@@ -9,7 +9,7 @@ const valid = (c: unknown) => implementedCommand.safeParse(c).success;
 describe("command schemas", () => {
   it("every implemented command is part of the published catalogue", () => {
     for (const t of IMPLEMENTED_TYPES) expect(KNOWN_TYPES.has(t), t).toBe(true);
-    expect(IMPLEMENTED_TYPES.size).toBe(15);
+    expect(IMPLEMENTED_TYPES.size).toBe(19);
   });
 
   it("rejects floating point and padded money everywhere", () => {

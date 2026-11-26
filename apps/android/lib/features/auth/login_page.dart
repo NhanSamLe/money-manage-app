@@ -118,6 +118,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             const SizedBox(height: 12),
             TextButton(
+              onPressed: () => context.go('/forgot'),
+              child: const Text('Quên mật khẩu?'),
+            ),
+            TextButton(
               onPressed: () => context.go('/setup'),
               child: const Text('Chưa thiết lập? Thiết lập mới'),
             ),

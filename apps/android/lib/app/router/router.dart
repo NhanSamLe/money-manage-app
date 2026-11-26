@@ -10,9 +10,11 @@ import '../../features/auth/setup_page.dart';
 import '../../features/auth/welcome_page.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/imports/csv_import_page.dart';
+import '../../features/settings/categories_page.dart';
+import '../../features/auth/forgot_page.dart';
 import '../../features/transactions/quick_entry_page.dart';
 
-const _publicRoutes = {'/welcome', '/login', '/setup'};
+const _publicRoutes = {'/welcome', '/login', '/setup', '/forgot'};
 
 /// Rebuilds the router whenever the Supabase auth state changes.
 class _AuthRefresh extends ChangeNotifier {
@@ -48,6 +50,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/home', builder: (_, _) => const HomeShell()),
       GoRoute(path: '/quick-entry', builder: (_, _) => const QuickEntryPage()),
       GoRoute(path: '/import', builder: (_, _) => const CsvImportPage()),
+      GoRoute(path: '/categories', builder: (_, _) => const CategoriesPage()),
+      GoRoute(path: '/forgot', builder: (_, _) => const ForgotPage()),
     ],
   );
 });

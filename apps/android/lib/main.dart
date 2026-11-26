@@ -14,7 +14,7 @@ Future<void> main() async {
     publishableKey: AppConfig.supabasePublishableKey,
     authOptions: FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
   );
-  runApp(const ProviderScope(child: MomaApp()));
+  runApp(ProviderScope(retry: (_, _) => null, child: const MomaApp()));
 }
 
 class MomaApp extends ConsumerWidget {

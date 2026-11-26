@@ -15,9 +15,9 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(summaryProvider);
-    final now = DateTime.now();
-    final email = Supabase.instance.client.auth.currentUser?.email ?? '';
-    return RefreshIndicator(
+    final month = ref.watch(selectedMonthProvider);
+    final email = _ownerEmail();
+    final body = RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(summaryProvider);
         await ref.read(summaryProvider.future);
@@ -36,10 +36,7 @@ class DashboardPage extends ConsumerWidget {
                 color: MomaColors.forest,
               ),
             ),
-            Text(
-              'Tháng ${now.month}/${now.year}${email.isEmpty ? '' : ' · $email'}',
-              style: const TextStyle(color: MomaColors.muted),
-            ),
+            Text(email, style: const TextStyle(color: MomaColors.muted)),
             const SizedBox(height: 16),
             _BalanceCard(summary: s),
             const SizedBox(height: 12),
@@ -88,6 +85,50 @@ class DashboardPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+    return Column(
+      children: [
+        _MonthBar(month: month),
+        Expanded(child: body),
+      ],
+    );
+  }
+}
+
+/// Owner email for the greeting; empty if the auth client is not available (tests, signed out).
+String _ownerEmail() {
+  try {
+    return Supabase.instance.client.auth.currentUser?.email ?? '';
+  } on Object {
+    return '';
+  }
+}
+
+class _MonthBar extends ConsumerWidget {
+  const _MonthBar({required this.month});
+  final String month;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(selectedMonthProvider.notifier);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          tooltip: 'Tháng trước',
+          icon: const Icon(Icons.chevron_left_rounded),
+          onPressed: () => notifier.shift(-1),
+        ),
+        Text(
+          'Tháng ${month.substring(5)}/${month.substring(0, 4)}',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        IconButton(
+          tooltip: 'Tháng sau',
+          icon: const Icon(Icons.chevron_right_rounded),
+          onPressed: () => notifier.shift(1),
+        ),
+      ],
     );
   }
 }
@@ -154,7 +195,13 @@ class _StatTile extends StatelessWidget {
               children: [
                 Icon(icon, size: 18, color: color),
                 const SizedBox(width: 6),
-                Text(label, style: const TextStyle(color: MomaColors.muted)),
+                Expanded(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: MomaColors.muted),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),

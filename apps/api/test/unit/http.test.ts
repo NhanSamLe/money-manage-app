@@ -97,6 +97,11 @@ describe("http api", () => {
     expect(gw.executeCommand).not.toHaveBeenCalled();
   });
 
+  it("answers 400 (not 503) for an invalid report month", async () => {
+    const { app } = makeApp();
+    expect((await app.request("/v1/reports/summary?month=2026-13", { headers: authed }, env)).status).toBe(400);
+  });
+
   it("maps domain errors to stable codes without leaking internals", async () => {
     const { app, gw } = makeApp();
     vi.mocked(gw.readAccounts).mockRejectedValueOnce(new Error("secret connection string"));

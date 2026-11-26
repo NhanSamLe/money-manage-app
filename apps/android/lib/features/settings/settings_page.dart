@@ -49,6 +49,14 @@ class SettingsPage extends ConsumerWidget {
         ),
         Card(
           child: ListTile(
+            leading: const Icon(Icons.category_outlined),
+            title: const Text('Danh mục'),
+            subtitle: const Text('Thêm, sửa, lưu trữ danh mục thu chi'),
+            onTap: () => context.push('/categories'),
+          ),
+        ),
+        Card(
+          child: ListTile(
             leading: const Icon(Icons.upload_file_rounded),
             title: const Text('Nhập sao kê CSV'),
             subtitle: const Text(

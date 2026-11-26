@@ -131,6 +131,55 @@ const recurringUpsert = command(
 
 const occurrenceMatch = command("OCCURRENCE_MATCH", z.object({ occurrence_id: uuid, tx_id: uuid, expected_version: version }).strict());
 
+const accountUpdate = command(
+  "ACCOUNT_UPDATE",
+  z.object({ account_id: uuid, expected_version: version, name: z.string().min(1).max(120).optional(), archived: z.boolean().optional(), hidden: z.boolean().optional() }).strict(),
+);
+
+const txAnnotate = command(
+  "TX_ANNOTATE",
+  z
+    .object({
+      tx_id: uuid,
+      expected_version: version,
+      note: z.string().max(1000).optional(),
+      merchant: z.string().min(1).max(120).optional(),
+      contact_id: uuid.optional(),
+      category_id: uuid.optional(),
+    })
+    .strict(),
+);
+
+const txCorrect = command(
+  "TX_CORRECT",
+  z
+    .object({
+      tx_id: uuid,
+      reason: z.string().min(1).max(1000),
+      expected_version: version,
+      replacement: z
+        .object({
+          kind: z.enum(["INCOME", "EXPENSE", "TRANSFER", "UNKNOWN_CREDIT", "UNKNOWN_DEBIT"]),
+          account_id: uuid,
+          amount: posMoney,
+          effective_at: iso,
+          category_id: uuid.optional(),
+          to_account_id: uuid.optional(),
+          contact_id: uuid.optional(),
+          note: z.string().max(1000).optional(),
+          merchant: z.string().min(1).max(120).optional(),
+          fee: posMoney.optional(),
+        })
+        .strict(),
+    })
+    .strict(),
+);
+
+const profileUpdate = command(
+  "PROFILE_UPDATE",
+  z.object({ expected_version: version, display_name: z.string().min(1).max(80).optional(), wizard_step: z.string().max(8).optional() }).strict(),
+);
+
 // Only commands whose RPC exists. Everything else in contracts/commands.schema.json answers NOT_IMPLEMENTED (explicit, never faked).
 export const implementedCommand = z.discriminatedUnion("command_type", [
   accountCreate,
@@ -148,6 +197,10 @@ export const implementedCommand = z.discriminatedUnion("command_type", [
   categoryUpsert,
   recurringUpsert,
   occurrenceMatch,
+  accountUpdate,
+  txAnnotate,
+  txCorrect,
+  profileUpdate,
 ]);
 export type ImplementedCommand = z.infer<typeof implementedCommand>;
 

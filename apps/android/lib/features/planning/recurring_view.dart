@@ -290,6 +290,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
         MoneyField(controller: _amount),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: _accountId,
           decoration: const InputDecoration(labelText: 'Tài khoản'),
           items: [
@@ -301,6 +302,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
         const SizedBox(height: 12),
         if (_kind == 'TRANSFER')
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _toAccountId,
             decoration: const InputDecoration(labelText: 'Đến tài khoản'),
             items: [
@@ -311,6 +313,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
           )
         else
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _categoryId,
             decoration: const InputDecoration(labelText: 'Danh mục'),
             items: [

@@ -256,6 +256,7 @@ class _DebtActionSheetState extends ConsumerState<_DebtActionSheet> {
           )
         else ...[
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _accountId,
             decoration: InputDecoration(
               labelText: d.isReceivable
@@ -378,6 +379,7 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
         const SizedBox(height: 12),
         if (contacts.isNotEmpty)
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _contactId,
             decoration: const InputDecoration(labelText: 'Người có sẵn'),
             items: [
@@ -406,6 +408,7 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
         ),
         if (!_historical)
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _accountId,
             decoration: InputDecoration(
               labelText: _direction == 'RECEIVABLE'

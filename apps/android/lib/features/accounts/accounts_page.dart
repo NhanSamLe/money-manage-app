@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/moma_theme.dart';
 import '../../core/icons.dart';
+import '../../core/models.dart';
+import '../../core/sheets.dart';
 import '../../core/money/money.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
@@ -47,6 +49,10 @@ class AccountsPage extends ConsumerWidget {
               for (final a in list)
                 Card(
                   child: ListTile(
+                    onTap: () => showFormSheet<void>(
+                      context,
+                      (_) => _EditAccountSheet(account: a),
+                    ),
                     leading: CircleAvatar(
                       backgroundColor: MomaColors.mint.withValues(alpha: 0.4),
                       child: Icon(
@@ -213,6 +219,86 @@ class _AddAccountSheetState extends ConsumerState<_AddAccountSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EditAccountSheet extends ConsumerStatefulWidget {
+  const _EditAccountSheet({required this.account});
+  final Account account;
+  @override
+  ConsumerState<_EditAccountSheet> createState() => _EditAccountSheetState();
+}
+
+class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
+  late final FormRunner _run = FormRunner(setState);
+  late final TextEditingController _name = TextEditingController(
+    text: widget.account.name,
+  );
+  final String _id = ApiClient.newId();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit({bool archive = false}) async {
+    if (_name.text.trim().isEmpty) {
+      setState(() => _run.error = 'Nhập tên tài khoản.');
+      return;
+    }
+    final ok = await _run.run(
+      () => ref.read(apiProvider).command('ACCOUNT_UPDATE', {
+        'account_id': widget.account.id,
+        'expected_version': widget.account.version,
+        'name': _name.text.trim(),
+        if (archive) 'archived': true,
+      }, commandId: _id),
+    );
+    if (ok && mounted) {
+      refreshAll(ref);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sửa tài khoản',
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _name,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+            hintText: 'Tên tài khoản',
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'Lưu trữ tài khoản giữ nguyên lịch sử nhưng không cho ghi giao dịch mới.',
+            style: TextStyle(color: MomaColors.muted),
+          ),
+        ),
+        FormError(_run.error),
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: _run.busy ? null : _submit,
+          child: const Text('Lưu'),
+        ),
+        TextButton(
+          onPressed: _run.busy ? null : () => _submit(archive: true),
+          child: const Text('Lưu trữ tài khoản'),
+        ),
+      ],
     );
   }
 }

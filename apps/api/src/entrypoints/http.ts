@@ -6,7 +6,7 @@ import { IMPLEMENTED_TYPES, KNOWN_TYPES, implementedCommand } from "../modules/l
 import type { CommandContext, FinanceGateway } from "../modules/ledger/ports";
 import { SupabaseFinanceGateway } from "../modules/ledger/supabase-gateway";
 import { canonicalJson, sha256Hex } from "../shared/canonical";
-import { DomainError, specFor } from "../shared/errors";
+import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
 import { currentVnDate, currentVnMonth, monthRangeUtc } from "../shared/report-period";
 
@@ -55,7 +55,9 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   app.onError((err, c) => {
     // Structured, redacted log: no request/response bodies.
     console.log(JSON.stringify({ request_id: c.get("rid"), op: c.req.path, outcome: "error", code: err instanceof DomainError ? err.code : "UNEXPECTED", detail: safeDetail(err) }));
-    return fail(c as unknown as Context<Vars>, err instanceof DomainError ? err.code : "UNEXPECTED");
+    // Input-validation RangeErrors (bad month, bad money) carry a catalogue code and are client errors, not outages.
+    const clientCode = err instanceof RangeError && isKnownCode(err.message) ? err.message : undefined;
+    return fail(c as unknown as Context<Vars>, err instanceof DomainError ? err.code : (clientCode ?? "UNEXPECTED"));
   });
 
   // Owner-authenticated routes: JWT valid + sub == singleton owner + device header present.

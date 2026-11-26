@@ -9,6 +9,7 @@ import '../../core/models.dart';
 import '../../core/money/money.dart';
 import '../../core/money/money_input.dart';
 import '../../core/network/api_client.dart';
+import '../../core/outbox.dart';
 import '../../core/providers.dart';
 import '../../core/quick_parse.dart';
 import '../../core/widgets.dart';
@@ -73,27 +74,50 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
       _busy = true;
       _error = null;
     });
+    final payload = <String, dynamic>{
+      'kind': switch (_kind) {
+        _Kind.expense => 'EXPENSE',
+        _Kind.income => 'INCOME',
+        _Kind.transfer => 'TRANSFER',
+      },
+      'account_id': _accountId,
+      'amount': amount.toString(),
+      'effective_at': _when.toUtc().toIso8601String(),
+      if (_kind != _Kind.transfer) 'category_id': _categoryId,
+      if (_kind == _Kind.transfer) 'to_account_id': _toAccountId,
+      if (_note.text.trim().isNotEmpty) 'note': _note.text.trim(),
+    };
     try {
-      await ref.read(apiProvider).command('TX_CREATE', {
-        'kind': switch (_kind) {
-          _Kind.expense => 'EXPENSE',
-          _Kind.income => 'INCOME',
-          _Kind.transfer => 'TRANSFER',
-        },
-        'account_id': _accountId,
-        'amount': amount.toString(),
-        'effective_at': _when.toUtc().toIso8601String(),
-        if (_kind != _Kind.transfer) 'category_id': _categoryId,
-        if (_kind == _Kind.transfer) 'to_account_id': _toAccountId,
-        if (_note.text.trim().isNotEmpty) 'note': _note.text.trim(),
-      }, commandId: _commandId);
+      await ref
+          .read(apiProvider)
+          .command('TX_CREATE', payload, commandId: _commandId);
       refreshAll(ref);
       if (mounted) {
         showSnack(context, 'Đã lưu giao dịch.');
         context.pop();
       }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (e.code == 'OFFLINE') {
+        // Keep the exact command (same id) so it can be sent later without any risk of duplicates.
+        final queued = await ref
+            .read(outboxProvider.notifier)
+            .add('TX_CREATE', payload, _commandId);
+        if (mounted) {
+          if (queued) {
+            showSnack(
+              context,
+              'Đang offline: đã lưu, sẽ tự đồng bộ khi có mạng.',
+            );
+            context.pop();
+          } else {
+            setState(
+              () => _error = 'Hàng đợi offline đã đầy. Hãy đồng bộ trước.',
+            );
+          }
+        }
+      } else if (mounted) {
+        setState(() => _error = e.message);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -213,6 +237,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _accountId,
                 decoration: InputDecoration(
                   labelText: _kind == _Kind.transfer
@@ -231,6 +256,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
               if (_kind == _Kind.transfer) ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _toAccountId,
                   decoration: const InputDecoration(labelText: 'Đến tài khoản'),
                   items: [

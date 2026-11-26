@@ -274,6 +274,7 @@ class _GoalMoveSheetState extends ConsumerState<_GoalMoveSheet> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: _accountId,
           decoration: const InputDecoration(labelText: 'Tài khoản'),
           items: [

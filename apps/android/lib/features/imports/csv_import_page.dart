@@ -169,6 +169,7 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _accountId,
             decoration: const InputDecoration(
               labelText: 'Tài khoản nhận dữ liệu',
