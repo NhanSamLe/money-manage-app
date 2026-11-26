@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Phiên bản | `0.1.0` (pre-release) — xem [`VERSION`](VERSION), [`CHANGELOG.md`](CHANGELOG.md) |
-| Trạng thái | Nền tảng backend + ứng dụng cơ bản. **Chưa dùng cho dữ liệu thật.** Xem [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) |
+| Trạng thái | Backend + ứng dụng đầy đủ tính năng nhập tay (tài khoản, giao dịch, công nợ, tiết kiệm, ngân sách, định kỳ, CSV, offline). Chưa có đọc thông báo ngân hàng và AI. **Chưa dùng cho dữ liệu thật quan trọng.** Xem [`docs/TESTING.md`](docs/TESTING.md) Xem [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) |
 | Giấy phép | Độc quyền, bảo lưu mọi quyền — [`LICENSE`](LICENSE) |
 | Đặc tả | [`spec/`](spec/README.md) (v1.0, có tính ràng buộc) |
 

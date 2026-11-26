@@ -4,6 +4,8 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   BOOTSTRAP_SECRET: string;
   OWNER_EMAIL: string;
+  /** Optional: only for legacy Supabase projects that still sign tokens with a shared HS256 secret. */
+  SUPABASE_JWT_SECRET?: string;
 }
 
 export interface Config {
@@ -12,6 +14,7 @@ export interface Config {
   serviceRoleKey: string;
   bootstrapSecret: string;
   ownerEmail: string;
+  jwtSecret?: string;
   dbTimeoutMs: number;
 }
 
@@ -40,6 +43,7 @@ export function loadConfig(env: Env): Config {
     serviceRoleKey: need("SUPABASE_SERVICE_ROLE_KEY"),
     bootstrapSecret,
     ownerEmail: need("OWNER_EMAIL").toLowerCase(),
+    ...(env.SUPABASE_JWT_SECRET ? { jwtSecret: env.SUPABASE_JWT_SECRET } : {}),
     dbTimeoutMs: DB_TIMEOUT_MS,
   };
 }

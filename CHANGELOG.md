@@ -10,7 +10,13 @@
 - API: `/contacts`, `/debts`, `/goals`, `/budgets`, `/recurring` và 12 lệnh mới (tổng 15 lệnh).
 - Ứng dụng: tab Kế hoạch (công nợ, tiết kiệm, ngân sách, định kỳ), nhập nhanh bằng câu tiếng Việt, nhập sao kê CSV.
 
+- Migration 004 và 4 lệnh mới (`ACCOUNT_UPDATE`, `TX_ANNOTATE`, `TX_CORRECT`, `PROFILE_UPDATE`): sửa/đổi danh mục/hiệu chỉnh giao dịch (giữ lịch sử), đổi tên và lưu trữ tài khoản.
+- Ứng dụng: chi tiết/sửa/hủy giao dịch, tìm kiếm không dấu + lọc + tải thêm, chọn tháng, quản lý danh mục, quên mật khẩu bằng mã, hàng đợi offline bền vững.
+- Kiểm thử toàn trình cho API (Postgres + PostgREST), kiểm thử luồng giao diện, hỗ trợ JWT HS256 tùy chọn.
+
 ### Fixed
+- Lỗi bố cục: thẻ Thu/Chi tràn chữ, ô chọn tài khoản tràn khi tên dài.
+- Tháng báo cáo không hợp lệ trả 400 thay vì 503.
 - Bảng tổng quan tính phí chuyển khoản và nợ xấu là chi tiêu (BR-15, BR-19); trước đó bị loại nhầm.
 - Giao dịch gắn với công nợ không thể bị đảo bằng `TX_REVERSE` (phải sửa trong mục công nợ).
 

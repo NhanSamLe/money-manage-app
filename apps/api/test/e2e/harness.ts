@@ -38,9 +38,11 @@ async function waitFor(check: () => Promise<boolean>, what: string, ms = 90_000)
 export async function startHarness(): Promise<Harness> {
   docker(["down", "-v"]);
   docker(["up", "-d", "--wait", "db"]);
-  const db = new pg.Client({ connectionString: DB_URL });
+  let db!: pg.Client;
   await waitFor(async () => {
-    await db.connect();
+    const c = new pg.Client({ connectionString: DB_URL });
+    await c.connect(); // a failed connect leaves the client unusable, so every attempt gets a fresh one
+    db = c;
     return true;
   }, "postgres");
 

@@ -24,11 +24,25 @@ class AuthService {
 
   /// Step 1 of first-time setup: the deployment secret makes the server send the owner invite.
   Future<void> startSetup(String bootstrapSecret) async {
-    await _api.post(
-      '/setup/start',
-      <String, dynamic>{},
-      extraHeaders: {'x-bootstrap-secret': bootstrapSecret},
-    );
+    try {
+      await _api.post(
+        '/setup/start',
+        <String, dynamic>{},
+        extraHeaders: {'x-bootstrap-secret': bootstrapSecret},
+      );
+    } on ApiException catch (e) {
+      // The server answers UNAUTHENTICATED for a wrong deployment secret; say what the user actually got wrong.
+      if (e.code == 'UNAUTHENTICATED') {
+        throw ApiException('BAD_SECRET', 'Mã bí mật triển khai không đúng.');
+      }
+      if (e.code == 'SETUP_ALREADY_BOUND') {
+        throw ApiException(
+          'SETUP_ALREADY_BOUND',
+          'Ứng dụng đã có chủ sở hữu. Hãy chọn "Tôi đã có tài khoản".',
+        );
+      }
+      rethrow;
+    }
   }
 
   /// Step 2: verify the emailed code, set the password, bind the owner and register this device.

@@ -51,3 +51,19 @@ Commands actually executed this session and their real results:
 | G5-01 Vietnamese rule engine | IMPLEMENTED (quick text -> suggestion) | AI providers (G5-02/03) NOT started |
 | G3 notification/API integrations | NOT STARTED, intentionally disabled | needs consented redacted samples |
 | G1-05 offline outbox | NOT STARTED | |
+
+## 2026-11-27 final handover of this session (see docs/TESTING.md for the exact commands)
+
+| Item | Status |
+|---|---|
+| DB migrations 001-004, SQL tests (3 suites) | PASS on Postgres 17 |
+| API: 19 commands, 29 unit tests, 12 end-to-end tests (Postgres + PostgREST) | PASS |
+| Android: analyze --fatal-infos clean, 33 tests (unit + UI flows with fake API) | PASS |
+| Deployed Worker `moma-api` (custom domain) | UP, health 200 |
+| Migrations 003+004 on the owner's real Supabase | PENDING (owner runs `supabase/pending/apply-003-004.sql`) |
+| Owner bootstrap with real email, real device run | NOT DONE (owner UAT: docs/UAT.md) |
+| Android emulator (Pixel 6, API 35, WHPX) | APK installs and runs; welcome/login/setup screens and real-network error paths verified with screenshots (docs/screens). Post-login screens NOT driven on device (needs owner credentials) |
+| Gate 3 (notification/API integrations, dedup, reconcile) | NOT STARTED, intentionally disabled |
+| Gate 5 AI providers | NOT STARTED |
+| Gate 6 release (private signing key, backup/restore drill, security audit) | NOT STARTED |
+

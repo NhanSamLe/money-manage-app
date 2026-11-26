@@ -53,11 +53,12 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   });
 
   app.onError((err, c) => {
-    // Structured, redacted log: no request/response bodies.
-    console.log(JSON.stringify({ request_id: c.get("rid"), op: c.req.path, outcome: "error", code: err instanceof DomainError ? err.code : "UNEXPECTED", detail: safeDetail(err) }));
     // Input-validation RangeErrors (bad month, bad money) carry a catalogue code and are client errors, not outages.
-    const clientCode = err instanceof RangeError && isKnownCode(err.message) ? err.message : undefined;
-    return fail(c as unknown as Context<Vars>, err instanceof DomainError ? err.code : (clientCode ?? "UNEXPECTED"));
+    const code =
+      err instanceof DomainError ? err.code : err instanceof RangeError && isKnownCode(err.message) ? err.message : "UNEXPECTED";
+    // Structured, redacted log: no request/response bodies.
+    console.log(JSON.stringify({ request_id: c.get("rid"), op: c.req.path, outcome: "error", code, detail: code === "UNEXPECTED" ? safeDetail(err) : undefined }));
+    return fail(c as unknown as Context<Vars>, code);
   });
 
   // Owner-authenticated routes: JWT valid + sub == singleton owner + device header present.
