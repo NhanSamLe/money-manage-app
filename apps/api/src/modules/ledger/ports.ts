@@ -12,6 +12,12 @@ export interface FinanceGateway {
   readTransactions(ownerId: string, limit: number, before: { at: string; id: string } | null): Promise<unknown>;
   readDashboard(ownerId: string, fromIso: string, toIso: string): Promise<unknown>;
   readProfile(ownerId: string): Promise<unknown>;
+  readContacts(ownerId: string): Promise<unknown>;
+  readDebts(ownerId: string, todayLocal: string): Promise<unknown>;
+  readGoals(ownerId: string): Promise<unknown>;
+  readBudgets(ownerId: string, monthFirstDay: string): Promise<unknown>;
+  /** Generates due occurrences (idempotent) and returns templates with their expected occurrences. */
+  readRecurring(ownerId: string, todayLocal: string): Promise<unknown>;
   registerDevice(ownerId: string, sessionId: string, deviceId: string, label: string): Promise<unknown>;
   getOwnerId(): Promise<string | null>;
   getSetupState(): Promise<string>;

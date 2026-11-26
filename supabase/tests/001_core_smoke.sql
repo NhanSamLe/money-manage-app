@@ -92,10 +92,10 @@ begin
   assert (select (x->>'balance')::bigint from jsonb_array_elements(public.pf_read_accounts(o)) x where (x->>'id')::uuid = a2) = 1000000, 'cash received principal';
   assert (select (x->>'balance')::bigint from jsonb_array_elements(public.pf_read_accounts(o)) x where (x->>'id')::uuid = a1) = 9935000 + 20000000 - 1003300, 'bank paid principal + fee';
 
-  -- dashboard: SYS_* excluded from classified metrics, so the fee is not "expense"
+  -- dashboard: BR-15 transfer fee IS an expense (65.000 purchase + 3.300 fee); only SYS_ADJUSTMENT_* is excluded
   dash := public.pf_read_dashboard(o, '2026-10-31T17:00:00Z', '2026-11-30T17:00:00Z');
   assert (dash->>'income')::bigint = 20000000, 'dashboard income';
-  assert (dash->>'expense')::bigint = 65000, 'dashboard expense excludes system fee account';
+  assert (dash->>'expense')::bigint = 68300, 'dashboard expense includes the transfer fee';
 
   -- reversal restores the balance, keeps history, and cannot be repeated
   select version into ver from public.pf_tx where id = tx;

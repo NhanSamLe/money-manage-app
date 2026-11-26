@@ -2,13 +2,13 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { loadConfig, serviceHeaders, type Config, type Env } from "../bootstrap/config";
 import { SessionVerifier, type Session } from "../modules/auth/verify-session";
-import { implementedCommand } from "../modules/ledger/command-schemas";
+import { IMPLEMENTED_TYPES, KNOWN_TYPES, implementedCommand } from "../modules/ledger/command-schemas";
 import type { CommandContext, FinanceGateway } from "../modules/ledger/ports";
 import { SupabaseFinanceGateway } from "../modules/ledger/supabase-gateway";
 import { canonicalJson, sha256Hex } from "../shared/canonical";
 import { DomainError, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
-import { currentVnMonth, monthRangeUtc } from "../shared/report-period";
+import { currentVnDate, currentVnMonth, monthRangeUtc } from "../shared/report-period";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_PAGE = 50;
@@ -141,6 +141,20 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     return ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readDashboard(c.get("owner"), from, to), { as_of: new Date().toISOString() });
   });
 
+  app.get("/v1/contacts", auth, async (c) => ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readContacts(c.get("owner"))));
+  app.get("/v1/debts", auth, async (c) =>
+    ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readDebts(c.get("owner"), currentVnDate(new Date()))),
+  );
+  app.get("/v1/goals", auth, async (c) => ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readGoals(c.get("owner"))));
+  app.get("/v1/budgets", auth, async (c) => {
+    const month = z.object({ month: z.string().default(currentVnMonth(new Date())) }).parse(c.req.query()).month;
+    monthRangeUtc(month); // validates YYYY-MM
+    return ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readBudgets(c.get("owner"), `${month}-01`));
+  });
+  app.get("/v1/recurring", auth, async (c) =>
+    ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readRecurring(c.get("owner"), currentVnDate(new Date()))),
+  );
+
   app.post("/v1/commands", auth, async (c) => {
     const d = getDeps(c.env);
     const deviceId = needDevice(c);
@@ -151,9 +165,9 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     if (typeof type !== "string") throw new DomainError("VALIDATION_FAILED");
     const parsed = implementedCommand.safeParse(raw);
     if (!parsed.success) {
-      // Known-but-unbuilt command types are explicit NOT_IMPLEMENTED, malformed input is a validation error.
-      const known = !["ACCOUNT_CREATE", "TX_CREATE", "TX_REVERSE"].includes(type);
-      throw new DomainError(known ? "NOT_IMPLEMENTED" : "VALIDATION_FAILED");
+      // Catalogued-but-unbuilt command types are explicit NOT_IMPLEMENTED; malformed or unknown input is a validation error.
+      const unbuilt = KNOWN_TYPES.has(type) && !IMPLEMENTED_TYPES.has(type);
+      throw new DomainError(unbuilt ? "NOT_IMPLEMENTED" : "VALIDATION_FAILED");
     }
     if (parsed.data.command_id !== key) throw new DomainError("VALIDATION_FAILED");
     const ctx: CommandContext = { ownerId: c.get("owner"), sessionId: c.get("session").sessionId, deviceId };

@@ -84,7 +84,7 @@ describe("http api", () => {
 
   it("answers NOT_IMPLEMENTED for known but unbuilt commands (no fake success)", async () => {
     const { app } = makeApp();
-    const body = JSON.stringify({ command_id: CMD, command_type: "DEBT_CREATE", schema_version: 1, payload: {} });
+    const body = JSON.stringify({ command_id: CMD, command_type: "SPLIT_BILL_CREATE", schema_version: 1, payload: {} });
     const res = await app.request("/v1/commands", { method: "POST", headers: { ...authed, "idempotency-key": CMD }, body }, env);
     expect(res.status).toBe(422);
   });

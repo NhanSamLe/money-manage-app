@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -44,6 +45,16 @@ class SettingsPage extends ConsumerWidget {
               builder: (_, s) => Text(s.data ?? '...'),
             ),
             onTap: () => _editApiBase(context, ref),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.upload_file_rounded),
+            title: const Text('Nhập sao kê CSV'),
+            subtitle: const Text(
+              'Đưa giao dịch từ file sao kê ngân hàng vào MoMa',
+            ),
+            onTap: () => context.push('/import'),
           ),
         ),
         const Card(

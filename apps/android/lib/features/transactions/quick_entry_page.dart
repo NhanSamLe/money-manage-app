@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme/moma_theme.dart';
 import '../../core/icons.dart';
+import '../../core/models.dart';
 import '../../core/money/money.dart';
+import '../../core/money/money_input.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
+import '../../core/quick_parse.dart';
 import '../../core/widgets.dart';
 
 enum _Kind { expense, income, transfer }
@@ -37,6 +40,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
   void dispose() {
     _amount.dispose();
     _note.dispose();
+    _quick.dispose();
     super.dispose();
   }
 
@@ -95,6 +99,29 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
     }
   }
 
+  final _quick = TextEditingController();
+
+  /// Fills the form from free text such as "ăn trưa 65k". Suggestion only: the user still confirms and saves.
+  void _applyQuick(String text) {
+    final q = parseQuickText(text);
+    final cats = ref.read(categoriesProvider).value ?? <Category>[];
+    final type = q.income ? 'INCOME' : 'EXPENSE';
+    setState(() {
+      _kind = q.income ? _Kind.income : _Kind.expense;
+      if (q.amount != null) {
+        _amount.text = formatVnd(q.amount!).replaceAll(' ₫', '');
+      }
+      _categoryId = cats
+          .where((c) => c.name == q.categoryName && c.type == type)
+          .firstOrNull
+          ?.id;
+      if (q.note.isNotEmpty) _note.text = q.note;
+      _error = q.amount == null
+          ? 'Chưa thấy số tiền rõ ràng (vd 65k, 1,5tr). Hãy nhập số tiền bên dưới.'
+          : null;
+    });
+  }
+
   Future<void> _pickDate() async {
     final d = await showDatePicker(
       context: context,
@@ -139,6 +166,21 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              TextField(
+                controller: _quick,
+                textInputAction: TextInputAction.done,
+                onSubmitted: _applyQuick,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.bolt_rounded),
+                  hintText: 'Gõ nhanh: ăn trưa 65k, nhận lương 15tr...',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.auto_fix_high_rounded),
+                    tooltip: 'Điền vào biểu mẫu',
+                    onPressed: () => _applyQuick(_quick.text),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               SegmentedButton<_Kind>(
                 segments: const [
                   ButtonSegment(value: _Kind.expense, label: Text('Chi tiêu')),
@@ -157,7 +199,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  _ThousandsFormatter(),
+                  ThousandsFormatter(),
                 ],
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -272,22 +314,6 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
           );
         },
       ),
-    );
-  }
-}
-
-class _ThousandsFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final n = parseVndInput(newValue.text);
-    if (n == null) return const TextEditingValue();
-    final text = formatVnd(n).replaceAll(' ₫', '');
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

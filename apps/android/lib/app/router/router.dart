@@ -9,6 +9,7 @@ import '../../features/auth/login_page.dart';
 import '../../features/auth/setup_page.dart';
 import '../../features/auth/welcome_page.dart';
 import '../../features/home/home_shell.dart';
+import '../../features/imports/csv_import_page.dart';
 import '../../features/transactions/quick_entry_page.dart';
 
 const _publicRoutes = {'/welcome', '/login', '/setup'};
@@ -46,6 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/setup', builder: (_, _) => const SetupPage()),
       GoRoute(path: '/home', builder: (_, _) => const HomeShell()),
       GoRoute(path: '/quick-entry', builder: (_, _) => const QuickEntryPage()),
+      GoRoute(path: '/import', builder: (_, _) => const CsvImportPage()),
     ],
   );
 });

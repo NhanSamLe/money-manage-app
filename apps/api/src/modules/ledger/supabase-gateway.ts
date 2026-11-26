@@ -50,6 +50,22 @@ export class SupabaseFinanceGateway implements FinanceGateway {
   readProfile(ownerId: string) {
     return this.rpc("pf_read_profile", { p_owner: ownerId });
   }
+  readContacts(ownerId: string) {
+    return this.rpc("pf_read_contacts", { p_owner: ownerId });
+  }
+  readDebts(ownerId: string, todayLocal: string) {
+    return this.rpc("pf_read_debts", { p_owner: ownerId, p_today: todayLocal });
+  }
+  readGoals(ownerId: string) {
+    return this.rpc("pf_read_goals", { p_owner: ownerId });
+  }
+  readBudgets(ownerId: string, monthFirstDay: string) {
+    return this.rpc("pf_read_budgets", { p_owner: ownerId, p_month: monthFirstDay });
+  }
+  async readRecurring(ownerId: string, todayLocal: string) {
+    await this.rpc("pf_sync_occurrences", { p_owner: ownerId, p_today: todayLocal });
+    return this.rpc("pf_read_recurring", { p_owner: ownerId });
+  }
   registerDevice(ownerId: string, sessionId: string, deviceId: string, label: string) {
     return this.rpc("pf_device_register", { p_owner: ownerId, p_session: sessionId, p_device: deviceId, p_label: label });
   }

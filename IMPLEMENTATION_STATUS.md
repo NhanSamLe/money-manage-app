@@ -37,3 +37,17 @@ Commands actually executed this session and their real results:
 | G2-01..G2-03 | IN_PROGRESS | Accounts, quick entry, list exist (untested on device) |
 | G2-04 CSV import, G2-05 reports | NOT_STARTED / partial | Dashboard summary only |
 | G3 integrations, G4 debts/goals/budgets, G5 AI, G6 release | NOT_STARTED | Blocked on real-device notification samples and provider verification |
+
+## 2026-11-27 update: planning features (Gate 4 + parts of Gate 2/5), code + local tests only
+
+| Item | Status | Evidence actually run |
+|---|---|---|
+| Migration 003 (debts, goals, budgets, categories, recurring, corrected dashboard) | PASS on Postgres 17 | `scripts/db-test.sh` -> both `001_core_smoke.sql` and `002_planning_smoke.sql` OK |
+| Migration 003 on real Supabase | NOT APPLIED by owner yet | run `supabase/migrations/20261127000003_planning_rpc.sql` in SQL Editor |
+| API (15 commands, planning reads) | PASS | `tsc --noEmit` clean; `vitest run` 26/26; deployed Worker version 0cdf52d8 |
+| Android | PASS (static + unit) | `flutter analyze --fatal-infos` clean; `flutter test` 22/22 |
+| G4-01..G4-03 debts/goals/budgets/recurring | IMPLEMENTED, NOT VERIFIED ON DEVICE | UI untested on a phone |
+| G2-04 CSV import | IMPLEMENTED (client parse + idempotent per-row TX_CREATE) | No server-side preview/commit tables; no cross-source dedup (Gate 3) |
+| G5-01 Vietnamese rule engine | IMPLEMENTED (quick text -> suggestion) | AI providers (G5-02/03) NOT started |
+| G3 notification/API integrations | NOT STARTED, intentionally disabled | needs consented redacted samples |
+| G1-05 offline outbox | NOT STARTED | |

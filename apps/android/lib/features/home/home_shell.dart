@@ -1,8 +1,9 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../accounts/accounts_page.dart';
 import '../dashboard/dashboard_page.dart';
+import '../planning/planning_page.dart';
 import '../settings/settings_page.dart';
 import '../transactions/transactions_page.dart';
 
@@ -18,6 +19,7 @@ class _HomeShellState extends State<HomeShell> {
     DashboardPage(),
     TransactionsPage(),
     AccountsPage(),
+    PlanningPage(),
     SettingsPage(),
   ];
 
@@ -32,7 +34,6 @@ class _HomeShellState extends State<HomeShell> {
         tooltip: 'Nhập nhanh',
         child: const Icon(Icons.add_rounded),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -50,6 +51,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet_rounded),
             label: 'Tài khoản',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.track_changes_outlined),
+            selectedIcon: Icon(Icons.track_changes_rounded),
+            label: 'Kế hoạch',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

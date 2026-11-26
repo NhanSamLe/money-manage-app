@@ -11,6 +11,12 @@ export function monthRangeUtc(month: string): { from: string; to: string } {
   return { from: new Date(start).toISOString(), to: new Date(end).toISOString() };
 }
 
+/** Local calendar date YYYY-MM-DD in Asia/Ho_Chi_Minh. */
+export function currentVnDate(now: Date): string {
+  const vn = new Date(now.getTime() + VN_OFFSET_HOURS * 3_600_000);
+  return vn.toISOString().slice(0, 10);
+}
+
 export function currentVnMonth(now: Date): string {
   const vn = new Date(now.getTime() + VN_OFFSET_HOURS * 3_600_000);
   return `${vn.getUTCFullYear()}-${String(vn.getUTCMonth() + 1).padStart(2, "0")}`;

@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### Added
+- Migration 003: danh bạ, công nợ (cho vay/đi vay, thu/trả nợ có lãi, xóa nợ), mục tiêu tiết kiệm (đặt dành, không đổi sổ cái), ngân sách tháng (chuyển phần dư), danh mục cấp cha-con, khoản định kỳ và kỳ đến hạn.
+- API: `/contacts`, `/debts`, `/goals`, `/budgets`, `/recurring` và 12 lệnh mới (tổng 15 lệnh).
+- Ứng dụng: tab Kế hoạch (công nợ, tiết kiệm, ngân sách, định kỳ), nhập nhanh bằng câu tiếng Việt, nhập sao kê CSV.
+
+### Fixed
+- Bảng tổng quan tính phí chuyển khoản và nợ xấu là chi tiêu (BR-15, BR-19); trước đó bị loại nhầm.
+- Giao dịch gắn với công nợ không thể bị đảo bằng `TX_REVERSE` (phải sửa trong mục công nợ).
+
 ## [0.1.0] - 2026-11-27
 
 Phiên bản nền tảng đầu tiên (pre-release, chưa dùng cho dữ liệu thật).
