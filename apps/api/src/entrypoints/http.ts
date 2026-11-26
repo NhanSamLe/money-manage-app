@@ -1,12 +1,13 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { loadConfig, type Config, type Env } from "../bootstrap/config";
+import { loadConfig, serviceHeaders, type Config, type Env } from "../bootstrap/config";
 import { SessionVerifier, type Session } from "../modules/auth/verify-session";
 import { implementedCommand } from "../modules/ledger/command-schemas";
 import type { CommandContext, FinanceGateway } from "../modules/ledger/ports";
 import { SupabaseFinanceGateway } from "../modules/ledger/supabase-gateway";
 import { canonicalJson, sha256Hex } from "../shared/canonical";
 import { DomainError, specFor } from "../shared/errors";
+import { API_VERSION } from "../shared/version";
 import { currentVnMonth, monthRangeUtc } from "../shared/report-period";
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -53,7 +54,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
 
   app.onError((err, c) => {
     // Structured, redacted log: no request/response bodies.
-    console.log(JSON.stringify({ request_id: c.get("rid"), op: c.req.path, outcome: "error", code: err instanceof DomainError ? err.code : "UNEXPECTED" }));
+    console.log(JSON.stringify({ request_id: c.get("rid"), op: c.req.path, outcome: "error", code: err instanceof DomainError ? err.code : "UNEXPECTED", detail: safeDetail(err) }));
     return fail(c as unknown as Context<Vars>, err instanceof DomainError ? err.code : "UNEXPECTED");
   });
 
@@ -77,7 +78,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   };
 
   // ------------------------------------------------------------ public
-  app.get("/v1/health", (c) => ok(c as unknown as Context<Vars>, { status: "OK", api_version: "1.0.0", instance_name: "moma" }));
+  app.get("/v1/health", (c) => ok(c as unknown as Context<Vars>, { status: "OK", api_version: API_VERSION, instance_name: "moma" }));
 
   app.get("/v1/auth/config", async (c) => {
     const d = getDeps(c.env);
@@ -94,7 +95,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     await rpcSetup(d, "pf_setup_reserve", { p_lease: lease, p_expires: new Date(Date.now() + 15 * 60_000).toISOString() });
     const res = await fetch(`${d.cfg.supabaseUrl}/auth/v1/invite`, {
       method: "POST",
-      headers: { apikey: d.cfg.serviceRoleKey, authorization: `Bearer ${d.cfg.serviceRoleKey}`, "content-type": "application/json" },
+      headers: serviceHeaders(d.cfg),
       body: JSON.stringify({ email: d.cfg.ownerEmail }),
       signal: AbortSignal.timeout(10_000),
     });
@@ -166,7 +167,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
 async function rpcSetup(d: Deps, name: string, args: Record<string, unknown>): Promise<unknown> {
   const res = await fetch(`${d.cfg.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: "POST",
-    headers: { apikey: d.cfg.serviceRoleKey, authorization: `Bearer ${d.cfg.serviceRoleKey}`, "content-type": "application/json" },
+    headers: serviceHeaders(d.cfg),
     body: JSON.stringify(args),
     signal: AbortSignal.timeout(d.cfg.dbTimeoutMs),
   });
@@ -175,6 +176,12 @@ async function rpcSetup(d: Deps, name: string, args: Record<string, unknown>): P
     throw new DomainError(b.code === "P0001" && b.message ? b.message : "DB_ERROR");
   }
   return res.json();
+}
+
+// Logs never carry raw error text: only our own CONFIG_* markers (key names, no values) or the error class.
+function safeDetail(err: Error): string | undefined {
+  if (err instanceof DomainError) return undefined;
+  return /^CONFIG_(MISSING|WEAK):[A-Z_]+$/.test(err.message) ? err.message : err.name;
 }
 
 function timingSafeEqual(a: string, b: string): boolean {

@@ -15,6 +15,13 @@ export interface Config {
   dbTimeoutMs: number;
 }
 
+// New-style secret keys (sb_secret_...) are not JWTs and must go in `apikey` only; legacy service_role JWTs need both headers.
+export function serviceHeaders(cfg: Pick<Config, "serviceRoleKey">): Record<string, string> {
+  const h: Record<string, string> = { apikey: cfg.serviceRoleKey, "content-type": "application/json" };
+  if (!cfg.serviceRoleKey.startsWith("sb_secret_")) h["authorization"] = `Bearer ${cfg.serviceRoleKey}`;
+  return h;
+}
+
 const DB_TIMEOUT_MS = 5_000;
 const MIN_BOOTSTRAP_SECRET_LEN = 32;
 

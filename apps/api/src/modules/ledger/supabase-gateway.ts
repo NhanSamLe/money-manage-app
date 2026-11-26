@@ -1,4 +1,4 @@
-import type { Config } from "../../bootstrap/config";
+import { serviceHeaders, type Config } from "../../bootstrap/config";
 import { DomainError } from "../../shared/errors";
 import type { CommandContext, FinanceGateway } from "./ports";
 
@@ -13,11 +13,7 @@ export class SupabaseFinanceGateway implements FinanceGateway {
   private async rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
     const res = await fetch(`${this.cfg.supabaseUrl}/rest/v1/rpc/${name}`, {
       method: "POST",
-      headers: {
-        apikey: this.cfg.serviceRoleKey,
-        authorization: `Bearer ${this.cfg.serviceRoleKey}`,
-        "content-type": "application/json",
-      },
+      headers: serviceHeaders(this.cfg),
       body: JSON.stringify(args),
       signal: AbortSignal.timeout(this.cfg.dbTimeoutMs),
     });

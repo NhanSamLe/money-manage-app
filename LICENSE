@@ -1,0 +1,25 @@
+MoMa (MoneyManage) - Proprietary Software License
+
+Copyright (c) 2026 Lê Đào Nhân Sâm. All rights reserved.
+
+This software, including its source code, database schema, API contracts,
+design assets and documentation (the "Software"), is proprietary and
+confidential. It is made available for the sole use of its copyright holder.
+
+No part of the Software may be copied, modified, merged, published,
+distributed, sublicensed, sold, or used to create derivative works, in whole
+or in part, without the prior written permission of the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+Third-party components
+----------------------
+The Software depends on third-party open-source packages (for example Flutter,
+Hono, Supabase client libraries). Each is licensed under its own terms, which
+remain in force and are not affected by this license. The Android application
+exposes the licenses of its Dart/Flutter dependencies from within the app.
+See docs/THIRD_PARTY.md for how to regenerate the dependency license report.

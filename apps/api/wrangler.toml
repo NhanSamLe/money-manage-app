@@ -2,6 +2,8 @@ name = "moma-api"
 main = "src/entrypoints/http.ts"
 compatibility_date = "2026-11-01"
 # Secrets (wrangler secret put): SUPABASE_SERVICE_ROLE_KEY, BOOTSTRAP_SECRET, OWNER_EMAIL
+routes = [{ pattern = "moma-api.superaicore.indevs.in", custom_domain = true }]
+
 [vars]
-SUPABASE_URL = "https://PROJECT_REF.supabase.co"
-SUPABASE_PUBLISHABLE_KEY = "REPLACE_PUBLIC"
+SUPABASE_URL = "https://dedjaugwvhipnxbwxaav.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_RamavXHPtMcVAwC6PswQWQ_wZPBdXol"
