@@ -1,0 +1,156 @@
+{
+  "version": "1.0",
+  "status": "SPECIFICATION_BASELINE",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 4312,
+      "sha256": "668a2b457ef81d747ed13c0f44379fd11a46700234240ae7f0ce5bfe20454c75"
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 375,
+      "sha256": "cf667e7fc34c8e76c6069865d949b2fb3ee1371a6a74cf97bfbe1af49d91b97b"
+    },
+    {
+      "path": "IMPLEMENTATION_STATUS.md",
+      "bytes": 1107,
+      "sha256": "7fb46a177afb365cec1cfc0acc5c869473d32b3e67674480b36031b58b84a2a3"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5935,
+      "sha256": "50faf9d4138f34bbca4073aaa56bab4a8444da0d357a1aed8bea4799cd14457d"
+    },
+    {
+      "path": "config/env.example",
+      "bytes": 502,
+      "sha256": "23bab741582c9ae32722dbc9ab633b700bf133cb21cbeb8ee93d7bc72a7f88cd"
+    },
+    {
+      "path": "config/providers.json",
+      "bytes": 2199,
+      "sha256": "8494954c1421437c925f006e3d8173767ddccfa38fe9f1c57e17ae5be7145b1c"
+    },
+    {
+      "path": "config/settings.example.json",
+      "bytes": 1190,
+      "sha256": "0e41cfceaddd723fce3dadae3d33bb205e7ccaa13c82b506197d674257017792"
+    },
+    {
+      "path": "config/wrangler.example.toml",
+      "bytes": 696,
+      "sha256": "59bb7a0da8a9393373b1ddb59509433c807cc4663d694e009b6e33b37e86570d"
+    },
+    {
+      "path": "contracts/ai-action.schema.json",
+      "bytes": 10660,
+      "sha256": "67f02b0963b6cc1af2b6581bbf9f09f543ad622bf20ff532e1cd632afab2de0c"
+    },
+    {
+      "path": "contracts/commands.schema.json",
+      "bytes": 65059,
+      "sha256": "cfbc6bec1b8263149d6c645377925573acd2fcb0dfcf042aab7bdcbbe3fe52db"
+    },
+    {
+      "path": "contracts/normalized-event.schema.json",
+      "bytes": 3299,
+      "sha256": "69946f2cedf7f6ae4e1a025cada77a7e22300f4c5ab14d857f8045bcfca7d4b5"
+    },
+    {
+      "path": "contracts/openapi.yaml",
+      "bytes": 159615,
+      "sha256": "bca569bf4c72511b6a30da159acb4421e3f02630c0bd0af24de0a008101eb1fd"
+    },
+    {
+      "path": "db/001-baseline.sql",
+      "bytes": 26425,
+      "sha256": "8a4ccd8fe9c7c0e06afe656ef3a0263f87164534f411efbf738cca066b38624d"
+    },
+    {
+      "path": "docs/01-product.md",
+      "bytes": 9450,
+      "sha256": "f3a92d6026e6e1d2b5b1fe931e4cfa4057e587d66f664b32d1cf2970868f68e8"
+    },
+    {
+      "path": "docs/02-ux-setup.md",
+      "bytes": 9538,
+      "sha256": "c668be37f54e275bf8c56760fd893802ae0ae12d9ff5bf4dff5743d3c8da89a1"
+    },
+    {
+      "path": "docs/03-financial-rules.md",
+      "bytes": 12541,
+      "sha256": "7a5dcf0957ae92ba1f929673f75a43ba1f2f32602e9dd9668448be3615abe612"
+    },
+    {
+      "path": "docs/04-integrations.md",
+      "bytes": 13056,
+      "sha256": "1552d75909fcd2cab55abd0f6816150472889415885c2342d9099966469e2837"
+    },
+    {
+      "path": "docs/05-ai.md",
+      "bytes": 8465,
+      "sha256": "7f640dadece27597ffdae640f58a7fded6c0cd1192c48d73c41136f14dfb6475"
+    },
+    {
+      "path": "docs/06-architecture-security.md",
+      "bytes": 11420,
+      "sha256": "11de2f8e870f3c226287b279b93309a0afe31e685101a6719f60c01ee00f15a6"
+    },
+    {
+      "path": "docs/07-deployment-operations.md",
+      "bytes": 10330,
+      "sha256": "1af335f1ba22d4c430ae9a140b3b79cf1cbc8e2bc0b1db315e52c379f7b13401"
+    },
+    {
+      "path": "docs/08-data-api.md",
+      "bytes": 15562,
+      "sha256": "814ba45324fc09f4a2554a376f6874a1d2451b42a50167296d7b44c55c5e452c"
+    },
+    {
+      "path": "docs/09-research.md",
+      "bytes": 5103,
+      "sha256": "6f387826c372144b58de4f34977ba02ac7dbeeee74ba08ca20748eac12d10b3a"
+    },
+    {
+      "path": "docs/10-roadmap.md",
+      "bytes": 4592,
+      "sha256": "ea1e98595a0a925a75c3c51ef113124a868d3f99048458c05779412d43ef9ed1"
+    },
+    {
+      "path": "docs/11-engineering-standards.md",
+      "bytes": 17513,
+      "sha256": "4058dfa60d43d4536411dd04606c024ef08d6ee23a0589e52ffca47bb311249b"
+    },
+    {
+      "path": "docs/12-rpc-and-ll-database.md",
+      "bytes": 14237,
+      "sha256": "ea93360ade9a6d73ad980061d311061f52ec25c6f3ea4cad14bcfcdde505f68b"
+    },
+    {
+      "path": "tests/STATIC-VALIDATION.txt",
+      "bytes": 328,
+      "sha256": "561038d554e82a15112fe6a3fb64b293dca27661141f1c569b718eb71612a047"
+    },
+    {
+      "path": "tests/acceptance.md",
+      "bytes": 10557,
+      "sha256": "00c3fe54fcdb663155cd57a6e762c10bf2ed4eef431476e9c70e4af540d9e378"
+    },
+    {
+      "path": "tests/fixtures.json",
+      "bytes": 7270,
+      "sha256": "18fb71894c95231accd1cf178f5e184ed81cfc614ab4c22bb445c18055e42e55"
+    },
+    {
+      "path": "tests/traceability.json",
+      "bytes": 6291,
+      "sha256": "6c9d0ef61a8f2460bd0c8c9d26704172a3c291086268bc7f42558d2121a8d7e3"
+    },
+    {
+      "path": "tests/verify_specs.py",
+      "bytes": 3348,
+      "sha256": "60dcee14bddaf131ab8d2ebbd02a67ab84a899cc4a275a31d0cf8e9f1dd17645"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+PASS static: 7 JSON files, 3 JSON Schemas, 39 command schema parity checks, 39 OpenAPI paths, 39 unique operations, local refs, 7 schema examples, 5 ledger golden scenarios, 2 cost scenarios.
+NOT RUN: full OpenAPI validator, SQL migration/database/RLS/concurrency, actual app, device, provider, email, AI benchmark, deployment.

@@ -1,0 +1,5889 @@
+openapi: 3.1.0
+info:
+  title: Personal Finance AI Internal API
+  version: 1.0.0
+  description: Normative internal API. External providers use their own verified contracts. All money values integer
+    decimal strings; date ranges half-open. Single owner only.
+servers:
+- url: https://api.example.com/v1
+  description: Placeholder; use owner domain.
+security:
+- OwnerBearer: []
+  DeviceId: []
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: health
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                        - OK
+                        - DEGRADED
+                      api_version:
+                        type: string
+                        minLength: 1
+                        maxLength: 12
+                      instance_name: &id001
+                        type: string
+                        minLength: 1
+                        maxLength: 120
+                    required:
+                    - status
+                    - api_version
+                    - instance_name
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+  /auth/config:
+    get:
+      operationId: authConfig
+      summary: authConfig
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      project_url:
+                        type: string
+                        format: uri
+                      publishable_key:
+                        type: string
+                        minLength: 1
+                        maxLength: 500
+                      setup_state:
+                        type: string
+                        enum:
+                        - UNINITIALIZED
+                        - INVITE_PENDING
+                        - BOUND
+                    required:
+                    - project_url
+                    - publishable_key
+                    - setup_state
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+  /setup/start:
+    post:
+      operationId: setupStart
+      summary: setupStart
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        const: CHECK_EMAIL
+                    required:
+                    - status
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Fixed owner email and one-time secret, generic output, rate limited; invite uses official Supabase
+        SDK.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+                setup_code:
+                  type: string
+                  minLength: 32
+                  maxLength: 200
+              required:
+              - email
+              - setup_code
+              additionalProperties: false
+      security: []
+  /setup/claim:
+    post:
+      operationId: setupClaim
+      summary: setupClaim
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Profile'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Only verified invite user may bind singleton; one transaction and idempotent owner UUID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: *id001
+              required:
+              - display_name
+              additionalProperties: false
+      security:
+      - OwnerBearer: []
+  /devices/register:
+    post:
+      operationId: registerDevice
+      summary: registerDevice
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Device'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id: &id002
+                  type: string
+                  format: uuid
+                label: *id001
+              required:
+              - device_id
+              - label
+              additionalProperties: false
+      security:
+      - OwnerBearer: []
+  /profile:
+    get:
+      operationId: getProfile
+      summary: getProfile
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Profile'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /commands:
+    post:
+      operationId: executeCommand
+      summary: executeCommand
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CommandResult'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Idempotency-Key must equal command_id. Domain and DB enforce cross-field rules, auth, version
+        and money bounds.
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialCommand'
+  /accounts:
+    get:
+      operationId: listAccounts
+      summary: listAccounts
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Account'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - &id003
+        name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - &id004
+        name: limit
+        in: query
+        required: false
+        schema: &id008
+          type: integer
+          minimum: 1
+          maximum: 100
+  /accounts/{id}:
+    get:
+      operationId: getAccount
+      summary: getAccount
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Account'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+  /transactions:
+    get:
+      operationId: listTransactions
+      summary: listTransactions
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+      - name: from
+        in: query
+        required: false
+        schema: &id005
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema: *id005
+      - name: account_id
+        in: query
+        required: false
+        schema: *id002
+      - name: category_id
+        in: query
+        required: false
+        schema: *id002
+      - name: contact_id
+        in: query
+        required: false
+        schema: *id002
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - POSTED
+          - VOID
+          - MERGED
+      - name: source
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - API
+          - NOTIFICATION
+          - STATEMENT
+          - MANUAL
+      - name: tag_id
+        in: query
+        required: false
+        schema: *id002
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      summary: getTransaction
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Transaction'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+  /review:
+    get:
+      operationId: listReviews
+      summary: listReviews
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /review/{id}:
+    get:
+      operationId: getReview
+      summary: getReview
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Review'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+  /debts:
+    get:
+      operationId: listDebts
+      summary: listDebts
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Debt'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /debts/{id}:
+    get:
+      operationId: getDebt
+      summary: getDebt
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Debt'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+  /goals:
+    get:
+      operationId: listGoals
+      summary: listGoals
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Goal'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /goals/{id}:
+    get:
+      operationId: getGoal
+      summary: getGoal
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Goal'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+  /budgets:
+    get:
+      operationId: listBudgets
+      summary: listBudgets
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Budget'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+      - name: month
+        in: query
+        required: true
+        schema: &id013
+          type: string
+          pattern: ^\d{4}-(0[1-9]|1[0-2])$
+  /recurring:
+    get:
+      operationId: listRecurrings
+      summary: listRecurrings
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recurring'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /categories:
+    get:
+      operationId: listCategorys
+      summary: listCategorys
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /rules:
+    get:
+      operationId: listRules
+      summary: listRules
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Rule'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /contacts:
+    get:
+      operationId: listContacts
+      summary: listContacts
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Contact'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /reminders:
+    get:
+      operationId: listReminders
+      summary: listReminders
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reminder'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /devices:
+    get:
+      operationId: listDevices
+      summary: listDevices
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /integrations:
+    get:
+      operationId: listIntegrations
+      summary: listIntegrations
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Integration'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+  /integrations/{id}:
+    get:
+      operationId: getIntegration
+      summary: getIntegration
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Integration'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+  /reconciliations:
+    get:
+      operationId: listReconciliations
+      summary: listReconciliations
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reconciliation'
+                    minItems: 0
+                    maxItems: 100
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id003
+      - *id004
+      - name: account_id
+        in: query
+        required: true
+        schema: *id002
+  /settings:
+    get:
+      operationId: getSettings
+      summary: getSettings
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Settings'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reports/summary:
+    get:
+      operationId: reportSummary
+      summary: reportSummary
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Summary'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema: *id005
+      - name: to
+        in: query
+        required: true
+        schema: *id005
+  /reports/series:
+    get:
+      operationId: reportSeries
+      summary: reportSeries
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        period_start: *id005
+                        period_end: *id005
+                        income: &id006
+                          type: string
+                          pattern: ^(?:0|-?[1-9][0-9]{0,37})$
+                        expense: *id006
+                        net_savings: *id006
+                        net_worth:
+                          anyOf:
+                          - *id006
+                          - type: 'null'
+                        coverage: &id010
+                          type: object
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                              - COMPLETE_VERIFIED
+                              - PARTIAL
+                              - UNKNOWN
+                              - STALE
+                            as_of:
+                              anyOf:
+                              - &id009
+                                type: string
+                                format: date-time
+                              - type: 'null'
+                            unclassified_credit: *id006
+                            unclassified_debit: *id006
+                            pending_count:
+                              type: integer
+                              minimum: 0
+                            reason_codes:
+                              type: array
+                              items:
+                                type: string
+                                minLength: 1
+                                maxLength: 60
+                              minItems: 0
+                              maxItems: 30
+                          required:
+                          - state
+                          - as_of
+                          - unclassified_credit
+                          - unclassified_debit
+                          - pending_count
+                          - reason_codes
+                          additionalProperties: false
+                      required:
+                      - period_start
+                      - period_end
+                      - income
+                      - expense
+                      - net_savings
+                      - net_worth
+                      - coverage
+                      additionalProperties: false
+                    minItems: 0
+                    maxItems: 366
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema: *id005
+      - name: to
+        in: query
+        required: true
+        schema: *id005
+      - name: group
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - DAY
+          - MONTH
+          - YEAR
+  /sync/changes:
+    get:
+      operationId: syncChanges
+      summary: syncChanges
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      changes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Change'
+                        minItems: 0
+                        maxItems: 100
+                      next_cursor: &id007
+                        type: string
+                        pattern: ^(0|[1-9][0-9]{0,18})$
+                      reset_required: &id015
+                        type: boolean
+                    required:
+                    - changes
+                    - next_cursor
+                    - reset_required
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema: *id007
+      - name: limit
+        in: query
+        required: false
+        schema: *id008
+  /events/notifications:
+    post:
+      operationId: receiveNotifications
+      summary: receiveNotifications
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        delivery_id: *id002
+                        status:
+                          type: string
+                          enum:
+                          - ACCEPTED
+                          - DUPLICATE
+                          - REVIEW
+                          - DISABLED
+                          - REJECTED
+                        event_id:
+                          anyOf:
+                          - *id002
+                          - type: 'null'
+                        code:
+                          anyOf:
+                          - type: string
+                            minLength: 1
+                            maxLength: 60
+                          - type: 'null'
+                      required:
+                      - delivery_id
+                      - status
+                      - event_id
+                      - code
+                      additionalProperties: false
+                    minItems: 0
+                    maxItems: 25
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationEvent'
+                  minItems: 1
+                  maxItems: 25
+              required:
+              - events
+              additionalProperties: false
+  /webhooks/{provider}/{connection_id}:
+    post:
+      operationId: providerWebhook
+      description: Provider-specific contract and authentication are external; route disabled until proven. Read
+        exact raw bytes before parsing, validate provider auth, persist atomically before provider-specific ACK.
+        This schema deliberately opaque; do not infer provider wire format.
+      security:
+      - ProviderAuth: []
+      parameters:
+      - name: provider
+        in: path
+        required: true
+        schema: &id014
+          type: string
+          minLength: 1
+          maxLength: 40
+      - name: connection_id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Provider-specific verified payload
+      responses:
+        '200':
+          description: Provider-specific durable ACK
+        '400':
+          description: Invalid payload
+        '401':
+          description: Invalid provider authentication
+        '503':
+          description: Retryable storage failure
+  /integrations/{id}/sync:
+    post:
+      operationId: requestSync
+      summary: requestSync
+      responses:
+        '202':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      job_id: *id002
+                      state:
+                        type: string
+                        enum:
+                        - QUEUED
+                        - EXISTING
+                    required:
+                    - job_id
+                    - state
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                from: *id009
+                to: *id009
+              required: []
+              additionalProperties: false
+  /imports/preview:
+    post:
+      operationId: previewImport
+      summary: previewImport
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      import_id: *id002
+                      expires_at: *id009
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: *id002
+                            row_no:
+                              type: integer
+                            status:
+                              type: string
+                              enum:
+                              - READY
+                              - DUPLICATE
+                              - REVIEW
+                              - INVALID
+                            candidate_tx_ids:
+                              type: array
+                              items: *id002
+                              minItems: 0
+                              maxItems: 30
+                            reason:
+                              anyOf:
+                              - type: string
+                                minLength: 1
+                                maxLength: 200
+                              - type: 'null'
+                          required:
+                          - id
+                          - row_no
+                          - status
+                          - candidate_tx_ids
+                          - reason
+                          additionalProperties: false
+                        minItems: 0
+                        maxItems: 100
+                    required:
+                    - import_id
+                    - expires_at
+                    - rows
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_id: *id002
+                rows:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      row_no:
+                        type: integer
+                        minimum: 1
+                      delivery_id: *id002
+                      amount: &id018
+                        type: string
+                        pattern: ^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|9000000000000000)$
+                      direction:
+                        type: string
+                        enum:
+                        - CREDIT
+                        - DEBIT
+                      occurred_at: *id009
+                      reference_hash:
+                        type: string
+                        minLength: 1
+                        maxLength: 64
+                      description:
+                        type: string
+                        minLength: 0
+                        maxLength: 500
+                      balance_after: &id019
+                        type: string
+                        pattern: ^(?:0|-?(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|9000000000000000))$
+                    required:
+                    - row_no
+                    - delivery_id
+                    - amount
+                    - direction
+                    - occurred_at
+                    additionalProperties: false
+                  minItems: 1
+                  maxItems: 100
+              required:
+              - account_id
+              - rows
+              additionalProperties: false
+  /ai/proposals:
+    post:
+      operationId: createProposal
+      summary: createProposal
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      proposal_id: *id002
+                      expires_at: *id009
+                      action:
+                        $ref: '#/components/schemas/AIAction'
+                      provider:
+                        type: string
+                        minLength: 1
+                        maxLength: 40
+                      estimated_micro_usd: *id007
+                    required:
+                    - proposal_id
+                    - expires_at
+                    - action
+                    - provider
+                    - estimated_micro_usd
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                client_at: *id009
+                account_id: *id002
+              required:
+              - text
+              - client_at
+              additionalProperties: false
+  /ai/query:
+    post:
+      operationId: queryAI
+      summary: queryAI
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      answer:
+                        type: string
+                        minLength: 1
+                        maxLength: 4000
+                      as_of: *id009
+                      coverage: *id010
+                      summary:
+                        anyOf:
+                        - $ref: '#/components/schemas/Summary'
+                        - type: 'null'
+                    required:
+                    - answer
+                    - as_of
+                    - coverage
+                    - summary
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Typed read-only query. No model-generated SQL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: object
+                  properties:
+                    tool:
+                      type: string
+                      enum:
+                      - summary
+                      - list_transactions
+                      - debt_summary
+                      - budget_status
+                      - goal_status
+                      - account_balances
+                    from: &id011
+                      type: string
+                      format: date
+                    to: *id011
+                    month:
+                      type: string
+                      pattern: ^\d{4}-(0[1-9]|1[0-2])$
+                    account_id: &id012
+                      type: string
+                      format: uuid
+                    category_id: *id012
+                    contact_id: *id012
+                    limit:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                  required:
+                  - tool
+                  additionalProperties: false
+              required:
+              - query
+              additionalProperties: false
+  /ops/usage:
+    get:
+      operationId: usage
+      summary: usage
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      ai_mode:
+                        type: string
+                        enum:
+                        - 'OFF'
+                        - FREE
+                        - PAID
+                      ai_period: *id013
+                      reserved_micro_usd: *id007
+                      spent_micro_usd: *id007
+                      cap_micro_usd: *id007
+                      db_bytes:
+                        anyOf:
+                        - *id007
+                        - type: 'null'
+                      quota_state:
+                        type: string
+                        enum:
+                        - OK
+                        - WARNING
+                        - BLOCKED
+                        - UNKNOWN
+                    required:
+                    - ai_mode
+                    - ai_period
+                    - reserved_micro_usd
+                    - spent_micro_usd
+                    - cap_micro_usd
+                    - db_bytes
+                    - quota_state
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /export:
+    get:
+      operationId: exportPage
+      summary: exportPage
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      snapshot_seq: *id007
+                      schema_version:
+                        const: 1
+                      entity:
+                        type: string
+                        minLength: 1
+                        maxLength: 40
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          description: Export versioned entity rows, sanitized no secret; validate per export manifest
+                            schema.
+                        minItems: 0
+                        maxItems: 100
+                      next_cursor:
+                        anyOf:
+                        - type: string
+                          minLength: 1
+                          maxLength: 200
+                        - type: 'null'
+                    required:
+                    - snapshot_seq
+                    - schema_version
+                    - entity
+                    - rows
+                    - next_cursor
+                    additionalProperties: false
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                required:
+                - data
+                - meta
+                additionalProperties: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Domain validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or quota limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Temporary unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Requires recent auth; stable export session or immutable versioned snapshot, not merely change_seq
+        filter on mutable rows. Operator pg_dump fallback.
+      parameters:
+      - name: snapshot_seq
+        in: query
+        required: false
+        schema: *id007
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - name: entity
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - accounts
+          - ledger_accounts
+          - transactions
+          - journals
+          - entries
+          - categories
+          - contacts
+          - debts
+          - debt_payments
+          - goals
+          - allocations
+          - budgets
+          - recurring
+          - rules
+          - tags
+          - tx_tags
+          - source_events
+          - event_links
+          - reconciliations
+          - audit
+          - settings
+components:
+  securitySchemes:
+    OwnerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    DeviceId:
+      type: apiKey
+      in: header
+      name: X-Device-Id
+    ProviderAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Illustrative only: use provider-specific documented authentication, not a universal Authorization
+        format.'
+  schemas:
+    Account:
+      type: object
+      properties:
+        id: *id002
+        version: &id016
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        kind: &id020
+          type: string
+          enum:
+          - BANK
+          - WALLET
+          - CASH
+          - SAVINGS
+          - CREDIT_CARD
+          - OTHER
+        institution: *id014
+        name: *id001
+        last4:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 4
+          - type: 'null'
+        balance:
+          anyOf:
+          - *id006
+          - type: 'null'
+        balance_as_of:
+          anyOf:
+          - *id009
+          - type: 'null'
+        baseline_known: *id015
+        baseline_at:
+          anyOf:
+          - *id009
+          - type: 'null'
+        reserved: *id006
+        api_enabled: *id015
+        notification_enabled: *id015
+        api_epoch: *id007
+        notification_epoch: *id007
+        archived: *id015
+        hidden: *id015
+        coverage: *id010
+      required:
+      - id
+      - version
+      - kind
+      - institution
+      - name
+      - last4
+      - balance
+      - balance_as_of
+      - baseline_known
+      - baseline_at
+      - reserved
+      - api_enabled
+      - notification_enabled
+      - api_epoch
+      - notification_epoch
+      - archived
+      - hidden
+      - coverage
+      additionalProperties: false
+    Transaction:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        kind:
+          type: string
+          enum:
+          - OPENING
+          - INCOME
+          - EXPENSE
+          - TRANSFER
+          - REFUND_EXPENSE
+          - REFUND_INCOME
+          - UNKNOWN_CREDIT
+          - UNKNOWN_DEBIT
+          - LOAN_GIVEN
+          - LOAN_RECEIVED
+          - LOAN_COLLECTED
+          - LOAN_REPAID
+          - DEBT_WRITEOFF
+          - DEBT_FORGIVEN
+          - ADJUSTMENT
+          - SPLIT
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - POSTED
+          - VOID
+          - MERGED
+        effective_at: *id009
+        amount:
+          anyOf:
+          - *id006
+          - type: 'null'
+        note:
+          anyOf:
+          - &id017
+            type: string
+            minLength: 0
+            maxLength: 1000
+          - type: 'null'
+        merchant:
+          anyOf:
+          - *id001
+          - type: 'null'
+        contact_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        related_tx_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        provisional: *id015
+        legs:
+          type: array
+          items:
+            type: object
+            properties:
+              account_id: *id002
+              signed_amount: *id006
+            required:
+            - account_id
+            - signed_amount
+            additionalProperties: false
+          minItems: 0
+          maxItems: 100
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category_id: *id002
+              amount: *id006
+            required:
+            - category_id
+            - amount
+            additionalProperties: false
+          minItems: 0
+          maxItems: 100
+        sources:
+          type: array
+          items:
+            type: string
+            enum:
+            - API
+            - NOTIFICATION
+            - STATEMENT
+            - MANUAL
+          minItems: 0
+          maxItems: 4
+        review_required: *id015
+        tag_ids:
+          type: array
+          items: *id002
+          minItems: 0
+          maxItems: 30
+      required:
+      - id
+      - version
+      - kind
+      - status
+      - effective_at
+      - amount
+      - note
+      - merchant
+      - contact_id
+      - related_tx_id
+      - provisional
+      - legs
+      - categories
+      - sources
+      - review_required
+      - tag_ids
+      additionalProperties: false
+    Review:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        type:
+          type: string
+          minLength: 1
+          maxLength: 60
+        reason: *id017
+        event_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        tx_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        candidate_tx_ids:
+          type: array
+          items: *id002
+          minItems: 0
+          maxItems: 100
+        state:
+          type: string
+          enum:
+          - OPEN
+          - RESOLVED
+          - DEFERRED
+        created_at: *id009
+      required:
+      - id
+      - version
+      - type
+      - reason
+      - event_id
+      - tx_id
+      - candidate_tx_ids
+      - state
+      - created_at
+      additionalProperties: false
+    Debt:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        contact_id: *id002
+        direction:
+          type: string
+          enum:
+          - RECEIVABLE
+          - PAYABLE
+        principal: *id018
+        remaining: *id006
+        originated_at: *id009
+        due_date:
+          anyOf:
+          - *id005
+          - type: 'null'
+        state:
+          type: string
+          enum:
+          - OPEN
+          - PARTIAL
+          - SETTLED
+          - WRITTEN_OFF
+        overdue: *id015
+        note:
+          anyOf:
+          - *id017
+          - type: 'null'
+        origin_tx_id: *id002
+      required:
+      - id
+      - version
+      - contact_id
+      - direction
+      - principal
+      - remaining
+      - originated_at
+      - due_date
+      - state
+      - overdue
+      - note
+      - origin_tx_id
+      additionalProperties: false
+    Goal:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        name: *id001
+        target: *id018
+        allocated: *id006
+        due_date:
+          anyOf:
+          - *id005
+          - type: 'null'
+        state:
+          type: string
+          enum:
+          - ACTIVE
+          - COMPLETED
+          - ARCHIVED
+      required:
+      - id
+      - version
+      - name
+      - target
+      - allocated
+      - due_date
+      - state
+      additionalProperties: false
+    Budget:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        month: *id013
+        category_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        limit: *id018
+        carryover: *id015
+        consumed: *id006
+        remaining: *id006
+      required:
+      - id
+      - version
+      - month
+      - category_id
+      - limit
+      - carryover
+      - consumed
+      - remaining
+      additionalProperties: false
+    Recurring:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        name: *id001
+        kind:
+          type: string
+          enum:
+          - INCOME
+          - EXPENSE
+          - TRANSFER
+        account_id: *id002
+        amount: *id018
+        interval:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+        next_date: *id005
+        enabled: *id015
+      required:
+      - id
+      - version
+      - name
+      - kind
+      - account_id
+      - amount
+      - interval
+      - next_date
+      - enabled
+      additionalProperties: false
+    Category:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        name: *id001
+        type:
+          type: string
+          enum:
+          - INCOME
+          - EXPENSE
+        parent_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        archived: *id015
+        icon:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 40
+          - type: 'null'
+      required:
+      - id
+      - version
+      - name
+      - type
+      - parent_id
+      - archived
+      - icon
+      additionalProperties: false
+    Rule:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        matcher: &id024
+          type: object
+          properties:
+            merchant_exact: *id001
+            account_id: *id002
+            description_exact: *id017
+            direction:
+              type: string
+              enum:
+              - CREDIT
+              - DEBIT
+          required: []
+          additionalProperties: false
+          minProperties: 1
+        result: &id025
+          type: object
+          properties:
+            kind:
+              type: string
+              enum:
+              - INCOME
+              - EXPENSE
+              - UNKNOWN_CREDIT
+              - UNKNOWN_DEBIT
+            category_id: *id002
+          required:
+          - kind
+          additionalProperties: false
+        priority:
+          type: integer
+        enabled: *id015
+      required:
+      - id
+      - version
+      - matcher
+      - result
+      - priority
+      - enabled
+      additionalProperties: false
+    Contact:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        alias: *id001
+        note:
+          anyOf:
+          - *id017
+          - type: 'null'
+        archived: *id015
+      required:
+      - id
+      - version
+      - alias
+      - note
+      - archived
+      additionalProperties: false
+    Reminder:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        kind:
+          type: string
+          minLength: 1
+          maxLength: 40
+        target_id: *id002
+        due_at: *id009
+        enabled: *id015
+        state:
+          type: string
+          minLength: 1
+          maxLength: 40
+      required:
+      - id
+      - version
+      - kind
+      - target_id
+      - due_at
+      - enabled
+      - state
+      additionalProperties: false
+    Device:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        label: *id001
+        active: *id015
+        config_version: *id007
+        last_seen_at:
+          anyOf:
+          - *id009
+          - type: 'null'
+        revoked_at:
+          anyOf:
+          - *id009
+          - type: 'null'
+      required:
+      - id
+      - version
+      - label
+      - active
+      - config_version
+      - last_seen_at
+      - revoked_at
+      additionalProperties: false
+    Integration:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        account_id: *id002
+        provider: *id014
+        enabled: *id015
+        health:
+          type: string
+          enum:
+          - ACTIVE
+          - DEGRADED
+          - PAUSED
+          - AUTH_REQUIRED
+          - UNVERIFIED
+          - UNSUPPORTED
+          - BILLING_BLOCKED
+          - OFFLINE
+          - ERROR
+        billing_state:
+          type: string
+          enum:
+          - UNKNOWN
+          - SAFE
+          - BLOCKED
+        upstream_status:
+          type: string
+          enum:
+          - UNKNOWN
+          - ACTIVE
+          - PAUSED
+          - DISCONNECTED
+        last_success_at:
+          anyOf:
+          - *id009
+          - type: 'null'
+        epoch: *id007
+      required:
+      - id
+      - version
+      - account_id
+      - provider
+      - enabled
+      - health
+      - billing_state
+      - upstream_status
+      - last_success_at
+      - epoch
+      additionalProperties: false
+    Reconciliation:
+      type: object
+      properties:
+        id: *id002
+        version: *id016
+        account_id: *id002
+        as_of: *id009
+        observed:
+          anyOf:
+          - *id019
+          - type: 'null'
+        calculated:
+          anyOf:
+          - *id006
+          - type: 'null'
+        difference:
+          anyOf:
+          - *id006
+          - type: 'null'
+        status:
+          type: string
+          enum:
+          - MATCHED
+          - MISMATCH
+          - INCOMPARABLE
+          - UNKNOWN
+      required:
+      - id
+      - version
+      - account_id
+      - as_of
+      - observed
+      - calculated
+      - difference
+      - status
+      additionalProperties: false
+    Settings:
+      type: object
+      properties:
+        version: *id016
+        api_global: *id015
+        notification_global: *id015
+        ai_mode:
+          type: string
+          enum:
+          - 'OFF'
+          - FREE
+          - PAID
+        ai_cap_micro_usd: *id007
+        preferences: &id021
+          type: object
+          properties:
+            hide_amounts: *id015
+            daily_digest: *id015
+            default_account_id:
+              anyOf:
+              - *id002
+              - type: 'null'
+            quick_save: *id015
+            local_app_lock: *id015
+            backup_reminder: *id015
+          required: []
+          additionalProperties: false
+      required:
+      - version
+      - api_global
+      - notification_global
+      - ai_mode
+      - ai_cap_micro_usd
+      - preferences
+      additionalProperties: false
+    Profile:
+      type: object
+      properties:
+        id: *id002
+        display_name: *id001
+        locale:
+          const: vi-VN
+        timezone:
+          const: Asia/Ho_Chi_Minh
+        wizard_step:
+          type: string
+          minLength: 1
+          maxLength: 3
+        version: *id016
+      required:
+      - id
+      - display_name
+      - locale
+      - timezone
+      - wizard_step
+      - version
+      additionalProperties: false
+    Summary:
+      type: object
+      properties:
+        income: *id006
+        expense: *id006
+        net_savings: *id006
+        net_worth:
+          anyOf:
+          - *id006
+          - type: 'null'
+        savings_rate:
+          anyOf:
+          - type: number
+          - type: 'null'
+        unclassified_credit: *id006
+        unclassified_debit: *id006
+        cash_in: *id006
+        cash_out: *id006
+        coverage: *id010
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+          minItems: 0
+          maxItems: 100
+        as_of: *id009
+        from: *id005
+        to: *id005
+      required:
+      - income
+      - expense
+      - net_savings
+      - net_worth
+      - savings_rate
+      - unclassified_credit
+      - unclassified_debit
+      - cash_in
+      - cash_out
+      - coverage
+      - accounts
+      - as_of
+      - from
+      - to
+      additionalProperties: false
+    CommandResult:
+      type: object
+      properties:
+        entity_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        version:
+          anyOf:
+          - *id016
+          - type: 'null'
+        change_seq: *id007
+        status:
+          type: string
+          enum:
+          - APPLIED
+          - REPLAYED
+          - REVIEW
+          - QUEUED
+          - PARTIAL
+        review_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        row_results:
+          type: array
+          items:
+            type: object
+            properties:
+              id: *id002
+              status:
+                type: string
+                enum:
+                - POSTED
+                - DUPLICATE
+                - REVIEW
+                - REJECTED
+              code:
+                type: string
+                minLength: 1
+                maxLength: 60
+            required:
+            - id
+            - status
+            additionalProperties: false
+          minItems: 0
+          maxItems: 100
+      required:
+      - entity_id
+      - version
+      - change_seq
+      - status
+      additionalProperties: false
+    Change:
+      type: object
+      properties:
+        seq: *id007
+        entity:
+          type: string
+          minLength: 1
+          maxLength: 40
+        id: *id002
+        version: *id016
+        op:
+          type: string
+          enum:
+          - UPSERT
+          - DELETE
+        snapshot:
+          anyOf:
+          - type: object
+            description: Validated projection matching entity-specific resource schema; not raw DB row.
+          - type: 'null'
+      required:
+      - seq
+      - entity
+      - id
+      - version
+      - op
+      - snapshot
+      additionalProperties: false
+    Meta:
+      type: object
+      properties:
+        request_id: *id002
+        next_cursor:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 200
+          - type: 'null'
+        as_of: *id009
+        coverage: *id010
+      required:
+      - request_id
+      additionalProperties: false
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 60
+            message:
+              type: string
+              minLength: 1
+              maxLength: 300
+            field:
+              type: string
+              minLength: 1
+              maxLength: 120
+            retryable: *id015
+            request_id: *id002
+            details:
+              type: object
+              description: Safe conflict metadata, no raw input or secrets.
+          required:
+          - code
+          - message
+          - retryable
+          - request_id
+          additionalProperties: false
+      required:
+      - error
+      additionalProperties: false
+    CommandACCOUNT_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: ACCOUNT_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            kind: *id020
+            institution: *id014
+            name: *id001
+            last4:
+              type: string
+              pattern: ^[0-9]{4}$
+            opening_amount: *id019
+            baseline_at: *id009
+          required:
+          - kind
+          - institution
+          - name
+          additionalProperties: false
+          dependentRequired:
+            opening_amount:
+            - baseline_at
+            baseline_at:
+            - opening_amount
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandACCOUNT_UPDATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: ACCOUNT_UPDATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            account_id: *id002
+            expected_version: *id016
+            name: *id001
+            archived: *id015
+            hidden: *id015
+          required:
+          - account_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandBASELINE_SET:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: BASELINE_SET
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            account_id: *id002
+            amount: *id019
+            as_of: *id009
+            expected_version: *id016
+            reason: *id017
+          required:
+          - account_id
+          - amount
+          - as_of
+          - expected_version
+          - reason
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandSOURCE_SET:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: SOURCE_SET
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            account_id: *id002
+            api_enabled: *id015
+            notification_enabled: *id015
+            expected_version: *id016
+          required:
+          - account_id
+          - api_enabled
+          - notification_enabled
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandSETTINGS_UPDATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: SETTINGS_UPDATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            expected_version: *id016
+            api_global: *id015
+            notification_global: *id015
+            ai_mode:
+              type: string
+              enum:
+              - 'OFF'
+              - FREE
+              - PAID
+            ai_cap_micro_usd: *id007
+            preferences: *id021
+          required:
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandCONNECTION_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: CONNECTION_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            account_id: *id002
+            provider: *id014
+            external_account_alias: *id001
+          required:
+          - account_id
+          - provider
+          - external_account_alias
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandCONNECTION_PAUSE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: CONNECTION_PAUSE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            connection_id: *id002
+            expected_version: *id016
+          required:
+          - connection_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandCONNECTION_VERIFY:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: CONNECTION_VERIFY
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            connection_id: *id002
+            expected_version: *id016
+          required:
+          - connection_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandTX_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: TX_CREATE
+        schema_version:
+          const: 1
+        payload: &id023
+          type: object
+          properties:
+            kind: &id026
+              type: string
+              enum:
+              - INCOME
+              - EXPENSE
+              - TRANSFER
+              - REFUND_EXPENSE
+              - REFUND_INCOME
+              - UNKNOWN_CREDIT
+              - UNKNOWN_DEBIT
+            account_id: *id002
+            amount: *id018
+            effective_at: *id009
+            category_id: *id002
+            to_account_id: *id002
+            contact_id: *id002
+            note: *id017
+            merchant: *id001
+            splits:
+              type: array
+              items: &id022
+                type: object
+                properties:
+                  category_id: *id002
+                  amount: *id018
+                required:
+                - category_id
+                - amount
+                additionalProperties: false
+              minItems: 1
+              maxItems: 30
+            related_tx_id: *id002
+            fee: *id018
+          required:
+          - kind
+          - account_id
+          - amount
+          - effective_at
+          additionalProperties: false
+          allOf:
+          - if:
+              properties:
+                kind:
+                  const: TRANSFER
+            then:
+              required:
+              - to_account_id
+          - if:
+              properties:
+                kind:
+                  enum:
+                  - REFUND_EXPENSE
+                  - REFUND_INCOME
+            then:
+              required:
+              - related_tx_id
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandTX_ANNOTATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: TX_ANNOTATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            tx_id: *id002
+            expected_version: *id016
+            note: *id017
+            merchant: *id001
+            contact_id:
+              anyOf:
+              - *id002
+              - type: 'null'
+            category_id: *id002
+            splits:
+              type: array
+              items: *id022
+              minItems: 1
+              maxItems: 30
+            learn_rule: *id015
+          required:
+          - tx_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandTX_CORRECT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: TX_CORRECT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            tx_id: *id002
+            replacement: *id023
+            reason: *id017
+            expected_version: *id016
+          required:
+          - tx_id
+          - replacement
+          - reason
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandTX_REVERSE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: TX_REVERSE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            tx_id: *id002
+            reason: *id017
+            expected_version: *id016
+          required:
+          - tx_id
+          - reason
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandREVIEW_RESOLVE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: REVIEW_RESOLVE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            review_id: *id002
+            decision:
+              type: string
+              enum:
+              - LINK
+              - KEEP_SEPARATE
+              - IGNORE
+              - POST
+              - TRANSFER_MATCH
+              - RECLASSIFY
+            expected_version: *id016
+            tx_id: *id002
+            account_id: *id002
+            category_id: *id002
+            reason: *id017
+          required:
+          - review_id
+          - decision
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandIMPORT_COMMIT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: IMPORT_COMMIT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            import_id: *id002
+            accepted_row_ids:
+              type: array
+              items: *id002
+              minItems: 1
+              maxItems: 100
+          required:
+          - import_id
+          - accepted_row_ids
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandCONTACT_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: CONTACT_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            alias: *id001
+            note: *id017
+          required:
+          - alias
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandCONTACT_UPDATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: CONTACT_UPDATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            contact_id: *id002
+            expected_version: *id016
+            alias: *id001
+            note: *id017
+            archived: *id015
+          required:
+          - contact_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandDEBT_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: DEBT_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            direction:
+              type: string
+              enum:
+              - RECEIVABLE
+              - PAYABLE
+            contact_id: *id002
+            principal: *id018
+            originated_at: *id009
+            account_id: *id002
+            due_date:
+              anyOf:
+              - *id005
+              - type: 'null'
+            note: *id017
+            existing_tx_id: *id002
+            historical: *id015
+          required:
+          - direction
+          - contact_id
+          - principal
+          - originated_at
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandDEBT_REPAY:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: DEBT_REPAY
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            debt_id: *id002
+            account_id: *id002
+            principal: *id018
+            effective_at: *id009
+            expected_version: *id016
+            interest: *id018
+            existing_tx_id: *id002
+          required:
+          - debt_id
+          - account_id
+          - principal
+          - effective_at
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandDEBT_UPDATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: DEBT_UPDATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            debt_id: *id002
+            expected_version: *id016
+            due_date:
+              anyOf:
+              - *id005
+              - type: 'null'
+            note: *id017
+          required:
+          - debt_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandDEBT_WRITE_OFF:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: DEBT_WRITE_OFF
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            debt_id: *id002
+            amount: *id018
+            reason: *id017
+            effective_at: *id009
+            expected_version: *id016
+          required:
+          - debt_id
+          - amount
+          - reason
+          - effective_at
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandGOAL_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: GOAL_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            name: *id001
+            target: *id018
+            due_date:
+              anyOf:
+              - *id005
+              - type: 'null'
+          required:
+          - name
+          - target
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandGOAL_ALLOCATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: GOAL_ALLOCATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            goal_id: *id002
+            account_id: *id002
+            amount: *id018
+            expected_version: *id016
+          required:
+          - goal_id
+          - account_id
+          - amount
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandGOAL_RELEASE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: GOAL_RELEASE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            goal_id: *id002
+            account_id: *id002
+            amount: *id018
+            expected_version: *id016
+          required:
+          - goal_id
+          - account_id
+          - amount
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandGOAL_UPDATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: GOAL_UPDATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            goal_id: *id002
+            expected_version: *id016
+            name: *id001
+            target: *id018
+            due_date:
+              anyOf:
+              - *id005
+              - type: 'null'
+            state:
+              type: string
+              enum:
+              - ACTIVE
+              - COMPLETED
+              - ARCHIVED
+          required:
+          - goal_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandBUDGET_UPSERT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: BUDGET_UPSERT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            month: *id013
+            limit: *id018
+            carryover: *id015
+            category_id:
+              anyOf:
+              - *id002
+              - type: 'null'
+            expected_version: *id016
+          required:
+          - month
+          - limit
+          - carryover
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandCATEGORY_UPSERT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: CATEGORY_UPSERT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            name: *id001
+            type:
+              type: string
+              enum:
+              - INCOME
+              - EXPENSE
+            category_id: *id002
+            parent_id:
+              anyOf:
+              - *id002
+              - type: 'null'
+            archived: *id015
+            expected_version: *id016
+            icon:
+              type: string
+              minLength: 1
+              maxLength: 40
+          required:
+          - name
+          - type
+          additionalProperties: false
+          dependentRequired:
+            category_id:
+            - expected_version
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandRULE_UPSERT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: RULE_UPSERT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            matcher: *id024
+            result: *id025
+            priority:
+              type: integer
+              minimum: 0
+              maximum: 10000
+            enabled: *id015
+            rule_id: *id002
+            expected_version: *id016
+          required:
+          - matcher
+          - result
+          - priority
+          - enabled
+          additionalProperties: false
+          dependentRequired:
+            rule_id:
+            - expected_version
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandRECURRING_UPSERT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: RECURRING_UPSERT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            name: *id001
+            kind:
+              type: string
+              enum:
+              - INCOME
+              - EXPENSE
+              - TRANSFER
+            account_id: *id002
+            amount: *id018
+            interval:
+              type: string
+              enum:
+              - WEEKLY
+              - MONTHLY
+              - YEARLY
+            next_date: *id005
+            enabled: *id015
+            recurring_id: *id002
+            expected_version: *id016
+            category_id: *id002
+            to_account_id: *id002
+          required:
+          - name
+          - kind
+          - account_id
+          - amount
+          - interval
+          - next_date
+          - enabled
+          additionalProperties: false
+          dependentRequired:
+            recurring_id:
+            - expected_version
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandOCCURRENCE_MATCH:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: OCCURRENCE_MATCH
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            occurrence_id: *id002
+            tx_id: *id002
+            expected_version: *id016
+          required:
+          - occurrence_id
+          - tx_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandDEVICE_REVOKE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: DEVICE_REVOKE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            device_id: *id002
+            expected_version: *id016
+          required:
+          - device_id
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandDEVICE_SOURCE_SET:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: DEVICE_SOURCE_SET
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            device_id: *id002
+            account_id: *id002
+            package_name:
+              type: string
+              minLength: 1
+              maxLength: 200
+            enabled: *id015
+            expected_version: *id016
+            signing_digest:
+              type: string
+              minLength: 1
+              maxLength: 128
+          required:
+          - device_id
+          - account_id
+          - package_name
+          - enabled
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandAI_ACCEPT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: AI_ACCEPT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            proposal_id: *id002
+            edits:
+              type: object
+              properties:
+                note: *id017
+                category_id: *id002
+                amount: *id018
+                account_id: *id002
+                contact_id: *id002
+                effective_at: *id009
+              required: []
+              additionalProperties: false
+            expected_version: *id016
+          required:
+          - proposal_id
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandAI_DISMISS:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: AI_DISMISS
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            proposal_id: *id002
+          required:
+          - proposal_id
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandREMINDER_UPSERT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: REMINDER_UPSERT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            kind:
+              type: string
+              enum:
+              - DEBT
+              - BILL
+              - GOAL
+              - BACKUP
+            target_id: *id002
+            due_at: *id009
+            enabled: *id015
+            reminder_id: *id002
+            expected_version: *id016
+          required:
+          - kind
+          - target_id
+          - due_at
+          - enabled
+          additionalProperties: false
+          dependentRequired:
+            reminder_id:
+            - expected_version
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandPROFILE_UPDATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: PROFILE_UPDATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            expected_version: *id016
+            display_name: *id001
+            wizard_step:
+              type: string
+              pattern: ^W(0[6-9]|1[0-3])$
+          required:
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandTAG_UPSERT:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: TAG_UPSERT
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            name: *id001
+            tag_id: *id002
+          required:
+          - name
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandTX_TAG_SET:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: TX_TAG_SET
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            tx_id: *id002
+            tag_ids:
+              type: array
+              items: *id002
+              minItems: 0
+              maxItems: 30
+            expected_version: *id016
+          required:
+          - tx_id
+          - tag_ids
+          - expected_version
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandADJUSTMENT_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: ADJUSTMENT_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            account_id: *id002
+            delta: *id019
+            effective_at: *id009
+            reason: *id017
+          required:
+          - account_id
+          - delta
+          - effective_at
+          - reason
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    CommandSPLIT_BILL_CREATE:
+      type: object
+      properties:
+        command_id: *id002
+        command_type:
+          const: SPLIT_BILL_CREATE
+        schema_version:
+          const: 1
+        payload:
+          type: object
+          properties:
+            account_id: *id002
+            amount: *id018
+            own_share: *id018
+            category_id: *id002
+            effective_at: *id009
+            shares:
+              type: array
+              items:
+                type: object
+                properties:
+                  contact_id: *id002
+                  principal: *id018
+                  due_date:
+                    anyOf:
+                    - *id005
+                    - type: 'null'
+                required:
+                - contact_id
+                - principal
+                additionalProperties: false
+              minItems: 1
+              maxItems: 30
+            existing_tx_id: *id002
+            note: *id017
+          required:
+          - account_id
+          - amount
+          - own_share
+          - category_id
+          - effective_at
+          - shares
+          additionalProperties: false
+      required:
+      - command_id
+      - command_type
+      - schema_version
+      - payload
+      additionalProperties: false
+    FinancialCommand:
+      oneOf:
+      - $ref: '#/components/schemas/CommandACCOUNT_CREATE'
+      - $ref: '#/components/schemas/CommandACCOUNT_UPDATE'
+      - $ref: '#/components/schemas/CommandBASELINE_SET'
+      - $ref: '#/components/schemas/CommandSOURCE_SET'
+      - $ref: '#/components/schemas/CommandSETTINGS_UPDATE'
+      - $ref: '#/components/schemas/CommandCONNECTION_CREATE'
+      - $ref: '#/components/schemas/CommandCONNECTION_PAUSE'
+      - $ref: '#/components/schemas/CommandCONNECTION_VERIFY'
+      - $ref: '#/components/schemas/CommandTX_CREATE'
+      - $ref: '#/components/schemas/CommandTX_ANNOTATE'
+      - $ref: '#/components/schemas/CommandTX_CORRECT'
+      - $ref: '#/components/schemas/CommandTX_REVERSE'
+      - $ref: '#/components/schemas/CommandREVIEW_RESOLVE'
+      - $ref: '#/components/schemas/CommandIMPORT_COMMIT'
+      - $ref: '#/components/schemas/CommandCONTACT_CREATE'
+      - $ref: '#/components/schemas/CommandCONTACT_UPDATE'
+      - $ref: '#/components/schemas/CommandDEBT_CREATE'
+      - $ref: '#/components/schemas/CommandDEBT_REPAY'
+      - $ref: '#/components/schemas/CommandDEBT_UPDATE'
+      - $ref: '#/components/schemas/CommandDEBT_WRITE_OFF'
+      - $ref: '#/components/schemas/CommandGOAL_CREATE'
+      - $ref: '#/components/schemas/CommandGOAL_ALLOCATE'
+      - $ref: '#/components/schemas/CommandGOAL_RELEASE'
+      - $ref: '#/components/schemas/CommandGOAL_UPDATE'
+      - $ref: '#/components/schemas/CommandBUDGET_UPSERT'
+      - $ref: '#/components/schemas/CommandCATEGORY_UPSERT'
+      - $ref: '#/components/schemas/CommandRULE_UPSERT'
+      - $ref: '#/components/schemas/CommandRECURRING_UPSERT'
+      - $ref: '#/components/schemas/CommandOCCURRENCE_MATCH'
+      - $ref: '#/components/schemas/CommandDEVICE_REVOKE'
+      - $ref: '#/components/schemas/CommandDEVICE_SOURCE_SET'
+      - $ref: '#/components/schemas/CommandAI_ACCEPT'
+      - $ref: '#/components/schemas/CommandAI_DISMISS'
+      - $ref: '#/components/schemas/CommandREMINDER_UPSERT'
+      - $ref: '#/components/schemas/CommandPROFILE_UPDATE'
+      - $ref: '#/components/schemas/CommandTAG_UPSERT'
+      - $ref: '#/components/schemas/CommandTX_TAG_SET'
+      - $ref: '#/components/schemas/CommandADJUSTMENT_CREATE'
+      - $ref: '#/components/schemas/CommandSPLIT_BILL_CREATE'
+      discriminator:
+        propertyName: command_type
+        mapping:
+          ACCOUNT_CREATE: '#/components/schemas/CommandACCOUNT_CREATE'
+          ACCOUNT_UPDATE: '#/components/schemas/CommandACCOUNT_UPDATE'
+          BASELINE_SET: '#/components/schemas/CommandBASELINE_SET'
+          SOURCE_SET: '#/components/schemas/CommandSOURCE_SET'
+          SETTINGS_UPDATE: '#/components/schemas/CommandSETTINGS_UPDATE'
+          CONNECTION_CREATE: '#/components/schemas/CommandCONNECTION_CREATE'
+          CONNECTION_PAUSE: '#/components/schemas/CommandCONNECTION_PAUSE'
+          CONNECTION_VERIFY: '#/components/schemas/CommandCONNECTION_VERIFY'
+          TX_CREATE: '#/components/schemas/CommandTX_CREATE'
+          TX_ANNOTATE: '#/components/schemas/CommandTX_ANNOTATE'
+          TX_CORRECT: '#/components/schemas/CommandTX_CORRECT'
+          TX_REVERSE: '#/components/schemas/CommandTX_REVERSE'
+          REVIEW_RESOLVE: '#/components/schemas/CommandREVIEW_RESOLVE'
+          IMPORT_COMMIT: '#/components/schemas/CommandIMPORT_COMMIT'
+          CONTACT_CREATE: '#/components/schemas/CommandCONTACT_CREATE'
+          CONTACT_UPDATE: '#/components/schemas/CommandCONTACT_UPDATE'
+          DEBT_CREATE: '#/components/schemas/CommandDEBT_CREATE'
+          DEBT_REPAY: '#/components/schemas/CommandDEBT_REPAY'
+          DEBT_UPDATE: '#/components/schemas/CommandDEBT_UPDATE'
+          DEBT_WRITE_OFF: '#/components/schemas/CommandDEBT_WRITE_OFF'
+          GOAL_CREATE: '#/components/schemas/CommandGOAL_CREATE'
+          GOAL_ALLOCATE: '#/components/schemas/CommandGOAL_ALLOCATE'
+          GOAL_RELEASE: '#/components/schemas/CommandGOAL_RELEASE'
+          GOAL_UPDATE: '#/components/schemas/CommandGOAL_UPDATE'
+          BUDGET_UPSERT: '#/components/schemas/CommandBUDGET_UPSERT'
+          CATEGORY_UPSERT: '#/components/schemas/CommandCATEGORY_UPSERT'
+          RULE_UPSERT: '#/components/schemas/CommandRULE_UPSERT'
+          RECURRING_UPSERT: '#/components/schemas/CommandRECURRING_UPSERT'
+          OCCURRENCE_MATCH: '#/components/schemas/CommandOCCURRENCE_MATCH'
+          DEVICE_REVOKE: '#/components/schemas/CommandDEVICE_REVOKE'
+          DEVICE_SOURCE_SET: '#/components/schemas/CommandDEVICE_SOURCE_SET'
+          AI_ACCEPT: '#/components/schemas/CommandAI_ACCEPT'
+          AI_DISMISS: '#/components/schemas/CommandAI_DISMISS'
+          REMINDER_UPSERT: '#/components/schemas/CommandREMINDER_UPSERT'
+          PROFILE_UPDATE: '#/components/schemas/CommandPROFILE_UPDATE'
+          TAG_UPSERT: '#/components/schemas/CommandTAG_UPSERT'
+          TX_TAG_SET: '#/components/schemas/CommandTX_TAG_SET'
+          ADJUSTMENT_CREATE: '#/components/schemas/CommandADJUSTMENT_CREATE'
+          SPLIT_BILL_CREATE: '#/components/schemas/CommandSPLIT_BILL_CREATE'
+    AIASK:
+      type: object
+      properties:
+        action:
+          const: ASK
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            question:
+              type: string
+              minLength: 1
+              maxLength: 200
+            missing_fields:
+              type: array
+              items:
+                type: string
+                minLength: 1
+                maxLength: 40
+              minItems: 1
+              maxItems: 10
+          required:
+          - question
+          - missing_fields
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AICREATE:
+      type: object
+      properties:
+        action:
+          const: CREATE
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            kind: *id026
+            amount_vnd: *id018
+            account_id: *id002
+            effective_at: *id009
+            category_id: *id002
+            to_account_id: *id002
+            note: *id017
+            related_tx_id: *id002
+          required:
+          - kind
+          - amount_vnd
+          - account_id
+          - effective_at
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AIANNOTATE:
+      type: object
+      properties:
+        action:
+          const: ANNOTATE
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            tx_id: *id002
+            note: *id017
+            category_id: *id002
+          required:
+          - tx_id
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AICREATE_DEBT:
+      type: object
+      properties:
+        action:
+          const: CREATE_DEBT
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            direction:
+              type: string
+              enum:
+              - RECEIVABLE
+              - PAYABLE
+            principal: *id018
+            contact_id: *id002
+            account_id: *id002
+            originated_at: *id009
+            due_date: *id005
+            existing_tx_id: *id002
+          required:
+          - direction
+          - principal
+          - contact_id
+          - originated_at
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AILINK_DEBT:
+      type: object
+      properties:
+        action:
+          const: LINK_DEBT
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            debt_id: *id002
+            tx_id: *id002
+            principal: *id018
+            interest: *id018
+          required:
+          - debt_id
+          - tx_id
+          - principal
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AIALLOCATE_GOAL:
+      type: object
+      properties:
+        action:
+          const: ALLOCATE_GOAL
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            goal_id: *id002
+            account_id: *id002
+            amount_vnd: *id018
+          required:
+          - goal_id
+          - account_id
+          - amount_vnd
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AIQUERY:
+      type: object
+      properties:
+        action:
+          const: QUERY
+        reason:
+          type: string
+          minLength: 0
+          maxLength: 200
+        confidence:
+          type: string
+          enum:
+          - HIGH
+          - MEDIUM
+          - LOW
+        payload:
+          type: object
+          properties:
+            tool:
+              type: string
+              enum:
+              - summary
+              - list_transactions
+              - debt_summary
+              - budget_status
+              - goal_status
+              - account_balances
+            from: *id005
+            to: *id005
+            month: *id013
+            account_id: *id002
+            category_id: *id002
+            contact_id: *id002
+            limit: *id008
+          required:
+          - tool
+          additionalProperties: false
+      required:
+      - action
+      - reason
+      - confidence
+      - payload
+      additionalProperties: false
+    AIAction:
+      oneOf:
+      - $ref: '#/components/schemas/AIASK'
+      - $ref: '#/components/schemas/AICREATE'
+      - $ref: '#/components/schemas/AIANNOTATE'
+      - $ref: '#/components/schemas/AICREATE_DEBT'
+      - $ref: '#/components/schemas/AILINK_DEBT'
+      - $ref: '#/components/schemas/AIALLOCATE_GOAL'
+      - $ref: '#/components/schemas/AIQUERY'
+    NotificationEvent:
+      type: object
+      properties:
+        delivery_id: *id002
+        account_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        epoch: *id007
+        amount:
+          anyOf:
+          - *id018
+          - type: 'null'
+        direction:
+          anyOf:
+          - type: string
+            enum:
+            - CREDIT
+            - DEBIT
+          - type: 'null'
+        currency:
+          const: VND
+        occurred_at:
+          anyOf:
+          - *id009
+          - type: 'null'
+        reference_hash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        counterparty_alias: *id001
+        description:
+          type: string
+          minLength: 0
+          maxLength: 500
+        balance_after: *id019
+        settlement:
+          type: string
+          enum:
+          - SETTLED
+          - PENDING
+          - FAILED
+          - UNKNOWN
+        parser_version:
+          type: string
+          minLength: 1
+          maxLength: 40
+        content_hash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        package_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        config_version: *id007
+      required:
+      - delivery_id
+      - account_id
+      - epoch
+      - currency
+      - amount
+      - direction
+      - occurred_at
+      - settlement
+      - parser_version
+      - content_hash
+      - package_name
+      - config_version
+      additionalProperties: false

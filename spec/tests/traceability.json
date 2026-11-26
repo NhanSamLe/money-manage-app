@@ -1,0 +1,413 @@
+{
+  "schema_version": 1,
+  "requirements": [
+    {
+      "id": "AUTH-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-01",
+        "SEC-01"
+      ]
+    },
+    {
+      "id": "AUTH-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-02",
+        "AUTH-05"
+      ]
+    },
+    {
+      "id": "AUTH-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-03"
+      ]
+    },
+    {
+      "id": "AUTH-04",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-04",
+        "AUTH-05",
+        "SEC-03"
+      ]
+    },
+    {
+      "id": "SET-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-01",
+        "UX-01"
+      ]
+    },
+    {
+      "id": "ACC-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-01",
+        "FIN-02"
+      ]
+    },
+    {
+      "id": "ACC-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-02"
+      ]
+    },
+    {
+      "id": "ACC-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "ASSET-01"
+      ]
+    },
+    {
+      "id": "TX-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-02",
+        "FIN-01",
+        "FIN-03",
+        "FIN-04",
+        "FIN-06"
+      ]
+    },
+    {
+      "id": "TX-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-02",
+        "FIN-05"
+      ]
+    },
+    {
+      "id": "TX-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-03"
+      ]
+    },
+    {
+      "id": "TX-04",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-06"
+      ]
+    },
+    {
+      "id": "TX-05",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-02",
+        "FIN-03",
+        "FIN-05"
+      ]
+    },
+    {
+      "id": "TX-06",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-05"
+      ]
+    },
+    {
+      "id": "CAT-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-05"
+      ]
+    },
+    {
+      "id": "CAT-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-01"
+      ]
+    },
+    {
+      "id": "INT-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-01",
+        "SYNC-03"
+      ]
+    },
+    {
+      "id": "INT-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-02"
+      ]
+    },
+    {
+      "id": "INT-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-03",
+        "INT-04",
+        "INT-05",
+        "SEC-05"
+      ]
+    },
+    {
+      "id": "INT-04",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-01",
+        "SEC-06",
+        "SEC-07",
+        "AND-01"
+      ]
+    },
+    {
+      "id": "INT-05",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-06",
+        "INT-04",
+        "INT-06",
+        "INT-07"
+      ]
+    },
+    {
+      "id": "INT-06",
+      "status": "NOT_RUN",
+      "tests": [
+        "INT-02",
+        "COST-02"
+      ]
+    },
+    {
+      "id": "DEBT-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-03",
+        "FIN-08"
+      ]
+    },
+    {
+      "id": "DEBT-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-08",
+        "FIN-09"
+      ]
+    },
+    {
+      "id": "DEBT-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-10"
+      ]
+    },
+    {
+      "id": "SAV-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-03",
+        "FIN-11"
+      ]
+    },
+    {
+      "id": "SAV-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-11"
+      ]
+    },
+    {
+      "id": "BUD-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-03",
+        "FIN-12"
+      ]
+    },
+    {
+      "id": "REC-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-03",
+        "FIN-13"
+      ]
+    },
+    {
+      "id": "REP-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-03",
+        "FIN-07",
+        "INT-07",
+        "AI-03"
+      ]
+    },
+    {
+      "id": "REP-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-07"
+      ]
+    },
+    {
+      "id": "REP-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-07"
+      ]
+    },
+    {
+      "id": "AI-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-01",
+        "AI-02",
+        "SEC-08"
+      ]
+    },
+    {
+      "id": "AI-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-01",
+        "AI-02"
+      ]
+    },
+    {
+      "id": "AI-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-03"
+      ]
+    },
+    {
+      "id": "AI-04",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-04",
+        "SEC-07",
+        "COST-01"
+      ]
+    },
+    {
+      "id": "AI-05",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-05"
+      ]
+    },
+    {
+      "id": "OFF-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-04",
+        "SYNC-01",
+        "SYNC-02",
+        "SYNC-03"
+      ]
+    },
+    {
+      "id": "OPS-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "SEC-10",
+        "OPS-01",
+        "OPS-02"
+      ]
+    },
+    {
+      "id": "OPS-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "SEC-10",
+        "OPS-03"
+      ]
+    },
+    {
+      "id": "NFR-01",
+      "status": "NOT_RUN",
+      "tests": [
+        "COST-01",
+        "COST-02",
+        "OPS-01"
+      ]
+    },
+    {
+      "id": "NFR-02",
+      "status": "NOT_RUN",
+      "tests": [
+        "PERF-01"
+      ]
+    },
+    {
+      "id": "NFR-03",
+      "status": "NOT_RUN",
+      "tests": [
+        "AND-01"
+      ]
+    },
+    {
+      "id": "NFR-04",
+      "status": "NOT_RUN",
+      "tests": [
+        "AUTH-01",
+        "AUTH-02",
+        "FIN-01",
+        "SEC-01",
+        "SEC-02",
+        "SEC-04",
+        "SEC-08",
+        "SEC-09"
+      ]
+    },
+    {
+      "id": "NFR-05",
+      "status": "NOT_RUN",
+      "tests": [
+        "UX-01",
+        "UX-02"
+      ]
+    },
+    {
+      "id": "NFR-06",
+      "status": "NOT_RUN",
+      "tests": [
+        "FIN-01",
+        "SYNC-01"
+      ]
+    },
+    {
+      "id": "NFR-07",
+      "status": "NOT_RUN",
+      "tests": [
+        "COST-01",
+        "OPS-01",
+        "PERF-01"
+      ]
+    },
+    {
+      "id": "NFR-08",
+      "status": "NOT_RUN",
+      "tests": [
+        "AI-04",
+        "SEC-07",
+        "OPS-03"
+      ]
+    },
+    {
+      "id": "NFR-09",
+      "status": "NOT_RUN",
+      "tests": [
+        "ENG-01"
+      ]
+    },
+    {
+      "id": "NFR-10",
+      "status": "NOT_RUN",
+      "tests": [
+        "OPS-02"
+      ]
+    }
+  ]
+}

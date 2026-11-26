@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NormalizedEvent",
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": [
+        "API",
+        "NOTIFICATION",
+        "STATEMENT",
+        "MANUAL"
+      ]
+    },
+    "delivery_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "account_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "connection_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "device_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,18})$"
+    },
+    "amount": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|9000000000000000)$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "direction": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "CREDIT",
+            "DEBIT"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "currency": {
+      "const": "VND"
+    },
+    "occurred_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "external_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 180
+    },
+    "reference_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "counterparty_alias": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 500
+    },
+    "balance_after": {
+      "type": "string",
+      "pattern": "^(?:0|-?(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|9000000000000000))$"
+    },
+    "settlement": {
+      "type": "string",
+      "enum": [
+        "SETTLED",
+        "PENDING",
+        "FAILED",
+        "UNKNOWN"
+      ]
+    },
+    "parser_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "evidence_quality": {
+      "type": "string",
+      "enum": [
+        "VERIFIED",
+        "PROVISIONAL",
+        "UNKNOWN"
+      ]
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "source",
+    "delivery_id",
+    "epoch",
+    "currency",
+    "amount",
+    "direction",
+    "occurred_at",
+    "settlement",
+    "parser_version",
+    "evidence_quality",
+    "content_hash"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "API"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "connection_id"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "NOTIFICATION"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "device_id"
+        ],
+        "properties": {
+          "evidence_quality": {
+            "enum": [
+              "PROVISIONAL",
+              "UNKNOWN"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

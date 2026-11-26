@@ -1,0 +1,25 @@
+# Template only. Agent must confirm compatibility date and free plan limits at deploy.
+name = "personal-finance-ai"
+main = "src/entrypoints/http.ts"
+compatibility_date = "2026-11-27"
+workers_dev = false
+
+[vars]
+APP_ENV = "production"
+APP_NAME = "Personal Finance AI"
+SUPABASE_URL = "https://PROJECT_REF.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "REPLACE_WITH_PUBLIC_KEY"
+API_BASE_URL = "https://api.example.com"
+ZERO_COST_REQUIRED = "true"
+
+[[routes]]
+pattern = "api.example.com"
+custom_domain = true
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Enable AI binding only after verifying free eligible model and data policy.
+# [ai]
+# binding = "AI"
+# Secrets via dashboard/wrangler secret put, never here.

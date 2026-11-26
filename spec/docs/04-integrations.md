@@ -1,0 +1,65 @@
+# 04 — Financial Integration Gateway (HLD + LLD)
+
+## 1. Capability matrix (27/11/2026)
+`DOCUMENTED` means public docs, not a passed POC. `UNKNOWN` means do not enable. `MERCHANT_ONLY` cannot read all personal history. Notification `TEST_REQUIRED` for all sources; package IDs, template variants and coverage must be verified on actual Android. `FREE_CONDITIONAL` means possible zero cost, not guaranteed.
+
+| Institution | API candidate | Personal credit/debit | Balance | History/backfill | Notification |
+|---|---|---|---|---|---|
+| VCB | direct AIS/Finverse/Casso | UNKNOWN for free personal complete AIS; paid/RPA candidates excluded by default | UNKNOWN | UNKNOWN | TEST_REQUIRED (Digibank) |
+| TPBank | SePay official API | DOCUMENTED credit/debit main account | DOCUMENTED by SePay settings | provider-stored history, bank backfill UNKNOWN | TEST_REQUIRED |
+| MB | SePay official API | DOCUMENTED credit/debit main account | UNKNOWN for API (do not infer) | provider-stored history, bank backfill UNKNOWN | TEST_REQUIRED |
+| ACB/Sacombank/other banks | SePay or official AIS | check individual conditions, UNKNOWN until POC | UNKNOWN | UNKNOWN | TEST_REQUIRED |
+| MoMo | merchant IPN/query | MERCHANT_ONLY | UNKNOWN personal | UNKNOWN personal | TEST_REQUIRED |
+| ZaloPay | merchant callback/query | MERCHANT_ONLY | UNKNOWN personal | UNKNOWN personal | TEST_REQUIRED |
+| VNPAY | merchant querydr/IPN | MERCHANT_ONLY | UNKNOWN personal wallet | UNKNOWN personal | TEST_REQUIRED |
+| Other/custom | new read-only adapter | UNKNOWN | UNKNOWN | UNKNOWN | TEST_REQUIRED |
+
+VCB/MoMo are first onboarding options. Do not force opening another bank. TPBank/MB optional. Never treat QR payment API as AIS. See research sources. Every provider capability has checked_at, doc URL, proof (sandbox or actual), status, account type, conditions, quota/fee status. Version registry and allow disabling per adapter remotely via config update; no untrusted downloadable code.
+
+## 2. Independent switches
+Global API enabled A; global notification N; account api_enabled and notification_enabled; connection active; device permission + app allowlist; provider capability + cost guard. Effective API=A && account.api_enabled && connection.verified && billing_safe && !paused. Effective Notification=N && account.notification_enabled && device.active && permission && package_mapped. Global switches default false until setup; account switch default false; manual/import always available. Both enabled → same canonical reconciliation pipeline. 00 manual only; 10 API only; 01 notification only; 11 both. Disabled source does not delete data; stop collecting immediately on-device, reject new arrivals based on captured source epoch; API toggle pauses processing/polling, and clearly instruct/attempt supported upstream pause. Upstream might continue charging; UI separate `upstream_status` and `billing_safe`. API live disabled by default unless hard limit verified or explicit owner acceptance of potential provider charges (zero-cost mode disallows acceptance; change policy required). On disable, preserve previously durably accepted events for processing and show count; notifications collected before disable but not sent may be quarantined and require explicit import. Re-enable increments epoch, optionally backfill bounded date range, no automatic import earlier baseline. Do not claim disconnect if only local pause; show instructions for revoking provider/bank consent and verify status. Revoke device stops ingest and clears tokens. Use per-source version compare-and-swap.
+
+## 3. Provider adapter interface (TypeScript logical)
+```ts
+type Capability = 'DOCUMENTED'|'VERIFIED'|'UNKNOWN'|'UNSUPPORTED'|'MERCHANT_ONLY';
+type Money = string; // /^[0-9]+$/ VND
+interface NormalizedEvent {
+  source: 'API'|'NOTIFICATION'|'STATEMENT'|'MANUAL';
+  connectionId: string; accountId?: string; externalId?: string;
+  deliveryId: string; direction?: 'CREDIT'|'DEBIT'; amount?: Money;
+  currency: 'VND'; occurredAt?: string; receivedAt: string;
+  reference?: string; counterpartyAlias?: string; description?: string;
+  balanceAfter?: Money; settlement: 'SETTLED'|'PENDING'|'FAILED'|'UNKNOWN';
+  parserVersion: string; evidenceQuality: 'VERIFIED'|'PROVISIONAL'|'UNKNOWN';
+}
+interface ProviderAdapter {
+  capabilities(): Promise<Capabilities>;
+  verifyConnection(connectionId: string): Promise<ConnectionHealth>;
+  verifyWebhook(raw: Uint8Array, headers: Headers): Promise<boolean>;
+  normalizeWebhook(raw: Uint8Array): Promise<NormalizedEvent[]>;
+  listTransactions(input: {connectionId:string; cursor?:string; from?:string; to?:string; limit:number}): Promise<{events:NormalizedEvent[]; nextCursor?:string}>;
+  readBalance?(connectionId:string): Promise<BalanceSnapshot[]>;
+  pauseUpstream?(connectionId:string): Promise<UpstreamStatus>;
+}
+```
+Methods only implemented if documented; unsupported throws `CAPABILITY_UNSUPPORTED`, not fabricated values. Secret references resolved server side from Worker secret for one owner. For SePay follow official docs on account connection, webhook auth/payload and API paging (see URLs in research); do not assume HMAC if configured provider only uses API key. Use provider strongest documented auth, TLS, fixed configured endpoint, constant-time compare; reject unauthorized before durable insert. No bank username/password/PIN/OTP stored. Provider onboarding via official site. A connection maps provider account stable ID to exactly one local account; unknown/masked account mapping ambiguity → review. No arbitrary user-provided backend fetch URLs (SSRF). New provider checklist: official docs, allowed read-only, auth, exact sample response, currency/direction/time/IDs, fee/limits/revocation, unit fixture, POC credit/debit/balance/backfill, enable capability individually.
+
+## 4. Android notification implementation
+- Kotlin service extends NotificationListenerService; AndroidManifest service with `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`, correct intent-filter and exported value per Android official docs; open `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`, detect grant with NotificationManager/compatible APIs. App own notification permission is separate on API 33+. No READ_SMS, no Accessibility, no background screen capture.
+- Capture `onNotificationPosted`; check device active, current signed-in owner, global/account config and explicit package allowlist first. Resolve package from OS, verify official install/signature where feasible; never trust app label alone. Do not collect existing historical notifications automatically. Drop notification title/text when not financial; OTP/auth/login/PIN/passcode/verification/payment authorization must be excluded before storage/upload. Sensitive/obscured content → drop or minimal health counter. Never try to bypass Android 15 redaction. No raw notification logging. Allowlist parser accepts only known completed-transaction patterns; versioned rules + user verified sanitized fixture; unknown patterns may show local review and opt-in share sanitized example (never send full notification dump). Detect localized VND formats (`1.200.000`, `1,200,000` only with known template; reject ambiguous decimals), `+/-`, account last4, reference, local time. Balance-only separately; no inferred debit based on keywords alone.
+- Generate stable delivery UUID at initial capture, persist encrypted Room/SQLite outbox before network. Android SBN key + postTime + package + content digest used only for update detection, not universally unique transaction ID. Notifications may be replaced/grouped: ignore summary notifications, parse individual; same key updated with new movement must not drop. Dedup stable source ref when available; otherwise heuristic review. Multi-device same notification cross-device dedup only with strong evidence.
+- Use Kotlin WorkManager unique work with network constraint, batch ≤25, retry with exponential backoff and jitter, periodic maintenance (OS may delay); immediate attempt via scheduled work, no promise realtime. Store pending event age/retries, no ACK → retain. On server durable ACK, remove outbox raw fields, keep minimal status. On logout stop service processing; encrypt retained unsent events and require same owner re-login, or explicit discard. On device reboot/permission revocation update health; battery restrictions guidance only, do not bypass OS.
+- Payload send normalized fields only, no full notification text by default. Device id, source epoch, parser version, event_id, occurred_at/received_at, amount, direction, account mapping, redacted memo/ref. Notification is low trust even authenticated client. Local parser performs primary extraction; backend validates. AI never used on raw OTP-containing data. Test on current Android with VCB/MoMo true transaction samples; variants incoming/outgoing/card/refund/fee/pending/duplicate/locked/reboot/offline.
+
+## 5. Ingestion & processing states
+`RECEIVED → VALIDATED → NORMALIZED → MATCHED/NEEDS_REVIEW → POSTED/LINKED/IGNORED`; retryable `FAILED_RETRY` with next_attempt, permanent `DEAD_LETTER` with safe reason. Source raw storage is sanitized structured evidence; not arbitrary full bodies. Webhook receiver verifies, maps connection and source epoch, enforces body max 64KiB/rate limit, writes durable event + job in single RPC, ACK according to provider contract only after commit. For disabled source return provider-required ACK without booking (minimal audit), distinguish invalid auth. If storage unavailable return retryable status (document actual provider retry policy); polling/backfill heals gaps if supported. Async job uses lease with expiry, attempt counter, max retries then DLQ. Cursor advanced only after entire page persisted. Overlap window e.g. last 48h within quota; dedup stable keys. Poll 15min default if provider supports and fee safe; no polling for unsupported. `Cron */15 * * * *` picks due jobs, process bounded 10 rows, no long CPU; retry job not rely on Worker memory. Manual sync respects quota and cooldown. Provider auth expired -> pause and guide reconnect; 429 Retry-After; 5xx jitter; 4xx nonretry except auth renewal supported.
+
+## 6. Dedup algorithm
+1. Idempotency by (connection_id, external_event_id) when provider stable ID; by (device_id, delivery_id) for notification; by import batch/row fingerprint with caution; server unique indexes. Same external ID and changed content = versioned correction/review, not silently discard. Replayed request ACK same event.
+2. Resolve exact stable bank reference scoped to account and direction, amount, time if known. If exact unique ref match and no contradiction, link evidence to existing movement. API event authoritative for verified amount/time, but amount differences require review/correction, not silent mutation.
+3. For heuristic candidate search within ±10min (config by provider; UTC) same account/direction/currency/amount, normalized merchant/reference hints; require extra distinguishing evidence beyond amount/time and unique candidate. If ambiguous or two actual movements from same provider with distinct IDs, do not merge. Source reliability: verified API/statement > notification > manual inferred, not universally true; keep evidence. Cross-source duplicates provisional until resolved; prevent double-post by delaying ambiguous candidate posting, show pending amounts. Owner can merge/keep separate with audit, reverse duplicate via atomic correction if already booked.
+4. Separately pair internal transfer opposite directions across own accounts: amount match + known source/destination/transfer ref and time; fees separate. Missing leg review/in-transit. Do not conflate topup and merchant expense.
+5. Classification after identity resolution: rule/AI propose type/category; financial command creates suspense or correct journal. Incoming not automatically salary; outgoing not automatically expense. Unknown case review. Job idempotent even crash after posting, use event/command key.
+
+## 7. Reconciliation and observability
+For each account maintain baseline cutoff, `last_seen_event`, `last_sync_success`, provider cursor, last balance snapshot as-of and basis. Daily reconcile at same snapshot time: calculated closing = opening + signed movements; compare actual booked balance; show difference, gap interval, source coverage, unresolved/provisional count. Missing data: request backfill if documented, import CSV/statement, owner confirm adjustments separately. Don't claim full coverage if API off/notifications revoked or no recent verified baseline. Export reconciliation report. Metrics: accepted/ignored/duplicates/parse failure, webhook latency, jobs backlog, notification last signal, cost quota; no sensitive logs. App displays `ACTIVE`, `DEGRADED`, `PAUSED`, `AUTH_REQUIRED`, `UNVERIFIED`, `UNSUPPORTED`, `BILLING_BLOCKED`, `OFFLINE`, `ERROR`; independent sources can have different states. Health last event not equal permission status; zero recent events may be normal, label unknown rather than fake failure.

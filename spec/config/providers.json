@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-27",
+  "default_live_enabled": false,
+  "zero_cost_required": true,
+  "institutions": [
+    {"id":"VCB","name":"Vietcombank","kind":"BANK","api":"UNKNOWN","notification":"TEST_REQUIRED","api_candidates":["VCB_AIS","FINVERSE","CASSO"],"billing":"UNKNOWN"},
+    {"id":"MOMO","name":"MoMo","kind":"WALLET","api":"MERCHANT_ONLY","notification":"TEST_REQUIRED","api_candidates":[],"billing":"UNKNOWN"},
+    {"id":"TPBANK","name":"TPBank","kind":"BANK","api":"DOCUMENTED","provider":"SEPAY","credit":"DOCUMENTED","debit":"DOCUMENTED","balance":"DOCUMENTED","backfill":"UNKNOWN","notification":"TEST_REQUIRED","billing":"BLOCKED_UNTIL_VERIFIED"},
+    {"id":"MB","name":"MB Bank","kind":"BANK","api":"DOCUMENTED","provider":"SEPAY","credit":"DOCUMENTED","debit":"DOCUMENTED","balance":"UNKNOWN","backfill":"UNKNOWN","notification":"TEST_REQUIRED","billing":"BLOCKED_UNTIL_VERIFIED"},
+    {"id":"ACB","name":"ACB","kind":"BANK","api":"UNKNOWN","provider":"SEPAY","notification":"TEST_REQUIRED","billing":"UNKNOWN"},
+    {"id":"ZALOPAY","name":"ZaloPay","kind":"WALLET","api":"MERCHANT_ONLY","notification":"TEST_REQUIRED","billing":"UNKNOWN"},
+    {"id":"VNPAY","name":"VNPAY","kind":"WALLET","api":"MERCHANT_ONLY","notification":"TEST_REQUIRED","billing":"UNKNOWN"},
+    {"id":"BIDV","name":"BIDV","kind":"BANK","api":"UNKNOWN","notification":"TEST_REQUIRED","billing":"UNKNOWN"},
+    {"id":"VIETINBANK","name":"VietinBank","kind":"BANK","api":"UNKNOWN","notification":"TEST_REQUIRED","billing":"UNKNOWN"},
+    {"id":"OTHER","name":"Other","kind":"OTHER","api":"UNKNOWN","notification":"TEST_REQUIRED","billing":"UNKNOWN"},
+    {"id":"CASH","name":"Cash","kind":"CASH","api":"UNSUPPORTED","notification":"UNSUPPORTED","billing":"NOT_APPLICABLE"}
+  ],
+  "providers": [{"id":"SEPAY","docs":"https://docs.sepay.vn/","pricing":"https://sepay.vn/bang-gia.html","status":"DISABLED","personal_read_only":true,"hard_fee_cap":"UNKNOWN"}],
+  "notification_parsers": [],
+  "notes": "No real Android package names, notification templates or verified credentials supplied. Gate 0 populates registry from consented device evidence. Do not enable merchant APIs as AIS."
+}
