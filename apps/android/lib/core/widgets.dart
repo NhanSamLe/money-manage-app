@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../app/theme/moma_theme.dart';
 import 'network/api_client.dart';
 import '../app/theme/palette.dart';
+import 'ui/moma_switch.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -496,7 +497,7 @@ class LabeledSwitch extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       Expanded(child: HelpLabel(label, help: help)),
-      Switch(value: value, onChanged: onChanged),
+      MomaSwitch(value: value, onChanged: onChanged),
     ],
   );
 }

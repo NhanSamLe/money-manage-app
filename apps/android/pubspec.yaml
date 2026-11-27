@@ -48,6 +48,8 @@ dependencies:
   material_symbols_icons: ^4.2960.0
   qr_flutter: ^4.1.0
   onesignal_flutter: ^5.8.0
+  image_picker: ^1.2.4
+  google_mlkit_text_recognition: ^1.0.3
 
 dev_dependencies:
   flutter_test:

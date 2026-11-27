@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/theme/moma_theme.dart';
@@ -13,6 +12,7 @@ import '../../core/sheets.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../auth/auth_service.dart';
+import '../notify_capture/notify_capture_page.dart';
 
 /// Settings only contain things a person uses the app for (plans, data, appearance, help). Server, API and
 /// provider configuration is deliberately not user-editable: this is a finance app, not an admin console.
@@ -118,6 +118,13 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () => context.push('/banks'),
               ),
               _Item(
+                icon: Symbols.notifications_active_rounded,
+                color: const Color(0xFFE0A100),
+                title: 'Thông báo ngân hàng trên máy',
+                subtitle: 'Tự ghi giao dịch từ thông báo ứng dụng ngân hàng, ví',
+                onTap: () => openNotifyCaptureSettings(context),
+              ),
+              _Item(
                 icon: Symbols.qr_code_2_rounded,
                 color: const Color(0xFF1B8A5A),
                 title: 'Nhận tiền bằng mã QR',
@@ -173,17 +180,7 @@ class SettingsPage extends ConsumerWidget {
                 color: const Color(0xFF2F80ED),
                 title: 'Giới thiệu MoMa',
                 subtitle: 'Phiên bản và thông tin ứng dụng',
-                onTap: () async {
-                  final info = await PackageInfo.fromPlatform();
-                  if (!context.mounted) return;
-                  showLicensePage(
-                    context: context,
-                    applicationName: 'MoMa',
-                    applicationVersion: '${info.version}+${info.buildNumber}',
-                    applicationLegalese:
-                        '© 2026 Lê Đào Nhân Sâm. Bảo lưu mọi quyền.',
-                  );
-                },
+                onTap: () => context.push('/about'),
               ),
             ],
           ),

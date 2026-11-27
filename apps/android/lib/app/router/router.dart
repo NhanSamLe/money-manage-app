@@ -5,8 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/models.dart';
 import '../../core/providers.dart';
+import '../../core/push.dart';
+import '../../features/insights/insights_page.dart';
+import '../../features/reminders/reminder_settings_page.dart';
 import '../../core/ui/header.dart';
+import '../../features/about/about_page.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/banks/bank_connect_page.dart';
 import '../../features/notifications/notifications.dart';
@@ -24,6 +29,7 @@ import '../../features/imports/csv_import_page.dart';
 import '../../features/settings/categories_page.dart';
 import '../../features/auth/forgot_page.dart';
 import '../../features/transactions/quick_entry_page.dart';
+import '../../features/transactions/tx_detail_page.dart';
 
 const _publicRoutes = {
   '/splash',
@@ -76,7 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final auth = Supabase.instance.client.auth;
   final refresh = _AuthRefresh(auth.onAuthStateChange);
   ref.onDispose(refresh.dispose);
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/splash',
     refreshListenable: Listenable.merge([refresh, signupInProgress]),
     redirect: (context, state) {
@@ -157,12 +163,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/ai', builder: (_, _) => const _TabEntry(2)),
       GoRoute(path: '/import', builder: (_, _) => const CsvImportPage()),
       GoRoute(path: '/categories', builder: (_, _) => const CategoriesPage()),
+      GoRoute(path: '/about', builder: (_, _) => const AboutPage()),
+      GoRoute(
+        path: '/tx/:id',
+        builder: (_, state) => TxDetailPage(
+          txId: state.pathParameters['id']!,
+          initial: state.extra is MomaTx ? state.extra as MomaTx : null,
+        ),
+      ),
       GoRoute(
         path: '/forgot',
         pageBuilder: (_, state) => _fade(state, const ForgotPage()),
       ),
+      GoRoute(path: '/insights', builder: (_, _) => const InsightsPage()),
+      GoRoute(
+        path: '/insights/:id',
+        builder: (_, state) =>
+            InsightDetailPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reminders',
+        builder: (_, _) => const ReminderSettingsPage(),
+      ),
     ],
   );
+  // Notification taps navigate through this router (queued until the app is past splash/sign-in).
+  Push.attachRouter(router);
+  return router;
 });
 
 /// Wraps a feature page that has its own body in the shared green header with a back button.

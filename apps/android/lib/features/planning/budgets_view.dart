@@ -214,9 +214,9 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
         ),
         const SizedBox(height: 12),
         MoneyField(controller: _limit, hint: 'Hạn mức'),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Chuyển phần chưa dùng sang tháng sau'),
+        LabeledSwitch(
+          label: 'Chuyển phần chưa dùng sang tháng sau',
+          help: 'Nếu tháng này chi ít hơn hạn mức, phần còn lại được cộng vào hạn mức tháng sau.',
           value: _carryover,
           onChanged: (v) => setState(() => _carryover = v),
         ),

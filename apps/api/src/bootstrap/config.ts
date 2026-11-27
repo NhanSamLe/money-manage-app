@@ -15,6 +15,10 @@ export interface Env {
   OWNER_EMAIL: string;
   /** Optional: only for legacy Supabase projects that still sign tokens with a shared HS256 secret. */
   SUPABASE_JWT_SECRET?: string;
+  /** OneSignal App ID (public). Defaults to the MoMa app. */
+  ONESIGNAL_APP_ID?: string;
+  /** OneSignal REST API key. Absent => push notifications are OFF. */
+  ONESIGNAL_REST_KEY?: string;
 }
 
 export interface Config {
@@ -28,8 +32,14 @@ export interface Config {
   sepayWebhookSecret?: string;
   ownerEmail: string;
   jwtSecret?: string;
+  /** OneSignal App ID (always set; defaults to the MoMa app). */
+  onesignalAppId?: string;
+  /** Undefined => push is OFF. */
+  onesignalRestKey?: string;
   dbTimeoutMs: number;
 }
+
+export const DEFAULT_ONESIGNAL_APP_ID = "fce35790-4bdd-420a-aedb-0d41593e7894";
 
 // New-style secret keys (sb_secret_...) are not JWTs and must go in `apikey` only; legacy service_role JWTs need both headers.
 export function serviceHeaders(cfg: Pick<Config, "serviceRoleKey">): Record<string, string> {
@@ -57,6 +67,8 @@ export function loadConfig(env: Env): Config {
     ...(env.SEPAY_WEBHOOK_SECRET ? { sepayWebhookSecret: env.SEPAY_WEBHOOK_SECRET } : {}),
     ...(env.DEEPSEEK_API_KEY ? { deepseekKey: env.DEEPSEEK_API_KEY } : {}),
     ...(env.SUPABASE_JWT_SECRET ? { jwtSecret: env.SUPABASE_JWT_SECRET } : {}),
+    onesignalAppId: env.ONESIGNAL_APP_ID || DEFAULT_ONESIGNAL_APP_ID,
+    ...(env.ONESIGNAL_REST_KEY ? { onesignalRestKey: env.ONESIGNAL_REST_KEY } : {}),
     dbTimeoutMs: DB_TIMEOUT_MS,
   };
 }

@@ -26,6 +26,7 @@ class PickField<T> extends StatefulWidget {
     this.help,
     this.validator,
     this.icon,
+    this.errorText,
   });
   final T? initialValue;
   final InputDecoration? decoration;
@@ -36,6 +37,9 @@ class PickField<T> extends StatefulWidget {
   final String? help;
   final String? Function(T?)? validator;
   final IconData? icon;
+
+  /// Error forced by the parent form on submit (shown right under the field).
+  final String? errorText;
 
   @override
   State<PickField<T>> createState() => _PickFieldState<T>();
@@ -92,7 +96,8 @@ class _PickFieldState<T> extends State<PickField<T>> {
     final pal = context.pal;
     final shown = _labelFor(_value);
     final enabled = widget.onChanged != null;
-    final hasError = _error != null;
+    final err = _error ?? widget.errorText;
+    final hasError = err != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -139,7 +144,7 @@ class _PickFieldState<T> extends State<PickField<T>> {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 6, 0, 0),
             child: Text(
-              _error!,
+              err,
               style: const TextStyle(color: MomaColors.expense, fontSize: 12),
             ),
           ),

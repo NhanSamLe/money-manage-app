@@ -10,6 +10,7 @@ import '../../core/ui/nav.dart';
 import '../assistant/assistant_page.dart';
 import '../dashboard/dashboard_page.dart';
 import '../dashboard/reports_page.dart';
+import '../notify_capture/notify_capture_page.dart';
 import '../settings/settings_page.dart';
 import '../transactions/transactions_page.dart';
 
@@ -29,6 +30,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     Future.microtask(() async {
       await ref.read(outboxProvider.notifier).load();
       await ref.read(outboxProvider.notifier).flush();
+      // Bank/e-wallet notifications captured while the app was closed: record those with a chosen account.
+      if (mounted) {
+        try {
+          await autoRecordNotifications(ref);
+        } catch (_) {}
+      }
     });
   }
 

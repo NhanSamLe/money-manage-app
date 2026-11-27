@@ -30,6 +30,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget build(BuildContext context) {
     final summary = ref.watch(summaryProvider);
     final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+    // First run without any account: open the guided setup once per app session.
+    final accState = ref.watch(accountsProvider);
+    if (!_autoSetupShown && accState.hasValue && accounts.isEmpty) {
+      _autoSetupShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.push('/onboarding');
+      });
+    }
     final txs =
         ref.watch(transactionsProvider).value?.items ?? const <MomaTx>[];
     final profile = ref.watch(profileProvider).value;
@@ -722,3 +730,6 @@ class _SetupCard extends StatelessWidget {
     );
   }
 }
+
+/// Guided setup opens at most once per app session.
+bool _autoSetupShown = false;

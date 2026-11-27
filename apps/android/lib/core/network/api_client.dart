@@ -59,6 +59,16 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> put(String path, Object body) async {
+    final uri = Uri.parse('${await _store.apiBase()}$path');
+    final headers = await _headers();
+    return _decode(
+      await _send(
+        () => _http.put(uri, headers: headers, body: jsonEncode(body)),
+      ),
+    );
+  }
+
   /// Sends one command. The caller owns [commandId] so a retry after a lost response reuses the same id.
   Future<Map<String, dynamic>> command(
     String type,

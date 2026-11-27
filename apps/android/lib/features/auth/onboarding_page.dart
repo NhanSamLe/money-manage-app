@@ -10,6 +10,7 @@ import '../../core/account_presets.dart';
 import '../../core/icons.dart';
 import '../../core/models.dart';
 import '../../core/money/money.dart';
+import '../../core/money/money_input.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
@@ -21,6 +22,7 @@ import '../guide/guide_content.dart';
 
 const _stepTitles = [
   'Hồ sơ',
+  'Tiền mặt',
   'Tài khoản',
   'Kiểm tra số dư',
   'Nguồn dữ liệu',
@@ -39,6 +41,9 @@ class OnboardingPage extends ConsumerStatefulWidget {
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
+  final _cashForm = GlobalKey<FormState>();
+  final _cashAmount = TextEditingController();
+  final _cashCmd = ApiClient.newId();
   int _step = 0;
   bool _busy = false;
   bool _nameLoaded = false;
@@ -46,6 +51,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   @override
   void dispose() {
     _name.dispose();
+    _cashAmount.dispose();
     super.dispose();
   }
 
@@ -56,19 +62,76 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       await _saveName();
       if (!mounted) return;
     }
-    if (_step == 1 && (ref.read(accountsProvider).value ?? const []).isEmpty) {
-      await showErrorDialog(
-        context,
-        'Hãy thêm ít nhất một tài khoản để bắt đầu ghi giao dịch.',
-        title: 'Chưa có tài khoản',
-      );
-      return;
+    if (_step == 1) {
+      if (!await _saveCash()) return;
+      if (!mounted) return;
     }
     if (_step == _stepTitles.length - 1) {
       if (mounted) context.go('/home');
       return;
     }
     setState(() => _step++);
+  }
+
+  /// Step "Tiền mặt": the starting cash on hand becomes a CASH account with that opening balance, so every
+  /// later transaction has a real starting point. Skipped when a cash account already exists.
+  Future<bool> _saveCash() async {
+    final accounts = ref.read(accountsProvider).value ?? const <Account>[];
+    if (accounts.any((a) => a.kind == 'CASH')) return true;
+    if (!(_cashForm.currentState?.validate() ?? false)) return false;
+    final amount = parseVndInput(_cashAmount.text) ?? 0;
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiProvider).command('ACCOUNT_CREATE', {
+        'kind': 'CASH',
+        'institution': 'Tiền mặt',
+        'name': 'Tiền mặt',
+        'opening_amount': amount.toString(),
+        'baseline_at': DateTime.now().toUtc().toIso8601String(),
+      }, commandId: _cashCmd);
+      refreshAll(ref);
+      return true;
+    } on ApiException catch (e) {
+      if (mounted) await showErrorDialog(context, e.message);
+      return false;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _cash(BuildContext context) {
+    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+    final cash = accounts.where((a) => a.kind == 'CASH').toList();
+    return Form(
+      key: _cashForm,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          _head(
+            context,
+            'Bạn đang có bao nhiêu tiền mặt?',
+            'Đây là điểm xuất phát của sổ. MoMa cộng trừ từ con số này theo từng khoản chi tiêu, thu nhập sau đó.',
+          ),
+          if (cash.isNotEmpty)
+            _Note(
+              icon: Symbols.check_circle_rounded,
+              text: 'Đã có tài khoản tiền mặt "${cash.first.name}". Bấm Tiếp tục để sang bước sau.',
+            )
+          else ...[
+            MoneyField(
+              controller: _cashAmount,
+              hint: 'Số tiền mặt đang có',
+              optional: true,
+            ),
+            const SizedBox(height: 12),
+            const _Note(
+              icon: Symbols.info_rounded,
+              text: 'Không chắc con số chính xác thì nhập gần đúng hoặc để trống, sau này có thể điều chỉnh số dư.',
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _saveName() async {
@@ -163,12 +226,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       case 0:
         return _profile(context);
       case 1:
-        return _accounts(context);
+        return _cash(context);
       case 2:
-        return _balances(context);
+        return _accounts(context);
       case 3:
-        return _sources(context);
+        return _balances(context);
       case 4:
+        return _sources(context);
+      case 5:
         return _options(context);
       default:
         return _finish(context);

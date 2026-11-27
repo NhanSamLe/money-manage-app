@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../app/theme/palette.dart';
 import '../../core/account_presets.dart';
@@ -12,6 +14,7 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
 import '../../core/ui/labeled_field.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/validators.dart';
 import '../../core/widgets.dart';
 
@@ -47,6 +50,15 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   final _opening = TextEditingController();
   final _commandId = ApiClient.newId();
   bool _busy = false;
+  late String? _pickedInst = widget.preset?.institution;
+  bool _autoName = false;
+  String? _instError;
+  static const _other = '__other';
+
+  List<String> _instOptions() => {
+    for (final p in accountPresets)
+      if (p.kind == _kind) p.institution,
+  }.toList();
 
   static const _kinds = ['CASH', 'BANK', 'WALLET', 'SAVINGS', 'CREDIT_CARD'];
 
@@ -59,7 +71,10 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   }
 
   Future<void> _save() async {
-    if (_busy || !(_form.currentState?.validate() ?? false)) return;
+    final formOk = _form.currentState?.validate() ?? false;
+    final instOk = _kind == 'CASH' || (_pickedInst != null && _institution.text.trim().isNotEmpty);
+    if (!instOk) setState(() => _instError = 'Chọn nơi mở tài khoản.');
+    if (_busy || !formOk || !instOk) return;
     final opening = _opening.text.trim().isEmpty
         ? null
         : parseVndInput(_opening.text);
@@ -116,34 +131,89 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(
-              'Loại tài khoản',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: pal.ink,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
+            PickField<String>(
+              initialValue: _kind,
+              decoration: const InputDecoration(labelText: 'Loại tài khoản'),
+              icon: accountIcon(_kind),
+              items: [
                 for (final k in _kinds)
-                  ChoiceChip(
-                    avatar: Icon(accountIcon(k), size: 18),
-                    label: Text(accountKindLabel(k)),
-                    selected: _kind == k,
-                    showCheckmark: false,
-                    selectedColor: pal.tint,
-                    side: BorderSide(
-                      color: _kind == k ? MomaColors.emerald : pal.line,
-                    ),
-                    shape: const StadiumBorder(),
-                    onSelected: (_) => setState(() => _kind = k),
-                  ),
+                  DropdownMenuItem(value: k, child: Text(accountKindLabel(k))),
               ],
+              onChanged: (v) => setState(() {
+                _kind = v ?? _kind;
+                _pickedInst = null;
+                _institution.text = _kind == 'CASH' ? 'Tiền mặt' : '';
+                if (_kind == 'CASH') _name.text = 'Tiền mặt';
+              }),
             ),
+            if (_kind == 'BANK') ...[
+              const SizedBox(height: 12),
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  Navigator.pop(context, false);
+                  context.push('/banks');
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: pal.tint,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Symbols.sync_alt_rounded, color: MomaColors.emerald),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Muốn tiền vào, ra tự ghi? Kết nối tài khoản ngân hàng thật thay vì nhập tay.',
+                          style: TextStyle(fontSize: 13, height: 1.35, color: pal.ink),
+                        ),
+                      ),
+                      const Icon(Symbols.chevron_right_rounded),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (_kind != 'CASH') ...[
+              const SizedBox(height: 16),
+              PickField<String>(
+                key: ValueKey('inst-$_kind'),
+                initialValue: _pickedInst,
+                decoration: const InputDecoration(labelText: 'Ngân hàng hoặc nơi mở'),
+                icon: Symbols.account_balance_rounded,
+                errorText: _pickedInst == null ? _instError : null,
+                items: [
+                  for (final n in _instOptions())
+                    DropdownMenuItem(value: n, child: Text(n)),
+                  const DropdownMenuItem(value: _other, child: Text('Khác')),
+                ],
+                onChanged: (v) => setState(() {
+                  _pickedInst = v;
+                  if (v != null && v != _other) {
+                    _institution.text = v;
+                    if (_name.text.isEmpty || _autoName) {
+                      _name.text = v;
+                      _autoName = true;
+                    }
+                  } else {
+                    _institution.text = '';
+                  }
+                }),
+              ),
+              if (_pickedInst == _other) ...[
+                const SizedBox(height: 16),
+                LabeledField(
+                  label: 'Tên nơi mở',
+                  hint: 'Nhập tên',
+                  controller: _institution,
+                  icon: Symbols.edit_rounded,
+                  required: true,
+                  validator: V.all([V.required('nơi mở tài khoản'), V.maxLength(60, 'Tên')]),
+                ),
+              ],
+            ],
             const SizedBox(height: 16),
             LabeledField(
               label: 'Tên tài khoản',
@@ -152,21 +222,9 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
               icon: Symbols.edit_rounded,
               required: true,
               textInputAction: TextInputAction.next,
+              onChanged: (_) => _autoName = false,
               validator: V.all([
                 V.required('tên tài khoản'),
-                V.maxLength(60, 'Tên'),
-              ]),
-            ),
-            const SizedBox(height: 16),
-            LabeledField(
-              label: 'Ngân hàng hoặc nơi mở',
-              hint: 'Nhập ngân hàng hoặc ví',
-              controller: _institution,
-              icon: Symbols.account_balance_rounded,
-              required: true,
-              textInputAction: TextInputAction.next,
-              validator: V.all([
-                V.required('nơi mở tài khoản'),
                 V.maxLength(60, 'Tên'),
               ]),
             ),

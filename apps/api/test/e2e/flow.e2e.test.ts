@@ -353,10 +353,17 @@ describe("bank connection via SePay (SePay faked, database real)", () => {
     }
     return new Response("{}", { status: 404 });
   };
+  // OneSignal faked: one push per APPLIED bank event, none for duplicates or unmatched accounts.
+  const pushes: { external_id: string[]; title: string; body: string }[] = [];
+  const fakePush: typeof fetch = async (_input, init) => {
+    const b = JSON.parse(String(init?.body));
+    pushes.push({ external_id: b.include_aliases.external_id, title: b.headings.vi, body: b.contents.vi });
+    return new Response(JSON.stringify({ id: "n" }), { status: 200 });
+  };
 
   beforeAll(() => {
-    const cfg = { ...cfgForBank(), sepayToken: "sepay-token", sepayWebhookKey: KEY } as Config;
-    bankApp = buildApp(() => ({ cfg, gw: new SupabaseFinanceGateway(cfg), verifier: new SessionVerifier(cfg), sepayFetch: fakeSepay }));
+    const cfg = { ...cfgForBank(), sepayToken: "sepay-token", sepayWebhookKey: KEY, onesignalRestKey: "push-key" } as Config;
+    bankApp = buildApp(() => ({ cfg, gw: new SupabaseFinanceGateway(cfg), verifier: new SessionVerifier(cfg), sepayFetch: fakeSepay, pushFetch: fakePush }));
   });
   function cfgForBank() {
     return { supabaseUrl: h.baseUrl, publishableKey: "pk", serviceRoleKey: "sb_secret_e2e", ownerEmail: "owner@example.test", dbTimeoutMs: 10_000 };
@@ -401,10 +408,15 @@ describe("bank connection via SePay (SePay faked, database real)", () => {
 
   it("posts money out once, classifies it by rule, and ignores a redelivery", async () => {
     const before = (await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n;
+    const pushedBefore = pushes.length;
     const r1 = await hook();
     expect(r1.json.success).toBe(true);
+    expect(pushes.length).toBe(pushedBefore + 1);
+    expect(pushes[pushes.length - 1]).toMatchObject({ title: "Tiền ra -65.000 đ", body: "Vietcombank • CAFE HIGHLANDS" });
+    expect(pushes[pushes.length - 1]!.external_id).toEqual([owner]); // OneSignal external_id = owner (Supabase auth user id)
     const r2 = await hook(); // SePay retry
     expect(r2.json.success).toBe(true);
+    expect(pushes.length).toBe(pushedBefore + 1); // DUPLICATE: no second push
     const after = (await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n;
     expect(after).toBe(before + 1);
     const tx = (await h.db.query("select t.amount::int as amount, t.kind::text as kind, c.name from pf_tx t join pf_category c on c.id = t.category_id order by t.created_at desc limit 1")).rows[0];
@@ -414,23 +426,30 @@ describe("bank connection via SePay (SePay faked, database real)", () => {
   });
 
   it("money in is posted as income; an unlinked account number is acknowledged but never posted", async () => {
+    const pushedBefore = pushes.length;
     await hook({ id: 92705, referenceCode: "FT-WEBHOOK-2", transactionDate: vnAfter(2), transferType: "in", transferAmount: 1000000, content: "LUONG THANG 11", accumulated: 3435000 });
+    expect(pushes.length).toBe(pushedBefore + 1);
+    expect(pushes[pushes.length - 1]!.title).toBe("Tiền vào +1.000.000 đ");
     const accounts = (await call("GET", "/v1/accounts")).json.data as any[];
     expect(accounts.find((a) => a.name === "VCB chinh").balance).toBe("3435000");
     const before = (await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n;
     const stranger = await hook({ id: 1, accountNumber: "0000000000", referenceCode: "FT-X" });
     expect(stranger.status).toBe(200);
     expect((await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n).toBe(before);
+    expect(pushes.length).toBe(pushedBefore + 1); // unmatched account: no push
   });
 
   it("shows the bank balance next to the ledger balance and the sync poll adds only what is new", async () => {
     const links = (await req("GET", "/v1/banks/links")).json.data as any[];
     expect(links[0]).toMatchObject({ bank_balance: "3435000", ledger_balance: "3435000", last4: "8888", holder_name: "NGUYEN VAN A" });
+    const pushedBefore = pushes.length;
     const sync = await req("POST", "/v1/banks/sepay/sync");
     expect(sync.status).toBe(200);
     expect(sync.json.data.applied).toBe(2); // the two polled transactions are new
+    expect(pushes.length).toBe(pushedBefore + 2);
     const again = await req("POST", "/v1/banks/sepay/sync");
     expect(again.json.data.applied).toBe(0); // dedup: same bank references
+    expect(pushes.length).toBe(pushedBefore + 2);
     const ledger = await h.db.query("select coalesce(sum(signed_amount::numeric),0) as s from pf_entry");
     expect(Number(ledger.rows[0].s)).toBe(0);
   });

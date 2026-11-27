@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:moma/core/models.dart';
 import 'package:moma/core/outbox.dart';
 import 'package:moma/core/network/api_client.dart';
 import 'package:moma/core/providers.dart';
@@ -13,6 +14,7 @@ import 'package:moma/features/dashboard/reports_page.dart';
 import 'package:moma/features/planning/planning_page.dart';
 import 'package:moma/features/transactions/quick_entry_page.dart';
 import 'package:moma/features/transactions/transactions_page.dart';
+import 'package:moma/features/transactions/tx_detail_page.dart';
 
 import 'support/fake_api.dart';
 
@@ -25,6 +27,13 @@ Widget host(Widget page, FakeApi api, {List<Override> extra = const []}) {
         path: '/',
         builder: (_, _) => const Scaffold(body: Text('home')),
         routes: [GoRoute(path: 'page', builder: (_, _) => page)],
+      ),
+      GoRoute(
+        path: '/tx/:id',
+        builder: (_, state) => TxDetailPage(
+          txId: state.pathParameters['id']!,
+          initial: state.extra is MomaTx ? state.extra as MomaTx : null,
+        ),
       ),
     ],
   );
@@ -111,10 +120,10 @@ void main() {
       expect(find.text('Cơm trưa'), findsOneWidget);
       expect(find.text('Lương'), findsNothing);
       await tester.enterText(find.byType(TextField), '');
-      // Filters open as a bottom sheet: pick "Thu nhập" from the "Loại" chip.
-      await tester.tap(find.text('Loại'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Thu nhập').last);
+      // Type chips (with counts) sit under the search box.
+      await tester.ensureVisible(find.textContaining('Thu nhập ('));
+      await tester.tap(find.textContaining('Thu nhập ('));
       await tester.pumpAndSettle();
       expect(find.text('Cơm trưa'), findsNothing);
       expect(find.text('Lương'), findsWidgets);
@@ -130,13 +139,18 @@ void main() {
         );
         await tester.tap(find.text('Cơm trưa'));
         await tester.pumpAndSettle();
-        expect(find.text('Sửa'), findsOneWidget);
+        expect(find.text('Chi tiết giao dịch'), findsOneWidget);
+        expect(find.text('Chỉnh sửa'), findsOneWidget);
         await tester.tap(find.text('Hủy giao dịch'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Xác nhận hủy'));
+        // Confirm dialog (with the required reason) before anything is sent.
+        expect(api.commands, isEmpty);
+        await tester.tap(find.text('Hủy giao dịch').last);
         await tester.pumpAndSettle();
         expect(api.commands.single.type, 'TX_REVERSE');
         expect(api.commands.single.payload['expected_version'], 2);
+        // The detail page closes after a successful cancel.
+        expect(find.text('Chi tiết giao dịch'), findsNothing);
 
         await tester.tap(find.text('Thu nợ'));
         await tester.pumpAndSettle();

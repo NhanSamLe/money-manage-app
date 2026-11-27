@@ -9,6 +9,7 @@ import { MAX_INPUT_CHARS, MODEL, MONTHLY_CAP_MICRO, actualMicro, buildMessages, 
 import { AGENT_MAX_OUTPUT_TOKENS, AgentRequest, buildAgentMessages, resolveAgentOutput, type AgentContext } from "../modules/ai/agent";
 import { vietQrPayload } from "../modules/bank/vietqr";
 import { SepayClient, hmacHex, parseWebhook, ruleCategory, verifyWebhook, type BankEvent } from "../modules/bank/sepay";
+import { bankEventPush, sendPush } from "../modules/push/onesignal";
 import { canonicalJson, sha256Hex } from "../shared/canonical";
 import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
@@ -27,6 +28,8 @@ interface Deps {
   ai?: ProviderCall;
   /** Injectable fetch for the SePay client (tests). */
   sepayFetch?: typeof fetch;
+  /** Injectable fetch for OneSignal push (tests). */
+  pushFetch?: typeof fetch;
 }
 type Vars = { Variables: { rid: string; session: Session; owner: string; deviceId: string } };
 
@@ -325,10 +328,11 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const categories = (await d.gw.readCategories(link.owner_id)) as { id: string; name: string; type: string }[];
     const categoryId = await classifyBankEvent(d, link.owner_id, ev, categories);
     if (!categoryId) return c.json({ success: true, note: "no category" });
-    await d.gw.ingestBankEvent({
+    const ingested = await d.gw.ingestBankEvent({
       externalId: ev.externalId, numberHash, direction: ev.direction, amount: ev.amount, atIso: ev.atIso,
       content: ev.content, categoryId, balance: ev.balance, payload: { source: "webhook", gateway: ev.bankName, content: ev.content },
     });
+    if (ingested.status === "APPLIED") await notifyBankEvent(c, d, link.owner_id, ev, ingested.tx_id);
     return c.json({ success: true });
   });
 
@@ -341,7 +345,8 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     let list;
     try {
       list = await new SepayClient(d.cfg.sepayToken, d.sepayFetch).accounts();
-    } catch {
+    } catch (e) {
+      console.log(JSON.stringify({ op: "sepay_failed", err: String((e as Error)?.message ?? e).slice(0, 200) }));
       throw new DomainError("BANK_UNAVAILABLE");
     }
     void hashKey;
@@ -363,7 +368,8 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     let list;
     try {
       list = await new SepayClient(d.cfg.sepayToken, d.sepayFetch).accounts();
-    } catch {
+    } catch (e) {
+      console.log(JSON.stringify({ op: "sepay_failed", err: String((e as Error)?.message ?? e).slice(0, 200) }));
       throw new DomainError("BANK_UNAVAILABLE");
     }
     // The account must be one SePay lists for this token: SePay is what verified it with the bank.
@@ -407,7 +413,8 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     let list;
     try {
       list = await new SepayClient(d.cfg.sepayToken, d.sepayFetch).accounts();
-    } catch {
+    } catch (e) {
+      console.log(JSON.stringify({ op: "sepay_failed", err: String((e as Error)?.message ?? e).slice(0, 200) }));
       throw new DomainError("BANK_UNAVAILABLE");
     }
     const a = list.find((x) => x.id === q.external_id);
@@ -431,7 +438,8 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
       let events;
       try {
         events = await client.transactions(l.external_id, l.cursor_id);
-      } catch {
+      } catch (e) {
+        console.log(JSON.stringify({ op: "sepay_failed", err: String((e as Error)?.message ?? e).slice(0, 200) }));
         throw new DomainError("BANK_UNAVAILABLE");
       }
       for (const ev of events) {
@@ -442,7 +450,10 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
           externalId: ev.externalId, numberHash, direction: ev.direction, amount: ev.amount, atIso: ev.atIso,
           content: ev.content, categoryId, balance: ev.balance, payload: { source: "poll", content: ev.content },
         });
-        if (r.status === "APPLIED") applied++;
+        if (r.status === "APPLIED") {
+          applied++;
+          await notifyBankEvent(c, d, owner, ev, r.tx_id);
+        }
       }
       const last = events.length ? (events[events.length - 1] as unknown as { rawId?: string }).rawId : undefined;
       if (last) await d.gw.setLinkCursor(owner, l.account_id, last);
@@ -522,6 +533,21 @@ async function classifyBankEvent(d: Deps, owner: string, ev: BankEvent, categori
   } catch {
     return fallback; // budget exhausted or provider down: rules keep money flowing in without AI
   }
+}
+
+// Push for an APPLIED bank event (never for DUPLICATE/UNMATCHED). Best effort: sendPush never throws. On Workers the
+// send runs after the response via waitUntil; without an execution context (tests) it is awaited inline.
+async function notifyBankEvent(c: Context<any>, d: Deps, ownerId: string, ev: BankEvent, txId?: string): Promise<void> {
+  if (!d.cfg.onesignalRestKey) return;
+  const p = sendPush(d.cfg, d.pushFetch ?? fetch, bankEventPush(ownerId, ev, txId)).then(() => undefined);
+  let ctx: { waitUntil(p: Promise<unknown>): void } | undefined;
+  try {
+    ctx = c.executionCtx; // Hono throws when there is no execution context
+  } catch {
+    ctx = undefined;
+  }
+  if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(p);
+  else await p;
 }
 
 async function leaseIdFor(seed: string): Promise<string> {

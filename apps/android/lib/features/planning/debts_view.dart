@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/ui/labeled_field.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../app/theme/palette.dart';
 import '../../core/models.dart';
 import '../../core/money/money.dart';
 import '../../core/money/money_input.dart';
@@ -12,6 +13,7 @@ import '../../core/planning_models.dart';
 import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/moma_switch.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 
@@ -45,7 +47,7 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
               .where((d) => d.isOpen)
               .fold<int>(0, (s, d) => s + d.remaining);
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
               PillTabs<String>(
                 segments: const [
@@ -55,9 +57,10 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
                 selected: {_direction},
                 onSelectionChanged: (s) => setState(() => _direction = s.first),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Card(
-                color: const Color(0xFFE9F6EE),
+                margin: const EdgeInsets.only(bottom: 16),
+                color: context.pal.tint,
                 child: ListTile(
                   title: Text(
                     _direction == 'RECEIVABLE'
@@ -105,7 +108,9 @@ class _DebtCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final settled = !debt.isOpen;
     return Card(
+      margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         onTap: settled
             ? null
             : () => showFormSheet<void>(
@@ -298,6 +303,7 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
   final _principal = TextEditingController();
   final _note = TextEditingController();
   String? _contactId;
+  bool _existing = true;
   String? _accountId;
   bool _historical = false;
   DateTime? _due;
@@ -318,8 +324,10 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
       setState(() => _run.error = 'Nhập số tiền hợp lệ.');
       return;
     }
-    if (_contactId == null && _alias.text.trim().isEmpty) {
-      setState(() => _run.error = 'Chọn hoặc nhập tên người.');
+    final hasContacts = (ref.read(contactsProvider).value ?? const []).isNotEmpty;
+    final pickExisting = hasContacts && _existing;
+    if (pickExisting ? _contactId == null : _alias.text.trim().isEmpty) {
+      setState(() => _run.error = pickExisting ? 'Chọn người.' : 'Nhập tên người.');
       return;
     }
     if (!_historical && _accountId == null) {
@@ -328,8 +336,8 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
     }
     final ok = await _run.run(() async {
       final api = ref.read(apiProvider);
-      var contact = _contactId;
-      if (contact == null) {
+      var contact = pickExisting ? _contactId : null;
+      if (contact == null || !pickExisting) {
         // Same command id on retry replays instead of creating a second contact.
         final r = await api.command('CONTACT_CREATE', {
           'alias': _alias.text.trim(),
@@ -378,25 +386,41 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
           onSelectionChanged: (s) => setState(() => _direction = s.first),
         ),
         const SizedBox(height: 12),
-        if (contacts.isNotEmpty)
+        if (contacts.isNotEmpty) ...[
+          PillTabs<bool>(
+            segments: const [
+              ButtonSegment(value: true, label: Text('Người đã có')),
+              ButtonSegment(value: false, label: Text('Người mới')),
+            ],
+            selected: {_existing},
+            onSelectionChanged: (s) => setState(() {
+              _existing = s.first;
+              if (!_existing) _contactId = null;
+            }),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (contacts.isNotEmpty && _existing)
           PickField<String>(
+            key: const ValueKey('contact-existing'),
             isExpanded: true,
             initialValue: _contactId,
-            decoration: const InputDecoration(labelText: 'Người có sẵn'),
+            decoration: const InputDecoration(labelText: 'Chọn người'),
+            icon: Symbols.person_rounded,
             items: [
               for (final c in contacts)
                 DropdownMenuItem(value: c.id, child: Text(c.alias)),
             ],
             onChanged: (v) => setState(() => _contactId = v),
-          ),
-        if (_contactId == null) ...[
-          const SizedBox(height: 12),
+          )
+        else
           LabeledField(
-            label: 'Người mới',
+            label: 'Tên người mới',
             hint: 'Nhập tên người',
             controller: _alias,
+            icon: Symbols.person_add_rounded,
+            required: true,
           ),
-        ],
         const SizedBox(height: 12),
         MoneyField(controller: _principal, hint: 'Số tiền gốc'),
         LabeledSwitch(
@@ -421,22 +445,13 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
             onChanged: (v) => setState(() => _accountId = v),
           ),
         const SizedBox(height: 12),
-        ListTile(
-          tileColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          leading: const Icon(Symbols.event_rounded),
-          title: Text(_due == null ? 'Hạn trả' : dateLabel(_due!)),
-          onTap: () async {
-            final d = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now().add(const Duration(days: 30)),
-              firstDate: DateTime.now().subtract(const Duration(days: 365)),
-              lastDate: DateTime.now().add(const Duration(days: 3650)),
-            );
-            if (d != null) setState(() => _due = d);
-          },
+        DateField(
+          label: 'Hạn trả',
+          value: _due,
+          initialDate: DateTime.now().add(const Duration(days: 30)),
+          firstDate: DateTime.now().subtract(const Duration(days: 365)),
+          lastDate: DateTime.now().add(const Duration(days: 3650)),
+          onChanged: (d) => setState(() => _due = d),
         ),
         const SizedBox(height: 12),
         LabeledField(label: 'Ghi chú', hint: 'Nhập ghi chú', controller: _note),

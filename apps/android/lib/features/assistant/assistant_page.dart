@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -12,12 +16,12 @@ import '../../core/money/money.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
-import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
 
-/// "Trợ lý AI": an agent, not a chat. One sentence becomes concrete steps (record, transfer, lend, repay, budget,
-/// cancel, answer). Low-risk steps run by themselves when "Tự động ghi" is on; everything else is one tap away.
-/// The model only plans: every step is validated by the server and executed through the normal idempotent commands.
+/// The finance assistant ("Trợ lý tài chính"), the owner's finance assistant: an agent, not a chat. One sentence becomes concrete steps (record,
+/// transfer, lend, repay, budget, cancel, answer). Low-risk steps run by themselves when "Tự động ghi" is on;
+/// everything else is one tap away. The model only plans: every step is validated by the server and executed
+/// through the normal idempotent commands. Photos are read on the device (OCR) and only the text is sent.
 
 enum _St { pending, running, done, failed, skipped }
 
@@ -43,19 +47,29 @@ class _Step {
 }
 
 class _Turn {
-  _Turn.user(this.text)
+  _Turn.user(this.text, {this.image})
     : isUser = true,
       steps = const [],
       reply = '',
-      plan = const [];
+      plan = const [],
+      at = DateTime.now();
   _Turn.agent(this.reply, this.steps, [this.plan = const []])
     : isUser = false,
-      text = '';
+      text = '',
+      image = null,
+      at = DateTime.now();
   final List<Map<String, dynamic>> plan;
   final bool isUser;
   final String text;
   final String reply;
   final List<_Step> steps;
+  final DateTime at;
+
+  /// Photo the request was read from (kept in memory for the bubble only, never uploaded).
+  final Uint8List? image;
+
+  /// The server answered this user message.
+  bool delivered = false;
 }
 
 class _Chat extends Notifier<List<_Turn>> {
@@ -84,6 +98,28 @@ class _Auto extends Notifier<bool> {
 
 final aiAutoProvider = NotifierProvider<_Auto, bool>(_Auto.new);
 
+/// Upper bound of `text` accepted by POST /v1/ai/agent (server `MAX_INPUT_CHARS`).
+const _maxRequestChars = 1600;
+
+/// Cap for the OCR part of a photo request (the server limit above wins while it is smaller).
+const _maxOcrChars = 1500;
+
+const _photoPrefix = 'Ảnh hóa đơn/chuyển khoản:\n';
+
+/// Request text for a receipt / transfer screenshot: the OCR lines, whitespace-normalised and truncated.
+String _photoRequest(String ocr) {
+  final lines = ocr
+      .split('\n')
+      .map((l) => l.trim().replaceAll(RegExp(r'\s+'), ' '))
+      .where((l) => l.isNotEmpty)
+      .join('\n');
+  final room = math.min(_maxOcrChars, _maxRequestChars - _photoPrefix.length);
+  return '$_photoPrefix${lines.length > room ? lines.substring(0, room) : lines}';
+}
+
+String _hhmm(DateTime t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
 class AssistantPage extends ConsumerStatefulWidget {
   const AssistantPage({super.key});
   @override
@@ -93,6 +129,12 @@ class AssistantPage extends ConsumerStatefulWidget {
 class _AssistantPageState extends ConsumerState<AssistantPage> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+
+  /// Waiting for the agent's plan (drives the staged loading bubble).
+  bool _waiting = false;
+
+  /// Picking a photo / running OCR.
+  bool _reading = false;
 
   @override
   void dispose() {
@@ -110,6 +152,10 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
       );
     }
   });
+
+  void _setWaiting(bool v) {
+    if (mounted && _waiting != v) setState(() => _waiting = v);
+  }
 
   /// The agent's last plan with the status of each step, so the next sentence can continue the same task
   /// ("50k" after "which amount?") instead of starting over.
@@ -159,22 +205,26 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
     ];
   }
 
-  Future<void> _send([String? preset]) async {
+  Future<void> _send([String? preset, Uint8List? image]) async {
     final text = (preset ?? _input.text).trim();
     if (text.isEmpty || ref.read(_busyProvider)) return;
-    _input.clear();
+    if (preset == null) _input.clear();
     final chat = ref.read(_chatProvider.notifier);
     final history = _history();
-    chat.add(_Turn.user(text));
+    final mine = _Turn.user(text, image: image);
+    chat.add(mine);
     ref.read(_busyProvider.notifier).set(true);
+    _setWaiting(true);
     _toEnd();
     try {
+      final previous = _previousPlan();
       final data = await ref.read(apiProvider).post('/ai/agent', {
         'text': text,
         'auto': ref.read(aiAutoProvider),
         if (history.isNotEmpty) 'history': history,
-        if (_previousPlan() != null) 'previous': _previousPlan(),
+        'previous': ?previous,
       }) as Map<String, dynamic>;
+      mine.delivered = true;
       final steps = [
         for (final a in (data['actions'] as List))
           _Step(Map<String, dynamic>.from(a as Map)),
@@ -183,6 +233,7 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
         for (final p in (data['plan'] as List? ?? const []))
           Map<String, dynamic>.from(p as Map),
       ]);
+      _setWaiting(false);
       chat.add(turn);
       _toEnd();
       if (ref.read(aiAutoProvider)) {
@@ -191,10 +242,73 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
         }
       }
     } on ApiException catch (e) {
+      _setWaiting(false);
       if (mounted) await showErrorDialog(context, e.message);
     } finally {
+      _setWaiting(false);
       ref.read(_busyProvider.notifier).set(false);
       _toEnd();
+    }
+  }
+
+  /// "+" button: take or pick a photo of a receipt / transfer screenshot, read it on the device and send the text.
+  Future<void> _attach() async {
+    if (_reading || ref.read(_busyProvider)) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Symbols.photo_camera_rounded),
+                title: const Text('Chụp ảnh'),
+                onTap: () => Navigator.pop(c, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Symbols.photo_library_rounded),
+                title: const Text('Chọn từ thư viện'),
+                onTap: () => Navigator.pop(c, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    setState(() => _reading = true);
+    try {
+      final file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 2000,
+        maxHeight: 2000,
+        imageQuality: 88,
+      );
+      if (file == null) return;
+      final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+      final String ocr;
+      try {
+        ocr = (await recognizer.processImage(
+          InputImage.fromFilePath(file.path),
+        )).text;
+      } finally {
+        await recognizer.close();
+      }
+      if (ocr.trim().isEmpty) {
+        if (mounted) showSnack(context, 'Không đọc được chữ trong ảnh');
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() => _reading = false);
+      await _send(_photoRequest(ocr), bytes);
+    } on PlatformException {
+      if (mounted) showSnack(context, 'Không mở được ảnh');
+    } finally {
+      if (mounted && _reading) setState(() => _reading = false);
     }
   }
 
@@ -256,21 +370,21 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
     final busy = ref.watch(_busyProvider);
     final auto = ref.watch(aiAutoProvider);
     final pal = context.pal;
-    return MomaPage(
-      title: 'Trợ lý AI',
-      titleIcon: Symbols.auto_awesome_rounded,
+    return ColoredBox(
+      color: pal.bg,
       child: Column(
         children: [
+          const _Header(),
           Expanded(
             child: turns.isEmpty
-                ? _Intro(onPick: _send)
+                ? _Welcome(onPick: (t) => _send(t))
                 : ListView(
                     controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     children: [
                       for (final t in turns)
                         t.isUser
-                            ? _UserBubble(text: t.text)
+                            ? _UserBubble(turn: t)
                             : _AgentTurn(
                                 turn: t,
                                 onRun: _run,
@@ -290,120 +404,443 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
                                   ref.read(_chatProvider.notifier).touch();
                                 },
                               ),
-                      if (busy) const _Thinking(),
+                      if (_waiting) const _Thinking(),
                     ],
                   ),
           ),
           Container(
-            color: pal.surface,
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () => ref.read(aiAutoProvider.notifier).set(!auto),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              auto
-                                  ? Symbols.bolt_rounded
-                                  : Symbols.touch_app_rounded,
-                              size: 18,
-                              color: auto ? MomaColors.emerald : pal.muted,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              auto ? 'Tự động ghi: Bật' : 'Tự động ghi: Tắt',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
+            decoration: BoxDecoration(
+              color: pal.surface,
+              border: Border(top: BorderSide(color: pal.lineSoft)),
+            ),
+            padding: const EdgeInsets.fromLTRB(10, 4, 12, 10),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () =>
+                            ref.read(aiAutoProvider.notifier).set(!auto),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                auto
+                                    ? Symbols.bolt_rounded
+                                    : Symbols.touch_app_rounded,
+                                size: 18,
                                 color: auto ? MomaColors.emerald : pal.muted,
                               ),
+                              const SizedBox(width: 6),
+                              Text(
+                                auto ? 'Tự động ghi: Bật' : 'Tự động ghi: Tắt',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: auto ? MomaColors.emerald : pal.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkResponse(
+                        radius: 18,
+                        onTap: () => showInfoDialog(
+                          context,
+                          title: 'Tự động ghi',
+                          message: 'Khi bật, Trợ lý tự ghi các khoản thu chi và chuyển khoản mà Trợ lý hiểu chắc chắn, rồi cho bạn hoàn tác nếu sai. Các việc quan trọng như công nợ, ngân sách hay hủy giao dịch luôn chờ bạn xác nhận.',
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Symbols.help_rounded,
+                            size: 18,
+                            color: pal.muted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 44,
+                        height: 48,
+                        child: Center(
+                          child: _reading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.4,
+                                    color: MomaColors.emerald,
+                                  ),
+                                )
+                              : IconButton(
+                                  tooltip: 'Gửi ảnh hóa đơn',
+                                  onPressed: busy ? null : _attach,
+                                  icon: Icon(
+                                    Symbols.add_circle_rounded,
+                                    size: 28,
+                                    color: busy ? pal.hint : MomaColors.emerald,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextField(
+                          controller: _input,
+                          maxLength: _maxRequestChars,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            hintText: 'Nhắn cho Trợ lý',
+                            filled: true,
+                            fillColor: pal.surfaceAlt,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
                             ),
-                          ],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(26),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(26),
+                              borderSide: BorderSide(color: pal.lineSoft),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(26),
+                              borderSide: const BorderSide(
+                                color: MomaColors.emerald,
+                                width: 1.4,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    InkResponse(
-                      radius: 18,
-                      onTap: () => showInfoDialog(
-                        context,
-                        title: 'Tự động ghi',
-                        message: 'Khi bật, Trợ lý tự ghi các khoản thu chi và chuyển khoản mà nó hiểu chắc chắn, rồi cho bạn hoàn tác nếu sai. Các việc quan trọng như công nợ, ngân sách hay hủy giao dịch luôn chờ bạn xác nhận.',
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          Symbols.help_rounded,
-                          size: 18,
-                          color: pal.muted,
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        tooltip: 'Gửi',
+                        onPressed: busy ? null : () => _send(),
+                        style: IconButton.styleFrom(
+                          backgroundColor: MomaColors.emerald,
+                          disabledBackgroundColor: MomaColors.emerald
+                              .withValues(alpha: 0.4),
+                          shape: const CircleBorder(),
+                          minimumSize: const Size(48, 48),
+                        ),
+                        icon: const Icon(
+                          Symbols.arrow_upward_rounded,
+                          color: Colors.white,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Assistant avatar: brand gradient circle with the sparkle mark.
+class _AssistantAvatar extends StatelessWidget {
+  const _AssistantAvatar({this.size = 28});
+  final double size;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [MomaColors.forest, MomaColors.emerald],
+      ),
+    ),
+    child: Icon(
+      Symbols.auto_awesome_rounded,
+      color: MomaColors.mint,
+      fill: 1,
+      size: size * 0.55,
+    ),
+  );
+}
+
+/// Persona header (the shared plain app bar has no avatar / subtitle slot).
+class _Header extends StatelessWidget {
+  const _Header();
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    return Container(
+      decoration: BoxDecoration(
+        color: pal.surface,
+        border: Border(bottom: BorderSide(color: pal.lineSoft)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(
+            children: [
+              const _AssistantAvatar(size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _input,
-                        maxLength: 600,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          hintText: 'Nhập yêu cầu cho Trợ lý',
-                          filled: true,
-                          fillColor: pal.surfaceAlt,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                    Text(
+                      'Trợ lý tài chính',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: pal.ink,
+                        height: 1.2,
+                      ),
+                    ),
+                    Text(
+                      'Ghi chép, trả lời và đề xuất cho bạn',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.5, color: pal.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Welcome extends ConsumerWidget {
+  const _Welcome({required this.onPick});
+  final void Function(String) onPick;
+
+  static const _chips = [
+    (Symbols.restaurant_rounded, 'Hôm nay ăn tối 200k'),
+    (Symbols.payments_rounded, 'Nhận lương 15 triệu'),
+    (Symbols.handshake_rounded, 'Nam mượn tôi 500k'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pal = context.pal;
+    final name = callName(ref.watch(profileProvider).value);
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: pal.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: pal.lineSoft),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const _AssistantAvatar(size: 44),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Chào $name',
+                      style: TextStyle(
+                        color: pal.ink,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Mình là Trợ lý tài chính của MoMa. Bạn cứ nói tự nhiên hoặc gửi ảnh hóa đơn, mình sẽ ghi thu chi, chuyển khoản, cho vay, thu nợ, đặt ngân sách và trả lời số liệu giúp bạn.',
+                style: TextStyle(color: pal.ink, fontSize: 14, height: 1.45),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Bạn có thể thử:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  color: pal.muted,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final c in _chips)
+                    Material(
+                      color: pal.tintSoft,
+                      shape: StadiumBorder(side: BorderSide(color: pal.tint)),
+                      child: InkWell(
+                        customBorder: const StadiumBorder(),
+                        onTap: () => onPick(c.$2),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: const BorderSide(
-                              color: MomaColors.emerald,
-                              width: 1.4,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(c.$1, size: 17, color: MomaColors.emerald),
+                              const SizedBox(width: 6),
+                              Text(
+                                c.$2,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.5,
+                                  color: pal.ink,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      tooltip: 'Gửi',
-                      onPressed: busy ? null : () => _send(),
-                      style: IconButton.styleFrom(
-                        backgroundColor: MomaColors.emerald,
-                        minimumSize: const Size(48, 48),
-                      ),
-                      icon: const Icon(
-                        Symbols.arrow_upward_rounded,
-                        color: Colors.white,
-                      ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UserBubble extends StatelessWidget {
+  const _UserBubble({required this.turn});
+  final _Turn turn;
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final image = turn.image;
+    final caption = image != null && turn.text.startsWith(_photoPrefix)
+        ? turn.text.substring(_photoPrefix.length)
+        : turn.text;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, left: 56),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            padding: image != null
+                ? const EdgeInsets.all(4)
+                : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: MomaColors.emerald,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(6),
+              ),
+            ),
+            child: image == null
+                ? Text(
+                    turn.text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.5,
+                      height: 1.4,
                     ),
-                  ],
+                  )
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.memory(
+                            image,
+                            width: 212,
+                            height: 180,
+                            fit: BoxFit.cover,
+                            cacheWidth: 424,
+                            gaplessPlayback: true,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Ảnh hóa đơn/chuyển khoản',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                caption,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 12,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, right: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _hhmm(turn.at),
+                  style: TextStyle(fontSize: 11, color: pal.hint),
                 ),
+                if (turn.delivered) ...[
+                  const SizedBox(width: 3),
+                  const Icon(
+                    Symbols.done_all_rounded,
+                    size: 14,
+                    color: MomaColors.emerald,
+                  ),
+                ],
               ],
             ),
           ),
@@ -413,167 +850,135 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
   }
 }
 
-class _Intro extends StatelessWidget {
-  const _Intro({required this.onPick});
-  final Future<void> Function([String?]) onPick;
-
-  static const _chips = [
-    (
-      Symbols.restaurant_rounded,
-      Color(0xFFFF8A3D),
-      'Sáng cà phê 30k, trưa cơm 65k',
-    ),
-    (
-      Symbols.payments_rounded,
-      Color(0xFF1B8A5A),
-      'Nhận lương 15 triệu vào Vietcombank',
-    ),
-    (Symbols.handshake_rounded, Color(0xFF8B5CF6), 'Nam mượn 500k hôm qua'),
-    (Symbols.insights_rounded, Color(0xFF2F80ED), 'Tháng này tiêu bao nhiêu'),
+/// Staged "thinking" bubble: the status line advances through the stages (and stays on the last one) with a
+/// soft shimmer and typing dots, until the agent's reply replaces it.
+class _Thinking extends StatefulWidget {
+  const _Thinking();
+  static const stages = [
+    'Đang đọc yêu cầu…',
+    'Đang xem dữ liệu của bạn…',
+    'Đang thực hiện…',
   ];
+  @override
+  State<_Thinking> createState() => _ThinkingState();
+}
+
+class _ThinkingState extends State<_Thinking>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+  Timer? _timer;
+  int _stage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 1200), (t) {
+      if (_stage >= _Thinking.stages.length - 1) {
+        t.cancel();
+        return;
+      }
+      setState(() => _stage++);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _anim.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final pal = context.pal;
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [MomaColors.forest, MomaColors.emerald],
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Symbols.auto_awesome_rounded,
-                color: MomaColors.mint,
-                size: 30,
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Bạn nói, MoMa làm',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _AssistantAvatar(),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: pal.bubble,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(6),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Ghi thu chi, chuyển khoản, cho vay, thu nợ, đặt ngân sách, hủy giao dịch, xem số liệu. Một câu có thể làm nhiều việc cùng lúc.',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 13.5,
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'Thử ngay',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
-            color: pal.ink,
-          ),
-        ),
-        const SizedBox(height: 10),
-        for (final c in _chips)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: pal.surface,
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => onPick(c.$3),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
+              child: AnimatedBuilder(
+                animation: _anim,
+                builder: (context, _) {
+                  final v = _anim.value;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      CategoryAvatar(iconData: c.$1, color: c.$2, size: 38),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          c.$3,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14.5,
+                      for (var i = 0; i < 3; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Opacity(
+                            opacity:
+                                0.3 +
+                                0.7 *
+                                    (0.5 +
+                                        0.5 *
+                                            math.sin(
+                                              (v - i * 0.18) * 2 * math.pi,
+                                            )),
+                            child: Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: MomaColors.emerald,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: ShaderMask(
+                            key: ValueKey(_stage),
+                            blendMode: BlendMode.srcIn,
+                            shaderCallback: (r) => LinearGradient(
+                              colors: [
+                                pal.muted,
+                                MomaColors.emerald,
+                                pal.muted,
+                              ],
+                              stops: const [0, 0.5, 1],
+                              begin: Alignment(-3 + 4 * v, 0),
+                              end: Alignment(-1 + 4 * v, 0),
+                            ).createShader(r),
+                            child: Text(
+                              _Thinking.stages[_stage],
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      Icon(
-                        Symbols.north_east_rounded,
-                        size: 18,
-                        color: pal.muted,
-                      ),
                     ],
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
-}
-
-class _UserBubble extends StatelessWidget {
-  const _UserBubble({required this.text});
-  final String text;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12, left: 56),
-    child: Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: MomaColors.emerald,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14.5,
-            height: 1.4,
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _Thinking extends StatelessWidget {
-  const _Thinking();
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      children: [
-        const SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.4,
-            color: MomaColors.emerald,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text('Đang xử lý...', style: TextStyle(color: context.pal.muted)),
-      ],
-    ),
-  );
 }
 
 class _AgentTurn extends StatelessWidget {
@@ -596,95 +1001,121 @@ class _AgentTurn extends StatelessWidget {
     final pending = turn.steps
         .where((s) => s.isCommand && s.status == _St.pending)
         .length;
+    const bubbleShape = BorderRadius.only(
+      topLeft: Radius.circular(6),
+      topRight: Radius.circular(18),
+      bottomLeft: Radius.circular(18),
+      bottomRight: Radius.circular(18),
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (turn.reply.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8, right: 24),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: pal.bubble,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        turn.reply,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          height: 1.4,
-                          color: pal.ink,
-                        ),
+          const _AssistantAvatar(),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (turn.reply.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8, right: 16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: pal.bubble,
+                        borderRadius: bubbleShape,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              turn.reply,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                height: 1.4,
+                                color: pal.ink,
+                              ),
+                            ),
+                          ),
+                          InkResponse(
+                            radius: 18,
+                            onTap: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: turn.reply),
+                              );
+                              if (context.mounted) {
+                                showSnack(context, 'Đã sao chép');
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8, top: 2),
+                              child: Icon(
+                                Symbols.content_copy_rounded,
+                                size: 16,
+                                color: pal.muted,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    InkResponse(
-                      radius: 18,
-                      onTap: () async {
-                        await Clipboard.setData(ClipboardData(text: turn.reply));
-                        if (context.mounted) showSnack(context, 'Đã sao chép');
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8, top: 2),
-                        child: Icon(
-                          Symbols.content_copy_rounded,
-                          size: 16,
-                          color: pal.muted,
+                  ),
+                for (final s in turn.steps)
+                  if (s.type == 'ASK')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, right: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pal.bubble,
+                          borderRadius: bubbleShape,
+                        ),
+                        child: Text(
+                          '${s.json['question']}',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            height: 1.4,
+                            color: pal.ink,
+                          ),
                         ),
                       ),
+                    )
+                  else if (s.type == 'ANSWER')
+                    _AnswerCard(json: s.json)
+                  else
+                    _ActionCard(
+                      step: s,
+                      onRun: onRun,
+                      onUndo: onUndo,
+                      onSkip: onSkip,
                     ),
-                  ],
-                ),
-              ),
-            ),
-          for (final s in turn.steps)
-            if (s.type == 'ASK')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8, right: 24),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                if (pending > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: FilledButton(
+                      onPressed: onRunAll,
+                      child: Text('Xác nhận tất cả ($pending)'),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: pal.bubble,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
                   child: Text(
-                    '${s.json['question']}',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      height: 1.4,
-                      color: pal.ink,
-                    ),
+                    _hhmm(turn.at),
+                    style: TextStyle(fontSize: 11, color: pal.hint),
                   ),
                 ),
-              )
-            else if (s.type == 'ANSWER')
-              _AnswerCard(json: s.json)
-            else
-              _ActionCard(
-                step: s,
-                onRun: onRun,
-                onUndo: onUndo,
-                onSkip: onSkip,
-              ),
-          if (pending > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: FilledButton(
-                onPressed: onRunAll,
-                child: Text('Xác nhận tất cả ($pending)'),
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );

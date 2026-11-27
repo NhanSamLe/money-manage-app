@@ -5,7 +5,7 @@ import { DomainError } from "../../shared/errors";
 // The model never does arithmetic, never sees account numbers / emails, and its output is validated against allowed ids.
 
 export const MODEL = "deepseek-flash";
-export const MAX_INPUT_CHARS = 600;
+export const MAX_INPUT_CHARS = 1600;
 export const MAX_OUTPUT_TOKENS = 400;
 /** Monthly hard cap, integer micro-USD ($1.00). */
 export const MONTHLY_CAP_MICRO = 1_000_000;

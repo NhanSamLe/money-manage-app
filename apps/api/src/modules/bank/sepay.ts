@@ -149,11 +149,11 @@ export class SepayClient {
 
   private async get(path: string): Promise<unknown> {
     const res = await this.fetchImpl(`${this.base}${path}`, {
-      headers: { authorization: `Bearer ${this.token}`, "content-type": "application/json" },
+      headers: { authorization: `Bearer ${this.token}`, accept: "application/json", "user-agent": "MoMa/1.0 (+https://moma-api.superaicore.indevs.in)" },
       signal: AbortSignal.timeout(12_000),
     });
     if (res.status === 429) throw new Error("SEPAY_RATE_LIMITED");
-    if (!res.ok) throw new Error(`SEPAY_HTTP_${res.status}`);
+    if (!res.ok) throw new Error(`SEPAY_HTTP_${res.status}:${(await res.text().catch(() => "")).slice(0, 120)}`);
     return res.json();
   }
 
