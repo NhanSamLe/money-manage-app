@@ -13,6 +13,8 @@ import '../dashboard/reports_page.dart';
 import '../notify_capture/notify_capture_page.dart';
 import '../settings/settings_page.dart';
 import '../transactions/transactions_page.dart';
+import '../update/update_sheet.dart';
+import '../widgets/widgets.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -36,6 +38,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           await autoRecordNotifications(ref);
         } catch (_) {}
       }
+      if (mounted) WidgetSync.refresh(ref).ignore(); // home-screen widget data
+    });
+    // In-app update check (at most once per 12 hours), after the first screen has settled.
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) maybeAutoCheckForUpdate(context).ignore();
     });
   }
 

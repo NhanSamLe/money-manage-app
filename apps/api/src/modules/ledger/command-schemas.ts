@@ -42,6 +42,8 @@ const txCreate = command(
       note: z.string().max(1000).optional(),
       merchant: z.string().min(1).max(120).optional(),
       fee: posMoney.optional(),
+      /** Where the entry came from. BANK / RECURRING / SYSTEM are set by the server only (migration 009). */
+      source: z.enum(["MANUAL", "AI", "NOTIFICATION", "IMPORT"]).optional(),
     })
     .strict()
     .superRefine((p, ctx) => {

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "QR nhận tiền" 4x2: QR on the left, account details and an amount button on the right. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/wg_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="10dp">
+
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:background="@drawable/wg_qr_frame"
+        android:padding="6dp">
+
+        <ImageView
+            android:id="@+id/r_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/wg_qr_title"
+            android:maxWidth="150dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/wg_qr_sample" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/WgText.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wg_qr_title_vietqr"
+            android:textColor="@color/wg_accent" />
+
+        <TextView
+            android:id="@+id/r_bank"
+            style="@style/WgText.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/wg_sample_bank"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/r_masked"
+            style="@style/WgText.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/wg_sample_masked"
+            android:textSize="12.5sp" />
+
+        <TextView
+            android:id="@+id/r_holder"
+            style="@style/WgText.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/wg_sample_holder"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/r_amount_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/wg_button_pill"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="@string/wg_qr_amount_btn"
+            android:textColor="@color/wg_button_icon"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

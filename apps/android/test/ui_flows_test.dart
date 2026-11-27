@@ -259,6 +259,26 @@ void main() {
       await tester.tap(find.text('Tiết kiệm'));
       await tester.pumpAndSettle();
       expect(find.text('Du lịch Đà Lạt'), findsOneWidget);
+      expect(find.text('1 mục tiêu'), findsOneWidget);
+      expect(find.text('Tất cả (1)'), findsOneWidget);
+      expect(find.text('Đang thực hiện (1)'), findsOneWidget);
+      expect(find.text('Đã hoàn thành (0)'), findsOneWidget);
+      expect(find.text('Chưa đặt hạn'), findsOneWidget);
+      expect(find.text('Kiên trì để chạm đích'), findsOneWidget);
+      await tester.ensureVisible(find.text('Đã hoàn thành (0)'));
+      await tester.tap(find.text('Đã hoàn thành (0)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Du lịch Đà Lạt'), findsNothing);
+      await tester.ensureVisible(find.text('Tất cả (1)'));
+      await tester.tap(find.text('Tất cả (1)'));
+      await tester.pumpAndSettle();
+      // The card still opens the save/withdraw sheet.
+      await tester.tap(find.text('Du lịch Đà Lạt'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dành thêm'), findsWidgets);
+      expect(find.text('Rút lại'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Rút lại'))).pop();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ngân sách'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Vượt 200.000 ₫'), findsOneWidget);

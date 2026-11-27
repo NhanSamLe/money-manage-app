@@ -125,36 +125,31 @@ class _AboutPageState extends State<AboutPage> {
               icon: Symbols.account_balance_rounded,
               color: Color(0xFF2F80ED),
               title: 'Ghi chép tự động từ ngân hàng',
-              body:
-                  'Biến động số dư được nhận và ghi thành giao dịch ngay, không cần nhập tay.',
+              body: 'Biến động số dư được nhận và ghi thành giao dịch ngay, không cần nhập tay.',
             ),
             const _Feature(
               icon: Symbols.smart_toy_rounded,
               color: Color(0xFF8B5CF6),
               title: 'Trợ lý tài chính AI',
-              body:
-                  'Nhắn tin tự nhiên để ghi chi tiêu, hỏi tình hình tài chính, nhận gợi ý.',
+              body: 'Nhắn tin tự nhiên để ghi chi tiêu, hỏi tình hình tài chính, nhận gợi ý.',
             ),
             const _Feature(
               icon: Symbols.savings_rounded,
               color: Color(0xFF1B8A5A),
               title: 'Ngân sách & mục tiêu',
-              body:
-                  'Đặt hạn mức chi theo danh mục và theo dõi tiến độ các mục tiêu tiết kiệm.',
+              body: 'Đặt hạn mức chi theo danh mục và theo dõi tiến độ các mục tiêu tiết kiệm.',
             ),
             const _Feature(
               icon: Symbols.handshake_rounded,
               color: Color(0xFFFF8A3D),
               title: 'Công nợ',
-              body:
-                  'Theo dõi khoản cho vay, đi vay và các lần trả nợ rõ ràng.',
+              body: 'Theo dõi khoản cho vay, đi vay và các lần trả nợ rõ ràng.',
             ),
             const _Feature(
               icon: Symbols.shield_lock_rounded,
               color: Color(0xFF0C6A54),
               title: 'Bảo mật — dữ liệu của riêng bạn',
-              body:
-                  'Dữ liệu nằm trong cơ sở dữ liệu riêng của bạn, không quảng cáo, không theo dõi.',
+              body: 'Dữ liệu nằm trong cơ sở dữ liệu riêng của bạn, không quảng cáo, không theo dõi.',
             ),
             const SizedBox(height: 16),
             const _Label('Thông tin'),
@@ -180,11 +175,8 @@ class _AboutPageState extends State<AboutPage> {
                     icon: Symbols.gavel_rounded,
                     color: const Color(0xFF8B5CF6),
                     title: 'Điều khoản sử dụng',
-                    onTap: () => _showDoc(
-                      context,
-                      'Điều khoản sử dụng',
-                      _termsSections,
-                    ),
+                    onTap: () =>
+                        _showDoc(context, 'Điều khoản sử dụng', _termsSections),
                   ),
                   _divider(context),
                   _InfoRow(
@@ -430,11 +422,7 @@ Future<void> _showDoc(
           const SizedBox(height: 4),
           Text(
             s.$2,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: ctx.pal.muted,
-            ),
+            style: TextStyle(fontSize: 14, height: 1.5, color: ctx.pal.muted),
           ),
           const SizedBox(height: 14),
         ],

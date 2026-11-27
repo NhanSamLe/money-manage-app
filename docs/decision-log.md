@@ -27,3 +27,12 @@ DeepSeek `deepseek-flash` qua Worker (khóa chỉ ở Worker). AI trả đề xu
 - Cron Worker 15 phút (`scheduled()`) + dự phòng `POST /v1/internal/tick` (header `x-cron-secret` = secret `CRON_SECRET`, gọi từ GitHub Actions `moma-tick.yml`) vì tài khoản Cloudflare chưa đăng ký được cron. Mỗi push được "claim" một lần trong `pf_push_log` nên gọi trùng vô hại.
 - Bữa ăn "đã ghi" = có khoản chi POSTED thuộc danh mục "Ăn uống" (theo tên hoặc icon `restaurant`) hoặc danh mục con, trong khung giờ địa phương (sáng 04:00–10:30, trưa 10:30–15:00, tối 15:00–23:00). Nhắc bữa ăn/kiểm tra tiền mặt chỉ gửi trong 3 giờ sau giờ hẹn; cảnh báo ngân sách chỉ 07:00–22:00.
 - Số liệu phân tích do SQL/TS tính; AI (DeepSeek, qua trần chi phí) chỉ viết lời; tắt/hết hạn mức thì dùng văn bản theo luật. Mức chi đề xuất = trung vị các kỳ gần nhất (4 tuần / 3 tháng / 14 ngày, bỏ kỳ không ghi chép), kéo một nửa về mục tiêu ngân sách nếu cao hơn, làm tròn lên 10.000 đ. So sánh với kỳ trước cùng số ngày đã trôi qua.
+
+## D-015 — Bỏ trần chi phí AI theo tháng
+Chủ sở hữu quyết định không giới hạn chi phí AI. `MONTHLY_CAP_MICRO` đặt rất lớn (không chặn thực tế); mỗi lần gọi vẫn ghi lại chi phí trong `pf_ai_usage`. Thay thế mức trần 1 USD/tháng ở D-013.
+
+## D-016 — Đánh phiên bản mỗi bản phát hành
+Mỗi bản phát hành có phiên bản mới theo SemVer. Trước bản phát hành hoàn chỉnh dùng 0.MINOR.PATCH (MINOR khi có tính năng mới, PATCH khi chỉ sửa lỗi); bản hoàn chỉnh đầu tiên là 1.0.0. Số build (+N) luôn tăng 1, không đặt lại. Không phát hành khi phiên bản/tag đã tồn tại, cây git chưa sạch, hoặc analyze/test chưa đạt. Bản kế tiếp: 0.2.0+2.
+
+## D-017 — Khóa ứng dụng
+Khóa khi mở lại sau khi app bị tắt hẳn, hoặc khi quay lại sau thời gian ở nền vượt mức chọn (15 phút / 30 phút mặc định / 1 giờ / 2 giờ). Sai PIN 5 lần thì chờ cố định 10 giây. Back ở màn hình gốc đưa app xuống nền thay vì đóng.

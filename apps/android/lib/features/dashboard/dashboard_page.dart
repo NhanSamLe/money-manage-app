@@ -12,6 +12,7 @@ import '../../core/providers.dart';
 import '../../core/ui/header.dart';
 import '../../core/ui/motion.dart';
 import '../../core/widgets.dart';
+import '../../core/ui/money_pattern.dart';
 import '../reminders/today_meals_card.dart';
 import '../transactions/transactions_page.dart';
 
@@ -289,7 +290,6 @@ class _NetWorthCard extends StatelessWidget {
     final delta = summary.income - summary.expense;
     final up = delta >= 0;
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: pal.surface,
         borderRadius: BorderRadius.circular(22),
@@ -301,118 +301,134 @@ class _NetWorthCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: MoneyPattern(
+        color: MomaColors.emerald,
+        opacity: 0.08,
+        lotus: false,
+        borderRadius: BorderRadius.circular(22),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Tài sản ròng',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: pal.muted,
-                ),
-              ),
-              const SizedBox(width: 4),
-              InkResponse(
-                radius: 16,
-                onTap: () => showInfoDialog(
-                  context,
-                  title: 'Tài sản ròng',
-                  message: 'Tổng số dư các tài khoản cộng khoản phải thu trừ khoản phải trả. Tài khoản chưa biết số dư đầu kỳ chưa được tính.',
-                ),
-                child: Icon(Symbols.help_rounded, size: 17, color: pal.muted),
-              ),
-              const Spacer(),
-              InkResponse(
-                onTap: onToggle,
-                radius: 22,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: pal.surfaceAlt,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    hidden
-                        ? Symbols.visibility_off_rounded
-                        : Symbols.visibility_rounded,
-                    size: 20,
-                    color: pal.ink,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: DefaultTextStyle.merge(
-              style: TextStyle(
-                color: pal.ink,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-              ),
-              child: hidden
-                  ? Text(mask)
-                  : CountUp(value: summary.netWorth, builder: formatVnd),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (up ? MomaColors.income : MomaColors.expense)
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      up
-                          ? Symbols.north_east_rounded
-                          : Symbols.south_east_rounded,
-                      size: 15,
-                      color: up ? MomaColors.income : MomaColors.expense,
+              Row(
+                children: [
+                  Text(
+                    'Tài sản ròng',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: pal.muted,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      hidden
-                          ? mask
-                          : '${up ? '+' : '-'}${formatVnd(delta.abs())}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12.5,
-                        color: up ? MomaColors.income : MomaColors.expense,
+                  ),
+                  const SizedBox(width: 4),
+                  InkResponse(
+                    radius: 16,
+                    onTap: () => showInfoDialog(
+                      context,
+                      title: 'Tài sản ròng',
+                      message: 'Tổng số dư các tài khoản cộng khoản phải thu trừ khoản phải trả. Tài khoản chưa biết số dư đầu kỳ chưa được tính.',
+                    ),
+                    child: Icon(
+                      Symbols.help_rounded,
+                      size: 17,
+                      color: pal.muted,
+                    ),
+                  ),
+                  const Spacer(),
+                  InkResponse(
+                    onTap: onToggle,
+                    radius: 22,
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: pal.surfaceAlt,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        hidden
+                            ? Symbols.visibility_off_rounded
+                            : Symbols.visibility_rounded,
+                        size: 20,
+                        color: pal.ink,
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: DefaultTextStyle.merge(
+                  style: TextStyle(
+                    color: pal.ink,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  child: hidden
+                      ? Text(mask)
+                      : CountUp(value: summary.netWorth, builder: formatVnd),
                 ),
               ),
-              Text(
-                'thu trừ chi tháng này',
-                style: TextStyle(fontSize: 12.5, color: pal.muted),
+              const SizedBox(height: 8),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (up ? MomaColors.income : MomaColors.expense)
+                          .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          up
+                              ? Symbols.north_east_rounded
+                              : Symbols.south_east_rounded,
+                          size: 15,
+                          color: up ? MomaColors.income : MomaColors.expense,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          hidden
+                              ? mask
+                              : '${up ? '+' : '-'}${formatVnd(delta.abs())}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            color: up ? MomaColors.income : MomaColors.expense,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'thu trừ chi tháng này',
+                    style: TextStyle(fontSize: 12.5, color: pal.muted),
+                  ),
+                ],
               ),
+              if (summary.unknownBaselines > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Chưa gồm ${summary.unknownBaselines} tài khoản chưa biết số dư đầu kỳ.',
+                    style: TextStyle(color: pal.muted, fontSize: 12),
+                  ),
+                ),
             ],
           ),
-          if (summary.unknownBaselines > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Chưa gồm ${summary.unknownBaselines} tài khoản chưa biết số dư đầu kỳ.',
-                style: TextStyle(color: pal.muted, fontSize: 12),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }

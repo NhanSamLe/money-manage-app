@@ -60,8 +60,14 @@ final _keywordRe = RegExp(
   r'(?:\bps|\bgd|giao dich|so tien(?: gd| giao dich)?|bien dong)\s*[:=]?\s*([+-])?\s?'
   '$_num$_cur?',
 );
-final _signedRe = RegExp(r'(?:^|[\s:|(\[;,])([+-])\s?' '$_num$_cur?');
-final _currencyRe = RegExp(r'(?<![\d.,])' '$_num$_cur');
+final _signedRe = RegExp(
+  r'(?:^|[\s:|(\[;,])([+-])\s?'
+  '$_num$_cur?',
+);
+final _currencyRe = RegExp(
+  r'(?<![\d.,])'
+  '$_num$_cur',
+);
 final _descRe = RegExp(
   r'(?:\bnd|noi dung(?: giao dich| gd)?|loi nhan|dien giai|\bmo ta|\bref)\s*[:.]?\s+|(?:\bnd|noi dung|loi nhan)\s*:',
 );

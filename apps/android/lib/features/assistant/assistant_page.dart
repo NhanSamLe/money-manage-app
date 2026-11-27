@@ -17,6 +17,7 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/widgets.dart';
+import 'memory_page.dart';
 
 /// The finance assistant ("Trợ lý tài chính"), the owner's finance assistant: an agent, not a chat. One sentence becomes concrete steps (record,
 /// transfer, lend, repay, budget, cancel, answer). Low-risk steps run by themselves when "Tự động ghi" is on;
@@ -627,6 +628,14 @@ class _Header extends StatelessWidget {
                       style: TextStyle(fontSize: 12.5, color: pal.muted),
                     ),
                   ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Trợ lý đã học được gì',
+                onPressed: () => openAssistantMemory(context),
+                icon: const Icon(
+                  Symbols.psychology_rounded,
+                  color: MomaColors.emerald,
                 ),
               ),
             ],

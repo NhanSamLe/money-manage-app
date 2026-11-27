@@ -144,8 +144,11 @@ void main() {
       isFalse,
     );
     expect(
-      p('com.mbmobile', 'OTP', 'Ma OTP cua quy khach la 123456. Ma GD 998877')
-          .isTransaction,
+      p(
+        'com.mbmobile',
+        'OTP',
+        'Ma OTP cua quy khach la 123456. Ma GD 998877',
+      ).isTransaction,
       isFalse,
     );
   });

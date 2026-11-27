@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/ui/labeled_field.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../core/money/money.dart';
 import '../../core/money/money_input.dart';
 import '../../core/network/api_client.dart';
@@ -13,60 +12,118 @@ import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+import '../goals/goal_insights.dart';
+import '../goals/goal_widgets.dart';
+import '../../core/ui/moma_switch.dart';
 import '../../app/theme/palette.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
-class GoalsView extends ConsumerWidget {
+/// "Tiết kiệm" tab: overview, status filter and one card per goal. Tapping a card opens the
+/// existing save/withdraw sheet.
+class GoalsView extends ConsumerStatefulWidget {
   const GoalsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final goals = ref.watch(goalsProvider);
+  ConsumerState<GoalsView> createState() => _GoalsViewState();
+}
+
+enum _GoalFilter { all, active, done }
+
+class _GoalsViewState extends ConsumerState<GoalsView> {
+  _GoalFilter _filter = _GoalFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
+    final board = ref.watch(goalsBoardProvider);
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(goalsProvider);
-        await ref.read(goalsProvider.future);
+        ref.invalidate(goalsBoardProvider);
+        await ref.read(goalsBoardProvider.future);
       },
-      child: goals.when(
+      child: board.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            ErrorView(error: e, onRetry: () => ref.invalidate(goalsProvider)),
-        data: (data) {
-          final saved = data.goals.fold<int>(0, (s, g) => s + g.allocated);
+        error: (e, _) => ErrorView(
+          error: e,
+          onRetry: () => ref.invalidate(goalsBoardProvider),
+        ),
+        data: (b) {
+          final now = DateTime.now();
+          final active = b.items.where((i) => !i.done).toList();
+          final done = b.items.where((i) => i.done).toList();
+          final shown = switch (_filter) {
+            _GoalFilter.all => b.items,
+            _GoalFilter.active => active,
+            _GoalFilter.done => done,
+          };
+          void create() =>
+              showFormSheet<void>(context, (_) => const _AddGoalSheet());
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             children: [
-              Card(
-                color: const Color(0xFFE9F6EE),
-                child: ListTile(
-                  title: const Text('Đã dành cho mục tiêu'),
-                  subtitle: const Text(
-                    'Chỉ là khoản dành riêng, không trừ vào số dư tài khoản.',
-                  ),
-                  trailing: Text(
-                    formatVnd(saved),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
+              if (b.items.isEmpty)
+                EmptyState(
+                  embedded: true,
+                  icon: Symbols.savings_rounded,
+                  title: 'Chưa có mục tiêu',
+                  hint: 'Tạo mục tiêu tiết kiệm đầu tiên của bạn.',
+                  actionLabel: 'Tạo mục tiêu mới',
+                  onAction: create,
+                )
+              else ...[
+                GoalsSummaryCard(board: b),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final (f, label, n) in [
+                        (_GoalFilter.all, 'Tất cả', b.items.length),
+                        (_GoalFilter.active, 'Đang thực hiện', active.length),
+                        (_GoalFilter.done, 'Đã hoàn thành', done.length),
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GoalFilterChip(
+                            label: '$label ($n)',
+                            active: _filter == f,
+                            onTap: () => setState(() => _filter = f),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-              if (data.goals.isEmpty)
-                const EmptyState(embedded: true, 
-                    icon: Symbols.savings_rounded,
-                    title: 'Chưa có mục tiêu',
-                    hint: 'Tạo mục tiêu tiết kiệm đầu tiên của bạn.',
+                const SizedBox(height: 12),
+                if (shown.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      _filter == _GoalFilter.done
+                          ? 'Chưa có mục tiêu nào hoàn thành.'
+                          : 'Không có mục tiêu đang thực hiện.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: context.pal.muted),
+                    ),
                   ),
-              for (final g in data.goals) _GoalCard(goal: g, data: data),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    showFormSheet<void>(context, (_) => const _AddGoalSheet()),
-                icon: const Icon(Symbols.add_rounded),
-                label: const Text('Tạo mục tiêu mới'),
-              ),
+                for (final i in shown)
+                  GoalCard(
+                    item: i,
+                    now: now,
+                    onTap: () => showFormSheet<void>(
+                      context,
+                      (_) => _GoalMoveSheet(
+                        goal: i.goal,
+                        accounts: b.data.accounts,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                OutlinedButton.icon(
+                  onPressed: create,
+                  icon: const Icon(Symbols.add_rounded),
+                  label: const Text('Tạo mục tiêu mới'),
+                ),
+              ],
             ],
           );
         },
@@ -75,65 +132,10 @@ class GoalsView extends ConsumerWidget {
   }
 }
 
-class _GoalCard extends StatelessWidget {
-  const _GoalCard({required this.goal, required this.data});
-  final Goal goal;
-  final GoalsData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final done = goal.state == 'COMPLETED';
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => showFormSheet<void>(
-          context,
-          (_) => _GoalMoveSheet(goal: goal, accounts: data.accounts),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      goal.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  if (done)
-                    const Chip(
-                      label: Text('Hoàn thành'),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: goal.progress,
-                  minHeight: 8,
-                  backgroundColor: context.pal.bg,
-                  color: MomaColors.emerald,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${formatVnd(goal.allocated)} / ${formatVnd(goal.target)}  (${(goal.progress * 100).round()}%)',
-                style: TextStyle(color: context.pal.muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+/// Goal commands change balances too: refresh planning read models and this tab's board.
+void _refreshGoals(WidgetRef ref) {
+  refreshPlanning(ref);
+  ref.invalidate(goalsBoardProvider);
 }
 
 class _AddGoalSheet extends ConsumerStatefulWidget {
@@ -146,6 +148,7 @@ class _AddGoalSheetState extends ConsumerState<_AddGoalSheet> {
   late final FormRunner _run = FormRunner(setState);
   final _name = TextEditingController();
   final _target = TextEditingController();
+  DateTime? _due;
   final String _id = ApiClient.newId();
 
   @override
@@ -165,10 +168,11 @@ class _AddGoalSheetState extends ConsumerState<_AddGoalSheet> {
       () => ref.read(apiProvider).command('GOAL_CREATE', {
         'name': _name.text.trim(),
         'target': target.toString(),
+        if (_due != null) 'due_date': isoDate(_due!),
       }, commandId: _id),
     );
     if (ok && mounted) {
-      refreshPlanning(ref);
+      _refreshGoals(ref);
       Navigator.pop(context);
     }
   }
@@ -192,6 +196,13 @@ class _AddGoalSheetState extends ConsumerState<_AddGoalSheet> {
         ),
         const SizedBox(height: 12),
         MoneyField(controller: _target, hint: 'Số tiền cần đạt'),
+        const SizedBox(height: 12),
+        DateField(
+          label: 'Hạn hoàn thành (không bắt buộc)',
+          value: _due,
+          firstDate: DateTime.now(),
+          onChanged: (d) => setState(() => _due = d),
+        ),
         FormError(_run.error),
         const SizedBox(height: 16),
         FilledButton(
@@ -243,7 +254,7 @@ class _GoalMoveSheetState extends ConsumerState<_GoalMoveSheet> {
       ),
     );
     if (ok && mounted) {
-      refreshPlanning(ref);
+      _refreshGoals(ref);
       Navigator.pop(context);
     }
   }

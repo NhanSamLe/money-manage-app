@@ -15,6 +15,8 @@ import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
 import { currentVnDate, currentVnMonth, monthRangeUtc } from "../shared/report-period";
 import { registerInsightRoutes, runScheduled } from "./routes-insights";
+import { afterAgentTurn, agentMemory, observeCommand, registerMemoryRoutes } from "./routes-memory";
+import type { MemoryGateway } from "../modules/ai/memory-gateway";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_PAGE = 50;
@@ -31,6 +33,8 @@ interface Deps {
   sepayFetch?: typeof fetch;
   /** Injectable fetch for OneSignal push (tests). */
   pushFetch?: typeof fetch;
+  /** Assistant memory gateway (tests); defaults to the Supabase RPC gateway. */
+  mg?: MemoryGateway;
 }
 type Vars = { Variables: { rid: string; session: Session; owner: string; deviceId: string } };
 
@@ -265,7 +269,9 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
       ...(defaultAccountId ? { defaultAccountId } : {}),
       ...(live[0] ? { lastTx: { id: live[0].id, version: live[0].version } } : {}),
     };
-    const { messages, bytes } = buildAgentMessages(body.text, body.history ?? [], ctx, { auto: body.auto === true, previous: body.previous });
+    // Read before acting: what the assistant has learned about this owner that is relevant to the request.
+    const memory = await agentMemory(d, owner, body.text);
+    const { messages, bytes } = buildAgentMessages(body.text, body.history ?? [], ctx, { auto: body.auto === true, previous: body.previous, memory });
     const est = estimateMicro(bytes, AGENT_MAX_OUTPUT_TOKENS);
     const { id: reservation } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO, "deepseek", MODEL);
     let out;
@@ -276,7 +282,10 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
       throw e instanceof DomainError ? e : new DomainError("AI_UNAVAILABLE");
     }
     await d.gw.aiSettle(owner, reservation, actualMicro(out.usage));
-    const result = resolveAgentOutput(parseModelJson(out.content), ctx);
+    const raw = parseModelJson(out.content);
+    const result = resolveAgentOutput(raw, ctx);
+    // Write after acting: aliases / people / preferences the model reported (validated, best effort).
+    await afterAgentTurn(c, d, owner, body.text, raw, result.plan);
     // Read-only answers are computed here from the ledger: the model never produces numbers.
     for (const a of result.actions) {
       if (a.type !== "ANSWER") continue;
@@ -479,10 +488,14 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     if (parsed.data.command_id !== key) throw new DomainError("VALIDATION_FAILED");
     const ctx: CommandContext = { ownerId: c.get("owner"), sessionId: c.get("session").sessionId, deviceId };
     const hash = await sha256Hex(canonicalJson({ owner: ctx.ownerId, command: parsed.data }));
-    return ok(c as unknown as Context<Vars>, await d.gw.executeCommand(ctx, key, hash, parsed.data));
+    const res = await d.gw.executeCommand(ctx, key, hash, parsed.data);
+    // Feedback for the assistant: edits / reversals of transactions it created (best effort, after the write).
+    await observeCommand(c, d, ctx.ownerId, parsed.data, res);
+    return ok(c as unknown as Context<Vars>, res);
   });
 
   registerInsightRoutes(app, getDeps, auth); // reminders + insights (routes-insights.ts)
+  registerMemoryRoutes(app, getDeps, auth); // assistant memory (routes-memory.ts)
 
   return app;
 }

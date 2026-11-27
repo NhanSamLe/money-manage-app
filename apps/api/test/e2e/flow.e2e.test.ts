@@ -317,15 +317,15 @@ describe("AI assistant (provider faked, database real)", () => {
     expect(u.state).toBe("UNKNOWN_CHARGE");
   });
 
-  it("blocks at the monthly cap and reports status", async () => {
+  // D-015: no practical monthly cap any more; heavy usage must not block the assistant, and usage is still recorded.
+  it("keeps working after heavy monthly usage and reports status", async () => {
     await h.db.query(
       "insert into pf_ai_usage(owner_id, period, provider, model, reserved_micro_usd, state) values ($1, date_trunc('month', now() at time zone 'UTC')::date, 'deepseek', 'deepseek-flash', 5000000, 'RESERVED')",
       [owner],
     );
     output = JSON.stringify({ action: "NONE" });
     const r = await aiCall("xin chào");
-    expect(r.status).toBe(429);
-    expect(r.json.error?.code).toBe("AI_BUDGET_EXCEEDED");
+    expect(r.status).toBe(200);
     const st = await aiApp.request("/v1/ai/status", { headers: { authorization: `Bearer ${jwt}`, "x-device-id": DEVICE } }, env);
     const body = (await st.json()) as any;
     expect(body.data.enabled).toBe(true);

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/widgets/widget_sync.dart';
 import 'models.dart';
 import 'network/api_client.dart';
 import 'storage/local_store.dart';
@@ -107,6 +108,7 @@ void refreshAll(WidgetRef ref) {
   ref.invalidate(accountsProvider);
   ref.invalidate(summaryProvider);
   ref.invalidate(transactionsProvider);
+  WidgetSync.refresh(ref).ignore(); // keep home-screen widgets in step
 }
 
 /// Selected bottom-navigation tab of the main shell (lets Home jump to "Giao dịch" etc.).

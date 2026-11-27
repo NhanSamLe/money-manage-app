@@ -11,6 +11,7 @@ import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
 import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
+import '../../core/account_presets.dart';
 
 class BankAccountInfo {
   BankAccountInfo(this.j);
@@ -156,15 +157,10 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: MomaColors.emerald.withValues(
-                                alpha: 0.14,
-                              ),
-                              child: const Icon(
-                                Symbols.account_balance_rounded,
-                                color: MomaColors.emerald,
-                              ),
+                            AccountBadge(
+                              institution: a.bank,
+                              kind: 'BANK',
+                              size: 44,
                             ),
                             const SizedBox(width: 12),
                             Expanded(

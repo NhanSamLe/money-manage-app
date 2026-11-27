@@ -22,10 +22,9 @@ import 'notify_capture_service.dart';
 import 'parser.dart';
 
 /// Opens the "Thông báo ngân hàng trên máy" page.
-Future<void> openNotifyCaptureSettings(BuildContext context) =>
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const NotifyCapturePage()),
-    );
+Future<void> openNotifyCaptureSettings(BuildContext context) => Navigator.of(
+  context,
+).push(MaterialPageRoute<void>(builder: (_) => const NotifyCapturePage()));
 
 /// Accounts a notification may be recorded into. Accounts linked through SePay are left out: their
 /// transactions already arrive from the bank, recording the notification too would count them twice.
@@ -47,7 +46,9 @@ final notifyTargetAccountsProvider = FutureProvider.autoDispose<List<Account>>((
   }
   return [
     for (final a in accounts)
-      if (!(a.kind == 'BANK' && a.last4 != null && linkedLast4.contains(a.last4)))
+      if (!(a.kind == 'BANK' &&
+          a.last4 != null &&
+          linkedLast4.contains(a.last4)))
         a,
   ];
 });
@@ -231,8 +232,7 @@ class _NotifyCapturePageState extends ConsumerState<NotifyCapturePage>
                         embedded: true,
                         icon: Symbols.notifications_active_rounded,
                         title: 'Chưa có thông báo nào',
-                        hint:
-                            'Khi có biến động số dư từ ứng dụng ngân hàng hoặc ví, thông báo sẽ hiện ở đây.',
+                        hint: 'Khi có biến động số dư từ ứng dụng ngân hàng hoặc ví, thông báo sẽ hiện ở đây.',
                       )
                     else
                       for (final n in _items) ...[
@@ -477,9 +477,8 @@ class _RecordSheetState extends ConsumerState<_RecordSheet> {
         children: [
           Text(
             'Ghi giao dịch từ ${_p.bank}',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 16),
           if (accs.isEmpty)

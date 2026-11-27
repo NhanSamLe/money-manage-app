@@ -23,9 +23,11 @@ import '../../features/accounts/accounts_page.dart';
 import '../../features/auth/onboarding_page.dart';
 import '../../features/auth/setup_page.dart';
 import '../../features/planning/planning_page.dart';
+import '../../features/profile/profile_page.dart';
 import '../../features/auth/welcome_page.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/imports/csv_import_page.dart';
+import '../../features/export/export_page.dart';
 import '../../features/settings/categories_page.dart';
 import '../../features/auth/forgot_page.dart';
 import '../../features/transactions/quick_entry_page.dart';
@@ -126,7 +128,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/accounts',
         builder: (_, _) =>
-            const _SubPage(title: 'Tài khoản', child: AccountsPage()),
+            const _SubPage(title: 'Tài khoản & Đồng bộ', child: AccountsPage()),
       ),
       GoRoute(
         path: '/planning',
@@ -162,6 +164,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Entry points for launcher shortcuts and the home-screen widget (moma://app/ai).
       GoRoute(path: '/ai', builder: (_, _) => const _TabEntry(2)),
       GoRoute(path: '/import', builder: (_, _) => const CsvImportPage()),
+      GoRoute(path: '/export', builder: (_, _) => const ExportPage()),
       GoRoute(path: '/categories', builder: (_, _) => const CategoriesPage()),
       GoRoute(path: '/about', builder: (_, _) => const AboutPage()),
       GoRoute(
@@ -185,6 +188,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reminders',
         builder: (_, _) => const ReminderSettingsPage(),
       ),
+      GoRoute(path: '/profile', builder: (_, _) => const ProfilePage()),
     ],
   );
   // Notification taps navigate through this router (queued until the app is past splash/sign-in).

@@ -5,6 +5,7 @@ import { secretEquals, tickSummary } from "../../src/entrypoints/routes-insights
 import type { SessionVerifier } from "../../src/modules/auth/verify-session";
 import type { FinanceGateway } from "../../src/modules/ledger/ports";
 import type { RemindersGateway } from "../../src/modules/reminders/gateway";
+import type { MemoryGateway } from "../../src/modules/ai/memory-gateway";
 
 const OWNER = "11111111-1111-1111-1111-111111111111";
 const env = {} as never;
@@ -35,7 +36,9 @@ function makeApp(cronSecret?: string) {
     return new Response("{}", { status: 200 });
   }) as typeof fetch;
   const verifier = { verify: vi.fn() } as unknown as SessionVerifier;
-  const app = buildApp(() => ({ cfg, gw, verifier, rg, pushFetch }) as any);
+  const reflectStats = { days: 30, meals: [], keywords: [], weekdays: [], preferences: [] };
+  const mg = { confirmRecent: async () => 0, reflectStats: async () => reflectStats, replace: async () => 0, decay: async () => ({ decayed: 0, dropped: 0 }) } as unknown as MemoryGateway;
+  const app = buildApp(() => ({ cfg, gw, verifier, rg, pushFetch, mg }) as any);
   const tick = (secret?: string) =>
     app.request("/v1/internal/tick", { method: "POST", headers: secret === undefined ? {} : { "x-cron-secret": secret } }, env);
   return { tick, claimed, pushes };
@@ -62,10 +65,11 @@ describe("POST /v1/internal/tick", () => {
     const s1 = ((await r1.json()) as { data: Record<string, number> }).data;
     expect(Object.keys(s1).sort()).toEqual(["budget_alerts", "cash_check", "meals", "processed", "reviews"]);
     expect(s1.processed).toBe(claimed.size);
-    expect(pushes.length).toBe(claimed.size);
+    const pushed = [...claimed].filter((k) => !k.startsWith("reflect:")).length; // the nightly reflection sends nothing
+    expect(pushes.length).toBe(pushed);
     const r2 = await tick("s3cret-value");
     expect(((await r2.json()) as { data: { processed: number } }).data.processed).toBe(0);
-    expect(pushes.length).toBe(claimed.size);
+    expect(pushes.length).toBe(pushed);
   });
 });
 

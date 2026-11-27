@@ -19,19 +19,24 @@ import '../../core/widgets.dart';
 import 'transactions_page.dart' show txKindLabel;
 import 'tx_sheets.dart' show TxEditSheet;
 
-/// How a transaction entered the ledger. The read model has no explicit source column, so it is derived:
-/// unclassified bank movements (UNKNOWN_CREDIT/UNKNOWN_DEBIT) can only come from bank ingest; everything
-/// else is shown as manual. Assumption: refine once the API exposes the origin.
-String txSourceLabel(MomaTx tx) {
-  if (tx.kind == 'UNKNOWN_CREDIT' || tx.kind == 'UNKNOWN_DEBIT') {
-    return 'Ngân hàng tự động';
-  }
-  return 'Thủ công';
-}
+/// How a transaction entered the ledger (server column `source`, migration 009).
+String txSourceLabel(MomaTx tx) => switch (tx.source) {
+  'BANK' => 'Ngân hàng tự động',
+  'AI' => 'Trợ lý tài chính',
+  'NOTIFICATION' => 'Thông báo ngân hàng trên máy',
+  'IMPORT' => 'Nhập từ file',
+  'RECURRING' => 'Định kỳ',
+  'SYSTEM' => 'Hệ thống',
+  _ => 'Thủ công',
+};
 
-IconData _sourceIcon(String label) => switch (label) {
-  'Ngân hàng tự động' => Symbols.account_balance_rounded,
-  'Trợ lý AI' => Symbols.smart_toy_rounded,
+IconData _sourceIcon(String source) => switch (source) {
+  'BANK' => Symbols.account_balance_rounded,
+  'AI' => Symbols.auto_awesome_rounded,
+  'NOTIFICATION' => Symbols.notifications_rounded,
+  'IMPORT' => Symbols.upload_file_rounded,
+  'RECURRING' => Symbols.event_repeat_rounded,
+  'SYSTEM' => Symbols.settings_rounded,
   _ => Symbols.edit_rounded,
 };
 
@@ -270,7 +275,7 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
                   value: formatVnd(tx.fee),
                 ),
               _DetailRow(
-                icon: _sourceIcon(source),
+                icon: _sourceIcon(tx.source),
                 color: const Color(0xFF8B5CF6),
                 label: 'Nguồn ghi nhận',
                 value: source,

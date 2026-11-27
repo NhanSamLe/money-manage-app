@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { eventKey, hmacHex, parseWebhook, ruleCategory, verifyWebhook, vnToIso } from "../../src/modules/bank/sepay";
+import { describe, expect, it, vi } from "vitest";
+import { eventKey, hmacHex, parseWebhook, ruleCategory, SepayClient, verifyWebhook, vnToIso } from "../../src/modules/bank/sepay";
 
 const cats = [
   { id: "a", name: "Ăn uống", type: "EXPENSE" },
@@ -68,5 +68,21 @@ describe("keyword classification fallback", () => {
     expect(ruleCategory("random memo", "out", cats)).toBe("c");
     expect(ruleCategory("random memo", "in", cats)).toBe("e");
     expect(ruleCategory("LUONG", "out", cats)).not.toBe("d");
+  });
+});
+
+describe("SepayClient default fetch", () => {
+  it("never calls the platform fetch as a method of the client (Workers 'Illegal invocation')", async () => {
+    const strictFetch = vi.fn(function (this: unknown) {
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", strictFetch);
+    try {
+      await expect(new SepayClient("tok").accounts()).resolves.toEqual([]);
+      expect(strictFetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

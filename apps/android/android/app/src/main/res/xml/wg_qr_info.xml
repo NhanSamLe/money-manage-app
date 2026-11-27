@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "QR nhận tiền": 2x2 by default; 2x1 strip, 3x3 large QR and 4x2 wide card when resized. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/wg_qr_desc"
+    android:initialLayout="@layout/wg_qr_square"
+    android:previewLayout="@layout/wg_qr_square"
+    android:previewImage="@drawable/wg_preview_qr"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

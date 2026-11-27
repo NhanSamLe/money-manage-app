@@ -3,6 +3,7 @@ import type { Config } from "../../src/bootstrap/config";
 import { buildApp } from "../../src/entrypoints/http";
 import type { SessionVerifier } from "../../src/modules/auth/verify-session";
 import type { FinanceGateway } from "../../src/modules/ledger/ports";
+import type { MemoryGateway } from "../../src/modules/ai/memory-gateway";
 import { DomainError } from "../../src/shared/errors";
 import { API_VERSION } from "../../src/shared/version";
 
@@ -31,7 +32,8 @@ function makeApp(opts: { userId?: string; owner?: string | null } = {}) {
       return { userId: opts.userId ?? OWNER, sessionId: "33333333-3333-3333-3333-333333333333" };
     }),
   } as unknown as SessionVerifier;
-  return { app: buildApp(() => ({ cfg, gw, verifier })), gw };
+  const mg = { observe: vi.fn(async () => ({ learned: null })) } as unknown as MemoryGateway;
+  return { app: buildApp(() => ({ cfg, gw, verifier, mg })), gw, mg };
 }
 
 const authed = { authorization: "Bearer t", "x-device-id": DEVICE, "content-type": "application/json" };

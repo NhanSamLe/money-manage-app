@@ -64,9 +64,8 @@ class NotifyCaptureChannel {
   Future<List<CapturedNotification>> pending() async {
     try {
       final list = await _ch.invokeMethod<List<dynamic>>('pending') ?? [];
-      return [
-        for (final m in list) CapturedNotification.fromMap(m as Map),
-      ]..sort((a, b) => b.postTime.compareTo(a.postTime));
+      return [for (final m in list) CapturedNotification.fromMap(m as Map)]
+        ..sort((a, b) => b.postTime.compareTo(a.postTime));
     } on MissingPluginException {
       return [];
     }
@@ -151,5 +150,6 @@ Future<void> recordNotification(
     'category_id': ?cat?.id,
     if (note.isNotEmpty)
       'note': note.length > 1000 ? note.substring(0, 1000) : note,
+    'source': 'NOTIFICATION',
   }, commandId: notifyCommandId(n));
 }

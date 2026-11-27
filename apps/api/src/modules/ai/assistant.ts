@@ -8,7 +8,8 @@ export const MODEL = "deepseek-flash";
 export const MAX_INPUT_CHARS = 1600;
 export const MAX_OUTPUT_TOKENS = 400;
 /** Monthly hard cap, integer micro-USD ($1.00). */
-export const MONTHLY_CAP_MICRO = 1_000_000;
+/** Owner decision: no practical monthly AI spending cap (usage is still recorded per call). */
+export const MONTHLY_CAP_MICRO = 1_000_000_000_000_000;
 // Conservative peak prices (USD per 1M tokens == micro-USD per token): input 0.30, output 1.20.
 const PRICE_IN_MICRO_PER_TOKEN = 0.3;
 const PRICE_OUT_MICRO_PER_TOKEN = 1.2;

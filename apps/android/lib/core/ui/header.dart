@@ -3,10 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'money_pattern.dart';
 
 import '../../app/theme/moma_theme.dart';
 import '../../features/notifications/notifications.dart';
+import '../../features/profile/avatar.dart';
 import 'brand.dart';
 import '../../app/theme/palette.dart';
 
@@ -90,7 +92,7 @@ class MomaPage extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(child: child),
+          Expanded(child: MoneyBackground(child: child)),
         ],
       ),
     );
@@ -113,80 +115,84 @@ class MomaPage extends StatelessWidget {
             ),
             child: CustomPaint(
               painter: _WavePainter(),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          if (showBack)
-                            IconButton(
-                              tooltip: 'Quay lại',
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => Navigator.maybePop(context),
-                              icon: const Icon(
-                                Symbols.arrow_back_rounded,
-                                color: Colors.white,
+              child: MoneyPattern(
+                opacity: 0.09,
+                lotus: false,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (showBack)
+                              IconButton(
+                                tooltip: 'Quay lại',
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () => Navigator.maybePop(context),
+                                icon: const Icon(
+                                  Symbols.arrow_back_rounded,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                          const MomaWordmark(size: 34),
-                          const Spacer(),
-                          _Bell(onTap: onBell),
-                          const SizedBox(width: 10),
-                          const _Avatar(),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    if (titleIcon != null) ...[
-                                      Icon(
-                                        titleIcon,
-                                        color: Colors.white,
-                                        size: 30,
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    Flexible(
-                                      child: Text(
-                                        title,
-                                        style: const TextStyle(
+                            const MomaWordmark(size: 34),
+                            const Spacer(),
+                            _Bell(onTap: onBell),
+                            const SizedBox(width: 10),
+                            const _Avatar(),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      if (titleIcon != null) ...[
+                                        Icon(
+                                          titleIcon,
                                           color: Colors.white,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w800,
-                                          height: 1.15,
+                                          size: 30,
+                                        ),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Flexible(
+                                        child: Text(
+                                          title,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.15,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (subtitle != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        subtitle!,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 14,
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
-                                if (subtitle != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2),
-                                    child: Text(
-                                      subtitle!,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          ?action,
-                        ],
-                      ),
-                    ],
+                            ?action,
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -197,7 +203,7 @@ class MomaPage extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(28),
               ),
-              child: ColoredBox(color: context.pal.bg, child: child),
+              child: MoneyBackground(child: child),
             ),
           ),
         ],
@@ -273,37 +279,18 @@ class _Bell extends ConsumerWidget {
   }
 }
 
+/// Owner photo (or a person silhouette) in the hero header; opens "Hồ sơ".
 class _Avatar extends StatelessWidget {
   const _Avatar();
 
-  static String _initial() {
-    try {
-      final u = Supabase.instance.client.auth.currentUser;
-      final n = (u?.userMetadata?['display_name'] as String?)?.trim();
-      final src = (n != null && n.isNotEmpty) ? n : (u?.email ?? 'M');
-      return src.characters.first.toUpperCase();
-    } on Object {
-      return 'M';
-    }
-  }
-
   @override
-  Widget build(BuildContext context) => Container(
-    width: 40,
-    height: 40,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: MomaColors.mint,
-      shape: BoxShape.circle,
-      border: Border.all(color: Colors.white, width: 2),
-    ),
-    child: Text(
-      _initial(),
-      style: const TextStyle(
-        color: MomaColors.forest,
-        fontWeight: FontWeight.w800,
-        fontSize: 16,
-      ),
+  Widget build(BuildContext context) => InkResponse(
+    onTap: () => context.push('/profile'),
+    radius: 24,
+    child: Semantics(
+      label: 'Hồ sơ',
+      button: true,
+      child: const OwnerAvatar(borderColor: Colors.white),
     ),
   );
 }

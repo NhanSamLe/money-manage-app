@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Enlarged receive-QR shown over the home screen when the QR widget is tapped (no full app start). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/qo_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/wg_scrim"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:id="@+id/qo_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/wg_sheet"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="22dp">
+
+        <TextView
+            android:id="@+id/qo_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wg_qr_title"
+            android:textColor="@color/wg_sheet_text"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/qo_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="@string/wg_qr_overlay_hint"
+            android:textColor="@color/wg_sheet_muted"
+            android:textSize="13sp" />
+
+        <FrameLayout
+            android:id="@+id/qo_qr_frame"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/wg_qr_frame"
+            android:elevation="2dp"
+            android:padding="14dp">
+
+            <ImageView
+                android:id="@+id/qo_qr"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:contentDescription="@string/wg_qr_title"
+                android:scaleType="fitCenter" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/qo_bank"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:textColor="@color/wg_sheet_text"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/qo_masked"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/wg_sheet_muted"
+            android:textSize="13.5sp" />
+
+        <TextView
+            android:id="@+id/qo_primary"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/wg_overlay_btn"
+            android:gravity="center"
+            android:text="@string/wg_qr_amount_btn"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/qo_close"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="@string/wg_close"
+            android:textColor="@color/wg_sheet_muted"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>

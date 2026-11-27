@@ -65,99 +65,92 @@ class EmptyState extends StatelessWidget {
     final pal = context.pal;
     final c = tone ?? MomaColors.emerald;
     final body = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 150,
-              height: 130,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 124,
-                    height: 124,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: c.withValues(alpha: 0.08),
-                    ),
-                  ),
-                  Container(
-                    width: 92,
-                    height: 92,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: c.withValues(alpha: 0.14),
-                    ),
-                  ),
-                  Container(
-                    width: 62,
-                    height: 62,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [c, MomaColors.forest],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: c.withValues(alpha: 0.3),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 30),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 10,
-                    child: _dot(c.withValues(alpha: 0.35), 10),
-                  ),
-                  Positioned(
-                    left: 6,
-                    bottom: 22,
-                    child: _dot(MomaColors.mint, 14),
-                  ),
-                  Positioned(
-                    right: 18,
-                    bottom: 10,
-                    child: _dot(c.withValues(alpha: 0.2), 7),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: pal.ink,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              hint,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, height: 1.45, color: pal.muted),
-            ),
-            if (actionLabel != null) ...[
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: onAction,
-                  child: Text(actionLabel!),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 150,
+          height: 130,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 124,
+                height: 124,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: c.withValues(alpha: 0.08),
                 ),
               ),
+              Container(
+                width: 92,
+                height: 92,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: c.withValues(alpha: 0.14),
+                ),
+              ),
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [c, MomaColors.forest],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: c.withValues(alpha: 0.3),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 30),
+              ),
+              Positioned(
+                right: 8,
+                top: 10,
+                child: _dot(c.withValues(alpha: 0.35), 10),
+              ),
+              Positioned(left: 6, bottom: 22, child: _dot(MomaColors.mint, 14)),
+              Positioned(
+                right: 18,
+                bottom: 10,
+                child: _dot(c.withValues(alpha: 0.2), 7),
+              ),
             ],
-            if (secondaryLabel != null) ...[
-              const SizedBox(height: 6),
-              TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
-            ],
-          ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: pal.ink,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          hint,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, height: 1.45, color: pal.muted),
+        ),
+        if (actionLabel != null) ...[
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+          ),
+        ],
+        if (secondaryLabel != null) ...[
+          const SizedBox(height: 6),
+          TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
+        ],
+      ],
     );
     if (embedded) {
       return Padding(

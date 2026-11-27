@@ -72,7 +72,9 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
 
   Future<void> _save() async {
     final formOk = _form.currentState?.validate() ?? false;
-    final instOk = _kind == 'CASH' || (_pickedInst != null && _institution.text.trim().isNotEmpty);
+    final instOk =
+        _kind == 'CASH' ||
+        (_pickedInst != null && _institution.text.trim().isNotEmpty);
     if (!instOk) setState(() => _instError = 'Chọn nơi mở tài khoản.');
     if (_busy || !formOk || !instOk) return;
     final opening = _opening.text.trim().isEmpty
@@ -162,12 +164,19 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Symbols.sync_alt_rounded, color: MomaColors.emerald),
+                      const Icon(
+                        Symbols.sync_alt_rounded,
+                        color: MomaColors.emerald,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Muốn tiền vào, ra tự ghi? Kết nối tài khoản ngân hàng thật thay vì nhập tay.',
-                          style: TextStyle(fontSize: 13, height: 1.35, color: pal.ink),
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.35,
+                            color: pal.ink,
+                          ),
                         ),
                       ),
                       const Icon(Symbols.chevron_right_rounded),
@@ -181,7 +190,9 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
               PickField<String>(
                 key: ValueKey('inst-$_kind'),
                 initialValue: _pickedInst,
-                decoration: const InputDecoration(labelText: 'Ngân hàng hoặc nơi mở'),
+                decoration: const InputDecoration(
+                  labelText: 'Ngân hàng hoặc nơi mở',
+                ),
                 icon: Symbols.account_balance_rounded,
                 errorText: _pickedInst == null ? _instError : null,
                 items: [
@@ -210,7 +221,10 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                   controller: _institution,
                   icon: Symbols.edit_rounded,
                   required: true,
-                  validator: V.all([V.required('nơi mở tài khoản'), V.maxLength(60, 'Tên')]),
+                  validator: V.all([
+                    V.required('nơi mở tài khoản'),
+                    V.maxLength(60, 'Tên'),
+                  ]),
                 ),
               ],
             ],

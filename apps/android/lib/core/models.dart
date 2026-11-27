@@ -73,11 +73,13 @@ class MomaTx {
     required this.rawEffectiveAt,
     required this.relatedTxId,
     required this.debtLinked,
+    this.source = 'MANUAL',
   });
   factory MomaTx.fromJson(Map<String, dynamic> j) => MomaTx(
     rawEffectiveAt: j['effective_at'] as String,
     relatedTxId: j['related_tx_id'] as String?,
     debtLinked: (j['debt_linked'] as bool?) ?? false,
+    source: (j['source'] as String?) ?? 'MANUAL',
     id: j['id'] as String,
     kind: j['kind'] as String,
     status: j['status'] as String,
@@ -110,6 +112,9 @@ class MomaTx {
 
   /// Debt repayments/origins can only be corrected from the debt screen.
   final bool debtLinked;
+
+  /// Where the entry came from: MANUAL, BANK, AI, NOTIFICATION, IMPORT, RECURRING or SYSTEM (older servers: MANUAL).
+  final String source;
 
   bool get isVoid => status == 'VOID';
   bool get isIncome => kind == 'INCOME' || kind == 'UNKNOWN_CREDIT';

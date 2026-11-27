@@ -10,4 +10,63 @@
     <string name="shortcut_receive_long">Tạo mã QR nhận tiền</string>
     <string name="shortcut_ai_short">Trợ lý AI</string>
     <string name="shortcut_ai_long">Nhờ Trợ lý AI làm giúp</string>
+
+    <!-- Home-screen widgets -->
+    <string name="wg_brand">MoMa</string>
+    <string name="wg_quick_label">Thao tác nhanh</string>
+    <string name="wg_quick_desc">Ghi chi, ghi thu, nhận tiền bằng QR, Trợ lý AI và quét hóa đơn chỉ với một chạm</string>
+    <string name="wg_spend_label">Chi tiêu hôm nay</string>
+    <string name="wg_spend_desc">Chi tiêu hôm nay, chi tiêu tháng so với ngân sách và giao dịch gần nhất</string>
+    <string name="wg_qr_label">QR nhận tiền</string>
+    <string name="wg_qr_desc">Mã VietQR của tài khoản ngân hàng đã liên kết, sẵn sàng cho người khác quét</string>
+    <string name="wg_ai_label">Trợ lý tài chính</string>
+    <string name="wg_ai_desc">Hỏi hoặc ghi nhanh với Trợ lý AI ngay từ màn hình chính</string>
+
+    <string name="wg_act_expense">Ghi chi</string>
+    <string name="wg_act_expense_long">Ghi một khoản chi</string>
+    <string name="wg_act_income">Ghi thu</string>
+    <string name="wg_act_income_long">Ghi một khoản thu</string>
+    <string name="wg_act_receive">Nhận tiền</string>
+    <string name="wg_act_receive_long">Mở mã QR nhận tiền</string>
+    <string name="wg_act_ai">Trợ lý AI</string>
+    <string name="wg_act_scan">Hóa đơn</string>
+    <string name="wg_act_scan_long">Quét hóa đơn với Trợ lý AI</string>
+    <string name="wg_refresh">Cập nhật số liệu</string>
+
+    <string name="wg_spend_title">Chi tiêu</string>
+    <string name="wg_today">Chi hôm nay</string>
+    <string name="wg_budget_left">Ngân sách còn lại</string>
+    <string name="wg_open_to_update">Mở MoMa để cập nhật</string>
+    <string name="wg_updating">Đang cập nhật…</string>
+
+    <string name="wg_qr_title">Nhận tiền</string>
+    <string name="wg_qr_title_vietqr">Nhận tiền · VietQR</string>
+    <string name="wg_vietqr">VietQR</string>
+    <string name="wg_qr_tap_hint">Chạm để phóng to mã</string>
+    <string name="wg_qr_unlinked">Chưa liên kết ngân hàng</string>
+    <string name="wg_qr_link_btn">Liên kết</string>
+    <string name="wg_qr_open_btn">Mở MoMa</string>
+    <string name="wg_qr_amount_btn">Tạo mã có số tiền</string>
+    <string name="wg_qr_overlay_hint">Đưa mã này cho người chuyển quét bằng ứng dụng ngân hàng bất kỳ</string>
+    <string name="wg_qr_overlay_unlinked">Kết nối một tài khoản ngân hàng thật để có mã QR nhận tiền.</string>
+    <string name="wg_qr_link_long">Kết nối ngân hàng</string>
+    <string name="wg_close">Đóng</string>
+    <string name="wg_ai_hint">Hỏi hoặc ghi nhanh…</string>
+
+    <!-- Sample data shown in the widget picker preview only -->
+    <string name="wg_sample_today">185.000 ₫</string>
+    <string name="wg_sample_today_sub">3 giao dịch</string>
+    <string name="wg_sample_month_label">Tháng 11</string>
+    <string name="wg_sample_month">3.250.000 ₫</string>
+    <string name="wg_sample_month_sub">65% ngân sách 5.000.000 ₫</string>
+    <string name="wg_sample_left">1.750.000 ₫</string>
+    <string name="wg_sample_left_sub">Còn 3 ngày trong tháng</string>
+    <string name="wg_sample_updated">Cập nhật 14:05</string>
+    <string name="wg_sample_last">Cà phê · 14:05</string>
+    <string name="wg_sample_last_amount">−45.000 ₫</string>
+    <string name="wg_sample_bank">MB Bank</string>
+    <string name="wg_sample_masked">•••• 6789</string>
+    <string name="wg_sample_holder">NGUYEN VAN A</string>
+    <string name="wg_sample_bank_line">MB Bank · •••• 6789</string>
+    <string name="wg_sample_masked_holder">•••• 6789 · NGUYEN VAN A</string>
 </resources>

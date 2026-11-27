@@ -1,201 +1,152 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../core/ui/labeled_field.dart';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../app/theme/moma_theme.dart';
-import '../../core/icons.dart';
+import '../../app/theme/palette.dart';
 import '../../core/models.dart';
-import '../../core/sheets.dart';
 import '../../core/money/money.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
-import '../../core/ui/category_style.dart';
+import '../../core/sheets.dart';
+import '../../core/ui/labeled_field.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import 'add_account_sheet.dart';
-import '../../app/theme/palette.dart';
+import 'sync/account_sync_card.dart';
+import 'sync/integrations_tab.dart';
+import 'sync/sync_sources.dart';
 
-import 'package:material_symbols_icons/symbols.dart';
+enum _Tab { accounts, integrations }
 
-class AccountsPage extends ConsumerWidget {
+/// "Tài khoản & Đồng bộ": every account with how it records transactions by itself (bank sync through SePay
+/// or Android notifications), plus a tab with the state of each integration.
+class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
+  @override
+  ConsumerState<AccountsPage> createState() => _AccountsPageState();
+}
+
+class _AccountsPageState extends ConsumerState<AccountsPage>
+    with WidgetsBindingObserver {
+  _Tab _tab = _Tab.accounts;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Back from the system screen where notification access is granted.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref
+        ..invalidate(notifySyncStateProvider)
+        ..invalidate(pushPermissionProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: PillTabs<_Tab>(
+              segments: const [
+                ButtonSegment(value: _Tab.accounts, label: Text('Tài khoản')),
+                ButtonSegment(
+                  value: _Tab.integrations,
+                  label: Text('Tích hợp'),
+                ),
+              ],
+              selected: {_tab},
+              onSelectionChanged: (s) => setState(() => _tab = s.first),
+            ),
+          ),
+          Expanded(
+            child: _tab == _Tab.accounts
+                ? const _AccountsTab()
+                : const IntegrationsTab(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountsTab extends ConsumerWidget {
+  const _AccountsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accounts = ref.watch(accountsProvider);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(accountsProvider);
-          await ref.read(accountsProvider.future);
-        },
-        child: accounts.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorView(
-            error: e,
-            onRetry: () => ref.invalidate(accountsProvider),
-          ),
-          data: (list) {
-            final known = list.where((a) => !a.isCard && a.balance != null);
-            final total = known.fold<int>(0, (s, a) => s + a.balance!);
-            final unknown = list.where((a) => a.balance == null).length;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [MomaColors.forest, MomaColors.emerald],
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Tổng số dư',
-                        style: TextStyle(
-                          color: MomaColors.mint,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          formatVnd(total),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      if (unknown > 0) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          'Chưa gồm $unknown tài khoản chưa biết số dư đầu kỳ.',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (list.isEmpty)
-                  const EmptyState(embedded: true, 
-                      icon: Symbols.account_balance_wallet_rounded,
-                      title: 'Chưa có tài khoản',
-                      hint: 'Thêm ngân hàng, ví hoặc tiền mặt để bắt đầu.',
-                    )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: context.pal.surface,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Column(
-                      children: [
-                        for (final (i, a) in list.indexed) ...[
-                          InkWell(
-                            onTap: () => showFormSheet<void>(
-                              context,
-                              (_) => _EditAccountSheet(account: a),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CategoryAvatar(
-                                    iconData: accountIcon(a.kind),
-                                    color: MomaColors.emerald,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          a.name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${accountKindLabel(a.kind)} · ${a.institution}${a.last4 == null ? '' : ' · •• ${a.last4}'}',
-                                          style: TextStyle(
-                                            color: context.pal.muted,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        a.balance == null
-                                            ? 'Chưa biết'
-                                            : formatVnd(
-                                                a.isCard
-                                                    ? -a.balance!
-                                                    : a.balance!,
-                                              ),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      if (a.isCard)
-                                        Text(
-                                          'Dư nợ',
-                                          style: TextStyle(
-                                            color: context.pal.muted,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (i < list.length - 1)
-                            Divider(height: 1, color: context.pal.lineSoft),
-                        ],
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () => _addAccount(context, ref),
-                  icon: const Icon(Symbols.add_rounded),
-                  label: const Text('Thêm tài khoản'),
-                ),
-              ],
-            );
-          },
+    final links = ref.watch(bankLinksProvider);
+    final notify = ref.watch(notifySyncStateProvider);
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref
+          ..invalidate(accountsProvider)
+          ..invalidate(bankLinksProvider)
+          ..invalidate(notifySyncStateProvider);
+        await ref.read(accountsProvider.future);
+      },
+      child: accounts.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorView(
+          error: e,
+          onRetry: () => ref.invalidate(accountsProvider),
         ),
+        data: (list) {
+          final linkOf = {
+            for (final l in links.value ?? const <BankLink>[]) l.accountId: l,
+          };
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              const _SyncBanner(),
+              const SizedBox(height: 12),
+              _TotalCard(list),
+              const SizedBox(height: 16),
+              if (list.isEmpty)
+                const EmptyState(
+                  embedded: true,
+                  icon: Symbols.account_balance_wallet_rounded,
+                  title: 'Chưa có tài khoản',
+                  hint: 'Thêm ngân hàng, ví hoặc tiền mặt để bắt đầu.',
+                )
+              else
+                for (final a in list)
+                  AccountSyncCard(
+                    key: ValueKey('account-${a.id}'),
+                    account: a,
+                    link: linkOf[a.id],
+                    linksFailed: links.hasError && !links.hasValue,
+                    notify: notify.value,
+                    onOpen: () => showFormSheet<void>(
+                      context,
+                      (_) => _EditAccountSheet(account: a),
+                    ),
+                  ),
+              const SizedBox(height: 4),
+              _AddButton(onTap: () => _addAccount(context)),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
+  Future<void> _addAccount(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -205,6 +156,162 @@ class AccountsPage extends ConsumerWidget {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: const AddAccountSheet(),
+      ),
+    );
+  }
+}
+
+class _SyncBanner extends StatelessWidget {
+  const _SyncBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final body = TextStyle(fontSize: 13, height: 1.4, color: pal.ink);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+      decoration: BoxDecoration(
+        color: pal.tintSoft,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Symbols.sync_rounded,
+              color: MomaColors.emerald,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Quản lý tài khoản và cách tự ghi',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: pal.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Đồng bộ ngân hàng: ngân hàng báo thẳng về MoMa, tự ghi cả khi điện thoại tắt.',
+                  style: body,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Thông báo Android: đọc thông báo biến động số dư trên điện thoại.',
+                  style: body,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Giải thích',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => showInfoDialog(
+              context,
+              title: 'Hai cách tự ghi giao dịch',
+              message: syncOverviewHelp,
+            ),
+            icon: Icon(Symbols.info_rounded, size: 20, color: pal.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TotalCard extends StatelessWidget {
+  const _TotalCard(this.list);
+  final List<Account> list;
+
+  @override
+  Widget build(BuildContext context) {
+    final known = list.where((a) => !a.isCard && a.balance != null);
+    final total = known.fold<int>(0, (s, a) => s + a.balance!);
+    final unknown = list.where((a) => a.balance == null).length;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [MomaColors.forest, MomaColors.emerald],
+        ),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tổng số dư',
+            style: TextStyle(
+              color: MomaColors.mint,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatVnd(total),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          if (unknown > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Chưa gồm $unknown tài khoản chưa biết số dư đầu kỳ.',
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: context.pal.tintSoft,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: const SizedBox(
+          height: 54,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Symbols.add_rounded, color: MomaColors.emerald),
+              SizedBox(width: 8),
+              Text(
+                'Thêm tài khoản',
+                style: TextStyle(
+                  color: MomaColors.emerald,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import 'core/push.dart';
 import 'core/storage/local_store.dart';
 import 'core/config/app_config.dart';
 import 'core/storage/secure_session_storage.dart';
+import 'features/lock/lock_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,10 +32,16 @@ class MomaApp extends ConsumerWidget {
       title: 'MoMa',
       debugShowCheckedModeBanner: false,
       theme: buildMomaTheme(),
+      darkTheme: buildMomaTheme(Brightness.dark),
+      // Sáng / Tối / Theo hệ thống (follows the phone's dark-mode setting and schedule).
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
       // Long-press any text anywhere in the app to select and copy it.
-      builder: (context, child) =>
-          SelectionArea(child: child ?? const SizedBox.shrink()),
+      // App lock (PIN / biometric) draws above the router once the splash is done.
+      builder: (context, child) => LockGate(
+        router: ref.watch(routerProvider),
+        child: SelectionArea(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

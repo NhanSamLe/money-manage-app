@@ -143,7 +143,8 @@ const txRow = z.object({
 export class SepayClient {
   constructor(
     private readonly token: string,
-    private readonly fetchImpl: typeof fetch = fetch,
+    // Wrapped so the platform fetch is never called as a method of this object (Workers: "Illegal invocation").
+    private readonly fetchImpl: typeof fetch = (input, init) => fetch(input, init),
     private readonly base = "https://userapi.sepay.vn/v2",
   ) {}
 

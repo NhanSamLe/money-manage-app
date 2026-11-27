@@ -19,6 +19,8 @@ import '../../core/widgets.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/brands/person_avatar.dart';
+
 class DebtsView extends ConsumerStatefulWidget {
   const DebtsView({super.key});
   @override
@@ -77,11 +79,12 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
                 ),
               ),
               if (list.isEmpty)
-                const EmptyState(embedded: true, 
-                    icon: Symbols.handshake_rounded,
-                    title: 'Chưa có công nợ',
-                    hint: 'Bấm "Thêm công nợ" để ghi một khoản cho vay hoặc đi vay.',
-                  ),
+                const EmptyState(
+                  embedded: true,
+                  icon: Symbols.handshake_rounded,
+                  title: 'Chưa có công nợ',
+                  hint: 'Bấm "Thêm công nợ" để ghi một khoản cho vay hoặc đi vay.',
+                ),
               for (final d in list) _DebtCard(debt: d),
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -117,14 +120,32 @@ class _DebtCard extends StatelessWidget {
                 context,
                 (_) => _DebtActionSheet(debt: debt),
               ),
-        leading: CircleAvatar(
-          backgroundColor: MomaColors.mint.withValues(alpha: 0.4),
-          child: Icon(
-            debt.isReceivable
-                ? Symbols.south_west_rounded
-                : Symbols.north_east_rounded,
-            color: MomaColors.forest,
-          ),
+        leading: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            PersonAvatar(name: debt.contactAlias, size: 42),
+            Positioned(
+              right: -3,
+              bottom: -3,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: debt.isReceivable
+                      ? MomaColors.income
+                      : MomaColors.expense,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Icon(
+                  debt.isReceivable
+                      ? Symbols.south_west_rounded
+                      : Symbols.north_east_rounded,
+                  size: 11,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
         title: Text(
           debt.contactAlias,
@@ -324,10 +345,13 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
       setState(() => _run.error = 'Nhập số tiền hợp lệ.');
       return;
     }
-    final hasContacts = (ref.read(contactsProvider).value ?? const []).isNotEmpty;
+    final hasContacts =
+        (ref.read(contactsProvider).value ?? const []).isNotEmpty;
     final pickExisting = hasContacts && _existing;
     if (pickExisting ? _contactId == null : _alias.text.trim().isEmpty) {
-      setState(() => _run.error = pickExisting ? 'Chọn người.' : 'Nhập tên người.');
+      setState(
+        () => _run.error = pickExisting ? 'Chọn người.' : 'Nhập tên người.',
+      );
       return;
     }
     if (!_historical && _accountId == null) {

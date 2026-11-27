@@ -69,6 +69,12 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> delete(String path) async {
+    final uri = Uri.parse('${await _store.apiBase()}$path');
+    final headers = await _headers();
+    return _decode(await _send(() => _http.delete(uri, headers: headers)));
+  }
+
   /// Sends one command. The caller owns [commandId] so a retry after a lost response reuses the same id.
   Future<Map<String, dynamic>> command(
     String type,

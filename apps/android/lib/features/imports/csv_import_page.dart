@@ -125,6 +125,7 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
             'note': l.row.description.length > 1000
                 ? l.row.description.substring(0, 1000)
                 : l.row.description,
+          'source': 'IMPORT',
         }, commandId: importCommandId(accountId, result.fingerprint, l.row));
         if (res['status'] == 'REPLAYED') {
           replayed++;

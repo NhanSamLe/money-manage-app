@@ -21,6 +21,8 @@ import { SupabaseRemindersGateway, type RemindersGateway } from "../modules/remi
 import { decidePushes, localClock, type BudgetRow, type Period } from "../modules/reminders/schedule";
 import { ReminderSettingsPatch, resolveSettings } from "../modules/reminders/settings";
 import { DomainError } from "../shared/errors";
+import type { MemoryGateway } from "../modules/ai/memory-gateway";
+import { REFLECT_FROM_MIN, runReflection } from "./routes-memory";
 
 // Smart reminders + spending insights: HTTP routes (registered from http.ts) and the cron entry (scheduled()).
 
@@ -31,6 +33,8 @@ export interface InsightDeps {
   pushFetch?: typeof fetch;
   /** Injectable for tests; defaults to the Supabase RPC gateway. */
   rg?: RemindersGateway;
+  /** Assistant memory gateway (nightly reflection); defaults to the Supabase RPC gateway. */
+  mg?: MemoryGateway;
 }
 
 const PERIOD = z.enum(["DAY", "WEEK", "MONTH"]);
@@ -246,6 +250,18 @@ export async function runScheduled(d: InsightDeps, now: Date): Promise<string[]>
         done.push(p.key);
       } catch (e) {
         logFailure(p.type, e, p.key);
+      }
+    }
+    // Nightly reflection of the assistant's memory: once per local day after 23:00, claimed like a push (no push).
+    if (clock.minutes >= REFLECT_FROM_MIN) {
+      const key = `reflect:${clock.date}`;
+      try {
+        if (await rg.pushClaim(owner, key)) {
+          await runReflection(d, owner);
+          done.push(key);
+        }
+      } catch (e) {
+        logFailure("reflect", e, key);
       }
     }
   } catch (e) {

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Chi tiêu hôm nay": 2x2 by default, shrinks to a 2x1 strip, grows to 4x2. Data is pushed by the app. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/wg_spend_desc"
+    android:initialLayout="@layout/wg_spend_small"
+    android:previewLayout="@layout/wg_spend_small"
+    android:previewImage="@drawable/wg_preview_spend"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

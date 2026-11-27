@@ -47,11 +47,12 @@ class BudgetsView extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             if (list.isEmpty)
-              const EmptyState(embedded: true, 
-                  icon: Symbols.pie_chart_outline_rounded,
-                  title: 'Chưa có ngân sách',
-                  hint: 'Đặt hạn mức chi tiêu cho tháng này.',
-                ),
+              const EmptyState(
+                embedded: true,
+                icon: Symbols.pie_chart_outline_rounded,
+                title: 'Chưa có ngân sách',
+                hint: 'Đặt hạn mức chi tiêu cho tháng này.',
+              ),
             for (final b in list) _BudgetCard(budget: b),
             const SizedBox(height: 8),
             OutlinedButton.icon(

@@ -115,7 +115,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           if (cash.isNotEmpty)
             _Note(
               icon: Symbols.check_circle_rounded,
-              text: 'Đã có tài khoản tiền mặt "${cash.first.name}". Bấm Tiếp tục để sang bước sau.',
+              text:
+                  'Đã có tài khoản tiền mặt "${cash.first.name}". Bấm Tiếp tục để sang bước sau.',
             )
           else ...[
             MoneyField(

@@ -40,7 +40,11 @@ class MomaSwitch extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(0, 1)),
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
                 ],
               ),
             ),
@@ -120,7 +124,11 @@ class DateField extends StatelessWidget {
                     InkResponse(
                       radius: 18,
                       onTap: () => onChanged(null),
-                      child: Icon(Symbols.close_rounded, color: pal.muted, size: 20),
+                      child: Icon(
+                        Symbols.close_rounded,
+                        color: pal.muted,
+                        size: 20,
+                      ),
                     ),
                 ],
               ),

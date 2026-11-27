@@ -4,7 +4,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../app/theme/palette.dart';
 import '../../app/theme/theme_mode.dart';
 import '../../core/providers.dart';
@@ -12,7 +11,11 @@ import '../../core/sheets.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../auth/auth_service.dart';
+import '../lock/lock_settings_page.dart';
 import '../notify_capture/notify_capture_page.dart';
+import '../profile/avatar.dart';
+import '../update/update_sheet.dart';
+import '../widgets/widget_settings_page.dart';
 
 /// Settings only contain things a person uses the app for (plans, data, appearance, help). Server, API and
 /// provider configuration is deliberately not user-editable: this is a finance app, not an admin console.
@@ -30,47 +33,47 @@ class SettingsPage extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _deco(context),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: MomaColors.mint,
-                  child: Text(
-                    shown.characters.first.toUpperCase(),
-                    style: const TextStyle(
-                      color: MomaColors.forest,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 20,
+          Material(
+            color: context.pal.surface,
+            borderRadius: BorderRadius.circular(20),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => context.push('/profile'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const OwnerAvatar(size: 52),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            shown,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.email ?? '',
+                            style: TextStyle(
+                              color: context.pal.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    Icon(
+                      Symbols.chevron_right_rounded,
+                      color: context.pal.muted,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        shown,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        user?.email ?? '',
-                        style: TextStyle(
-                          color: context.pal.muted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -121,7 +124,8 @@ class SettingsPage extends ConsumerWidget {
                 icon: Symbols.notifications_active_rounded,
                 color: const Color(0xFFE0A100),
                 title: 'Thông báo ngân hàng trên máy',
-                subtitle: 'Tự ghi giao dịch từ thông báo ứng dụng ngân hàng, ví',
+                subtitle:
+                    'Tự ghi giao dịch từ thông báo ứng dụng ngân hàng, ví',
                 onTap: () => openNotifyCaptureSettings(context),
               ),
               _Item(
@@ -152,6 +156,13 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: 'Đưa giao dịch từ file sao kê vào MoMa',
                 onTap: () => context.push('/import'),
               ),
+              _Item(
+                icon: Symbols.download_rounded,
+                color: const Color(0xFF1B8A5A),
+                title: 'Xuất dữ liệu',
+                subtitle: 'Lưu giao dịch ra file Excel hoặc CSV',
+                onTap: () => context.push('/export'),
+              ),
             ],
           ),
           const _Label('Ứng dụng'),
@@ -163,6 +174,20 @@ class SettingsPage extends ConsumerWidget {
                 title: 'Nhắc nhở & thông báo',
                 subtitle: 'Bữa ăn, kiểm tra tiền mặt, tổng kết, ngân sách',
                 onTap: () => context.push('/reminders'),
+              ),
+              _Item(
+                icon: Symbols.lock_rounded,
+                color: const Color(0xFF0E7490),
+                title: 'Khóa ứng dụng',
+                subtitle: 'Mã PIN, vân tay / khuôn mặt',
+                onTap: () => openLockSettings(context),
+              ),
+              _Item(
+                icon: Symbols.widgets_rounded,
+                color: const Color(0xFF14B8A6),
+                title: 'Tiện ích màn hình chính',
+                subtitle: 'Thêm tiện ích, ẩn số tiền trên tiện ích',
+                onTap: () => openWidgetSettings(context),
               ),
               _Item(
                 icon: Symbols.brightness_6_rounded,
@@ -188,6 +213,13 @@ class SettingsPage extends ConsumerWidget {
                 title: 'Giới thiệu MoMa',
                 subtitle: 'Phiên bản và thông tin ứng dụng',
                 onTap: () => context.push('/about'),
+              ),
+              _Item(
+                icon: Symbols.system_update_rounded,
+                color: const Color(0xFF0E7490),
+                title: 'Kiểm tra cập nhật',
+                subtitle: 'Tải và cài phiên bản MoMa mới nhất',
+                onTap: () => checkForUpdateManually(context),
               ),
             ],
           ),
