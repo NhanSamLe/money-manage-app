@@ -333,6 +333,109 @@ describe("AI assistant (provider faked, database real)", () => {
   });
 });
 
+describe("bank connection via SePay (SePay faked, database real)", () => {
+  let bankApp: ReturnType<typeof buildApp>;
+  const ACC_ID = "11111111-aaaa-4aaa-8aaa-111111111111";
+  const NUMBER = "1017588888";
+  const KEY = "webhook-shared-key";
+  let sepayCalls = 0;
+  const fakeSepay: typeof fetch = async (input) => {
+    sepayCalls++;
+    const url = String(input);
+    if (url.includes("/bank-accounts")) {
+      return new Response(JSON.stringify({ status: "success", data: [{ id: ACC_ID, account_holder_name: "NGUYEN VAN A", account_number: NUMBER, accumulated: 2500000, active: 1, bank_short_name: "Vietcombank", bank_full_name: "Ngan hang Ngoai thuong", label: "VCB chinh", connection_type: "api" }] }), { status: 200 });
+    }
+    if (url.includes("/transactions")) {
+      return new Response(JSON.stringify({ status: "success", data: [
+        { id: "tx-uuid-1", transaction_date: "2026-11-27 11:08:33", account_number: NUMBER, transfer_type: "in", amount_in: 700000, amount_out: 0, accumulated: 3200000, transaction_content: "LUONG THUONG", reference_number: "FT-POLL-1", bank_brand_name: "Vietcombank" },
+        { id: "tx-uuid-2", transaction_date: "2026-11-27 12:00:00", account_number: NUMBER, transfer_type: "out", amount_in: 0, amount_out: 50000, accumulated: 3150000, transaction_content: "GRAB", reference_number: "FT-POLL-2", bank_brand_name: "Vietcombank" },
+      ] }), { status: 200 });
+    }
+    return new Response("{}", { status: 404 });
+  };
+
+  beforeAll(() => {
+    const cfg = { ...cfgForBank(), sepayToken: "sepay-token", sepayWebhookKey: KEY } as Config;
+    bankApp = buildApp(() => ({ cfg, gw: new SupabaseFinanceGateway(cfg), verifier: new SessionVerifier(cfg), sepayFetch: fakeSepay }));
+  });
+  function cfgForBank() {
+    return { supabaseUrl: h.baseUrl, publishableKey: "pk", serviceRoleKey: "sb_secret_e2e", ownerEmail: "owner@example.test", dbTimeoutMs: 10_000 };
+  }
+  async function req(method: string, path: string, opts: { body?: unknown; headers?: Record<string, string>; auth?: boolean } = {}) {
+    const headers: Record<string, string> = { "content-type": "application/json", "x-device-id": DEVICE, ...opts.headers };
+    if (opts.auth !== false) headers["authorization"] = `Bearer ${jwt}`;
+    const res = await bankApp.request(path, { method, headers, body: opts.body === undefined ? null : JSON.stringify(opts.body) }, env);
+    return { status: res.status, json: (await res.json()) as { data?: any; error?: { code: string }; success?: boolean } };
+  }
+  // SePay sends Vietnam local time; events after the link time move the bank balance forward.
+  const vnAfter = (min: number) => new Date(Date.now() + 7 * 3_600_000 + min * 60_000).toISOString().slice(0, 19).replace("T", " ");
+  const hook = (over: Record<string, unknown> = {}, key = KEY) =>
+    req("POST", "/v1/webhooks/sepay", {
+      auth: false,
+      headers: { authorization: `Apikey ${key}` },
+      body: { id: 92704, gateway: "Vietcombank", transactionDate: vnAfter(1), accountNumber: NUMBER, content: "CAFE HIGHLANDS", transferType: "out", transferAmount: 65000, accumulated: 2435000, referenceCode: "FT-WEBHOOK-1", ...over },
+    });
+
+  it("lists the verified accounts and links one: the MoMa account starts at the bank balance", async () => {
+    const list = await req("GET", "/v1/banks/sepay/accounts");
+    expect(list.status).toBe(200);
+    expect(list.json.data[0]).toMatchObject({ external_id: ACC_ID, number_masked: "••••8888", balance: "2500000", linked: false, holder: "NGUYEN VAN A" });
+    expect(JSON.stringify(list.json)).not.toContain(NUMBER); // the full number never reaches the app
+
+    const link = await req("POST", "/v1/banks/sepay/link", { body: { external_id: ACC_ID } });
+    expect(link.status).toBe(200);
+    const again = await req("POST", "/v1/banks/sepay/link", { body: { external_id: ACC_ID } }); // idempotent
+    expect(again.status).toBe(200);
+    expect(again.json.data.account_id).toBe(link.json.data.account_id);
+    const accounts = (await call("GET", "/v1/accounts")).json.data as any[];
+    expect(accounts.filter((a) => a.name === "VCB chinh").length).toBe(1);
+    expect(accounts.find((a) => a.name === "VCB chinh").balance).toBe("2500000");
+    const unknown = await req("POST", "/v1/banks/sepay/link", { body: { external_id: "99999999-aaaa-4aaa-8aaa-999999999999" } });
+    expect(unknown.status).toBe(404); // an account SePay does not list can never be linked
+  });
+
+  it("rejects webhooks without the shared key", async () => {
+    expect((await hook({}, "wrong")).status).toBe(401);
+    expect((await req("POST", "/v1/webhooks/sepay", { auth: false, body: {} })).status).toBe(401);
+  });
+
+  it("posts money out once, classifies it by rule, and ignores a redelivery", async () => {
+    const before = (await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n;
+    const r1 = await hook();
+    expect(r1.json.success).toBe(true);
+    const r2 = await hook(); // SePay retry
+    expect(r2.json.success).toBe(true);
+    const after = (await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n;
+    expect(after).toBe(before + 1);
+    const tx = (await h.db.query("select t.amount::int as amount, t.kind::text as kind, c.name from pf_tx t join pf_category c on c.id = t.category_id order by t.created_at desc limit 1")).rows[0];
+    expect(tx).toMatchObject({ amount: 65000, kind: "EXPENSE", name: "Ăn uống" });
+    const accounts = (await call("GET", "/v1/accounts")).json.data as any[];
+    expect(accounts.find((a) => a.name === "VCB chinh").balance).toBe("2435000"); // 2.500.000 - 65.000, equals the bank
+  });
+
+  it("money in is posted as income; an unlinked account number is acknowledged but never posted", async () => {
+    await hook({ id: 92705, referenceCode: "FT-WEBHOOK-2", transactionDate: vnAfter(2), transferType: "in", transferAmount: 1000000, content: "LUONG THANG 11", accumulated: 3435000 });
+    const accounts = (await call("GET", "/v1/accounts")).json.data as any[];
+    expect(accounts.find((a) => a.name === "VCB chinh").balance).toBe("3435000");
+    const before = (await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n;
+    const stranger = await hook({ id: 1, accountNumber: "0000000000", referenceCode: "FT-X" });
+    expect(stranger.status).toBe(200);
+    expect((await h.db.query("select count(*)::int as n from pf_tx")).rows[0].n).toBe(before);
+  });
+
+  it("shows the bank balance next to the ledger balance and the sync poll adds only what is new", async () => {
+    const links = (await req("GET", "/v1/banks/links")).json.data as any[];
+    expect(links[0]).toMatchObject({ bank_balance: "3435000", ledger_balance: "3435000", last4: "8888", holder_name: "NGUYEN VAN A" });
+    const sync = await req("POST", "/v1/banks/sepay/sync");
+    expect(sync.status).toBe(200);
+    expect(sync.json.data.applied).toBe(2); // the two polled transactions are new
+    const again = await req("POST", "/v1/banks/sepay/sync");
+    expect(again.json.data.applied).toBe(0); // dedup: same bank references
+    const ledger = await h.db.query("select coalesce(sum(signed_amount::numeric),0) as s from pf_entry");
+    expect(Number(ledger.rows[0].s)).toBe(0);
+  });
+});
+
 function expectTx(t: any) {
   expect(t).toHaveProperty("effective_at");
   expect(t.status).toBe("POSTED");

@@ -117,3 +117,18 @@ class ShellTab extends Notifier<int> {
 }
 
 final shellTabProvider = NotifierProvider<ShellTab, int>(ShellTab.new);
+
+/// Owner profile (display name etc.) from the API; the greeting and settings read the name from here.
+final profileProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
+  ref,
+) async {
+  final data = await ref.watch(apiProvider).get('/profile');
+  return data as Map<String, dynamic>;
+});
+
+/// First word group the owner is called by (last word of the display name), or a neutral fallback.
+String callName(Map<String, dynamic>? profile, {String fallback = 'bạn'}) {
+  final n = (profile?['display_name'] as String?)?.trim() ?? '';
+  if (n.isEmpty) return fallback;
+  return n.split(RegExp(r'\s+')).last;
+}

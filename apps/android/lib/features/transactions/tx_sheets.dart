@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/ui/labeled_field.dart';
+
+import '../../core/ui/select_field.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../core/icons.dart';
 import '../../core/models.dart';
@@ -12,6 +16,8 @@ import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import 'transactions_page.dart' show txKindLabel;
 import '../../app/theme/palette.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 String _accountName(List<Account> accounts, String? id) {
   for (final a in accounts) {
@@ -117,7 +123,7 @@ class _TxDetailSheetState extends ConsumerState<TxDetailSheet> {
           TextField(
             controller: _reason,
             decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.edit_note_rounded),
+              prefixIcon: Icon(Symbols.edit_note_rounded),
               labelText: 'Lý do hủy',
             ),
           ),
@@ -286,7 +292,7 @@ class _TxEditSheetState extends ConsumerState<TxEditSheet> {
         if (_moneyEditable) ...[
           MoneyField(controller: _amount),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _accountId,
             decoration: const InputDecoration(labelText: 'Tài khoản'),
@@ -316,7 +322,7 @@ class _TxEditSheetState extends ConsumerState<TxEditSheet> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
-            leading: const Icon(Icons.event_rounded),
+            leading: const Icon(Symbols.event_rounded),
             title: Text(dateLabel(_when)),
             onTap: () async {
               final d = await showDatePicker(
@@ -340,29 +346,20 @@ class _TxEditSheetState extends ConsumerState<TxEditSheet> {
           ),
           const SizedBox(height: 12),
         ],
-        TextField(
+        LabeledField(
+          label: 'Nơi chi/thu',
+          hint: 'Nhập nơi chi hoặc thu',
           controller: _merchant,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.storefront_outlined),
-            hintText: 'Nơi chi/thu (tùy chọn)',
-          ),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _note,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.edit_note_rounded),
-            hintText: 'Ghi chú',
-          ),
-        ),
+        LabeledField(label: 'Ghi chú', hint: 'Nhập ghi chú', controller: _note),
         if (_moneyEditable) ...[
           const SizedBox(height: 12),
-          TextField(
+          LabeledField(
+            label: 'Lý do sửa',
+            hint: 'Nhập lý do sửa',
             controller: _reason,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.help_outline_rounded),
-              hintText: 'Lý do sửa (bắt buộc nếu đổi tiền/tài khoản/ngày)',
-            ),
+            required: true,
           ),
         ],
         FormError(_run.error),

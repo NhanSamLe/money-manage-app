@@ -49,8 +49,8 @@ export interface Usage {
 }
 
 /** Worst-case cost (micro-USD) reserved before the call: 1 token per UTF-8 byte of the prompt + full output budget. */
-export function estimateMicro(promptBytes: number): number {
-  return Math.ceil(promptBytes * PRICE_IN_MICRO_PER_TOKEN + MAX_OUTPUT_TOKENS * PRICE_OUT_MICRO_PER_TOKEN);
+export function estimateMicro(promptBytes: number, maxOutputTokens: number = MAX_OUTPUT_TOKENS): number {
+  return Math.ceil(promptBytes * PRICE_IN_MICRO_PER_TOKEN + maxOutputTokens * PRICE_OUT_MICRO_PER_TOKEN);
 }
 export function actualMicro(u: Usage): number {
   return Math.ceil(u.prompt_tokens * PRICE_IN_MICRO_PER_TOKEN + u.completion_tokens * PRICE_OUT_MICRO_PER_TOKEN);
@@ -163,12 +163,12 @@ export function resolveOutput(
   };
 }
 
-export function buildRequestBody(messages: unknown[]): Record<string, unknown> {
+export function buildRequestBody(messages: unknown[], maxTokens: number = MAX_OUTPUT_TOKENS): Record<string, unknown> {
   return {
     model: MODEL,
     messages,
     response_format: { type: "json_object" },
-    max_tokens: MAX_OUTPUT_TOKENS,
+    max_tokens: maxTokens,
     temperature: 0,
     stream: false,
   };

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moma/core/outbox.dart';
 import 'package:moma/core/network/api_client.dart';
 import 'package:moma/core/providers.dart';
+import 'package:moma/core/ui/select_field.dart';
 import 'package:moma/core/ui/motion.dart';
 import 'package:moma/features/dashboard/dashboard_page.dart';
 import 'package:moma/features/dashboard/reports_page.dart';
@@ -69,7 +70,7 @@ void main() {
         host(const Scaffold(body: DashboardPage()), FakeApi()),
       );
       expect(find.text('10.250.000 ₫'), findsOneWidget);
-      expect(find.text('+15.000.000 ₫'), findsWidgets);
+      expect(find.text('15.000.000 ₫'), findsWidgets);
       expect(find.textContaining('chưa biết số dư đầu kỳ'), findsOneWidget);
     });
 
@@ -162,7 +163,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('65.000'), findsOneWidget);
 
-      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await tester.tap(find.byType(PickField<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Vietcombank · Ngân hàng').last);
       await tester.pumpAndSettle();
@@ -209,7 +210,7 @@ void main() {
         await tester.enterText(find.byType(TextField).first, 'cà phê 30k');
         await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pumpAndSettle();
-        await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+        await tester.tap(find.byType(PickField<String>).first);
         await tester.pumpAndSettle();
         await tester.tap(find.text('Vietcombank · Ngân hàng').last);
         await tester.pumpAndSettle();

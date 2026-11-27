@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_add">Ghi nhanh</string>
+    <string name="widget_receive">Nhận tiền</string>
+    <string name="widget_ai">Trợ lý AI</string>
+    <string name="widget_description">Ghi nhanh, nhận tiền bằng QR và Trợ lý AI chỉ với một lần chạm</string>
+    <string name="shortcut_add_short">Ghi nhanh</string>
+    <string name="shortcut_add_long">Ghi một giao dịch</string>
+    <string name="shortcut_receive_short">Nhận tiền</string>
+    <string name="shortcut_receive_long">Tạo mã QR nhận tiền</string>
+    <string name="shortcut_ai_short">Trợ lý AI</string>
+    <string name="shortcut_ai_long">Nhờ Trợ lý AI làm giúp</string>
+</resources>

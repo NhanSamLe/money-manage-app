@@ -1,11 +1,16 @@
 import 'dart:math' as math;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../features/notifications/notifications.dart';
 import 'brand.dart';
 import '../../app/theme/palette.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Green gradient header with soft wave decoration, logo lockup, bell and avatar (design: every main screen).
 /// The body is drawn on a rounded cloud sheet that overlaps the header, as in the mock-ups.
@@ -19,6 +24,7 @@ class MomaPage extends StatelessWidget {
     this.action,
     this.onBell,
     this.showBack = false,
+    this.hero = false,
   });
   final String title;
   final String? subtitle;
@@ -28,8 +34,71 @@ class MomaPage extends StatelessWidget {
   final bool showBack;
   final Widget child;
 
+  /// Only the Home tab uses the branded green hero header. Every other screen gets a normal app bar.
+  final bool hero;
+
+  Widget _plain(BuildContext context) {
+    final pal = context.pal;
+    return ColoredBox(
+      color: pal.bg,
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: pal.surface,
+              border: Border(bottom: BorderSide(color: pal.lineSoft)),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: 56,
+                child: Row(
+                  children: [
+                    if (showBack)
+                      IconButton(
+                        tooltip: 'Quay lại',
+                        onPressed: () => Navigator.maybePop(context),
+                        icon: Icon(Symbols.arrow_back_rounded, color: pal.ink),
+                      )
+                    else
+                      const SizedBox(width: 20),
+                    if (titleIcon != null) ...[
+                      Icon(titleIcon, color: MomaColors.emerald, size: 22),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          color: pal.ink,
+                        ),
+                      ),
+                    ),
+                    if (action != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: action,
+                      )
+                    else
+                      const SizedBox(width: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!hero) return _plain(context);
     return ColoredBox(
       color: MomaColors.emerald,
       child: Column(
@@ -59,7 +128,7 @@ class MomaPage extends StatelessWidget {
                               visualDensity: VisualDensity.compact,
                               onPressed: () => Navigator.maybePop(context),
                               icon: const Icon(
-                                Icons.arrow_back_rounded,
+                                Symbols.arrow_back_rounded,
                                 color: Colors.white,
                               ),
                             ),
@@ -92,7 +161,7 @@ class MomaPage extends StatelessWidget {
                                         title,
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 27,
+                                          fontSize: 22,
                                           fontWeight: FontWeight.w800,
                                           height: 1.15,
                                         ),
@@ -159,27 +228,49 @@ class _WavePainter extends CustomPainter {
   bool shouldRepaint(_WavePainter old) => false;
 }
 
-class _Bell extends StatelessWidget {
+class _Bell extends ConsumerWidget {
   const _Bell({this.onTap});
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => InkResponse(
-    onTap: onTap,
-    radius: 24,
-    child: Semantics(
-      label: 'Thông báo',
-      button: true,
-      child: const SizedBox(
-        width: 40,
-        height: 40,
-        child: Icon(
-          Icons.notifications_none_rounded,
-          color: Colors.white,
-          size: 28,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadNoticesProvider);
+    return InkResponse(
+      onTap: onTap ?? () => context.push('/notifications'),
+      radius: 24,
+      child: Semantics(
+        label: unread > 0 ? 'Thông báo, $unread chưa xem' : 'Thông báo',
+        button: true,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(
+                Symbols.notifications_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+              if (unread > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    width: 11,
+                    height: 11,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF5A4F),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: MomaColors.forest, width: 1.5),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Avatar extends StatelessWidget {

@@ -1,42 +1,30 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../app/theme/palette.dart';
 import '../../app/theme/theme_mode.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../auth/auth_service.dart';
-import '../../app/theme/palette.dart';
 
-/// AI status for the settings row (enabled flag and this month's spend). Failure just hides the numbers.
-final aiStatusProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((
-  ref,
-) async {
-  try {
-    return await ref.watch(apiProvider).get('/ai/status')
-        as Map<String, dynamic>;
-  } on Object {
-    return null;
-  }
-});
-
+/// Settings only contain things a person uses the app for (plans, data, appearance, help). Server, API and
+/// provider configuration is deliberately not user-editable: this is a finance app, not an admin console.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = Supabase.instance.client.auth.currentUser;
-    final name = (user?.userMetadata?['display_name'] as String?)?.trim();
-    final ai = ref.watch(aiStatusProvider).value;
-    final aiOn = ai?['enabled'] == true;
-    final usage = ai?['usage'] as Map<String, dynamic>?;
-    final spent = ((usage?['spent_micro'] as num?) ?? 0) / 1000000;
-    final cap = ((ai?['cap_micro'] as num?) ?? 0) / 1000000;
+    final profile = ref.watch(profileProvider).value;
+    final name = (profile?['display_name'] as String?)?.trim() ?? '';
+    final shown = name.isNotEmpty ? name : 'Chủ sở hữu';
     return MomaPage(
       title: 'Cài đặt',
       child: ListView(
@@ -48,19 +36,14 @@ class SettingsPage extends ConsumerWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 28,
+                  radius: 26,
                   backgroundColor: MomaColors.mint,
                   child: Text(
-                    ((name != null && name.isNotEmpty)
-                            ? name
-                            : (user?.email ?? 'M'))
-                        .characters
-                        .first
-                        .toUpperCase(),
+                    shown.characters.first.toUpperCase(),
                     style: const TextStyle(
                       color: MomaColors.forest,
                       fontWeight: FontWeight.w800,
-                      fontSize: 22,
+                      fontSize: 20,
                     ),
                   ),
                 ),
@@ -70,15 +53,19 @@ class SettingsPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        (name != null && name.isNotEmpty) ? name : 'Chủ sở hữu',
+                        shown,
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
-                          fontSize: 18,
+                          fontSize: 16,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         user?.email ?? '',
-                        style: TextStyle(color: context.pal.muted),
+                        style: TextStyle(
+                          color: context.pal.muted,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -86,26 +73,73 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          const _Label('Kế hoạch'),
+          _Group(
+            children: [
+              _Item(
+                icon: Symbols.handshake_rounded,
+                color: const Color(0xFF8B5CF6),
+                title: 'Công nợ',
+                subtitle: 'Phải thu, phải trả',
+                onTap: () => context.push('/planning?tab=0'),
+              ),
+              _Item(
+                icon: Symbols.savings_rounded,
+                color: const Color(0xFF1B8A5A),
+                title: 'Mục tiêu tiết kiệm',
+                subtitle: 'Dành tiền cho kế hoạch của bạn',
+                onTap: () => context.push('/planning?tab=1'),
+              ),
+              _Item(
+                icon: Symbols.pie_chart_rounded,
+                color: const Color(0xFFFF8A3D),
+                title: 'Ngân sách',
+                subtitle: 'Hạn mức chi tiêu theo tháng',
+                onTap: () => context.push('/planning?tab=2'),
+              ),
+              _Item(
+                icon: Symbols.event_repeat_rounded,
+                color: const Color(0xFF2F80ED),
+                title: 'Thu chi định kỳ',
+                subtitle: 'Tiền nhà, hóa đơn, lương',
+                onTap: () => context.push('/planning?tab=3'),
+              ),
+            ],
+          ),
           const _Label('Dữ liệu'),
           _Group(
             children: [
               _Item(
-                icon: Icons.account_balance_wallet_outlined,
+                icon: Symbols.account_balance_rounded,
+                color: const Color(0xFF0E7490),
+                title: 'Kết nối ngân hàng',
+                subtitle: 'Tự động lấy số dư và giao dịch từ tài khoản thật',
+                onTap: () => context.push('/banks'),
+              ),
+              _Item(
+                icon: Symbols.qr_code_2_rounded,
+                color: const Color(0xFF1B8A5A),
+                title: 'Nhận tiền bằng mã QR',
+                subtitle: 'Tạo mã VietQR cho tài khoản của bạn',
+                onTap: () => context.push('/receive'),
+              ),
+              _Item(
+                icon: Symbols.account_balance_wallet_rounded,
                 color: const Color(0xFF1B8A5A),
                 title: 'Tài khoản',
                 subtitle: 'Ngân hàng, ví, tiền mặt',
                 onTap: () => context.push('/accounts'),
               ),
               _Item(
-                icon: Icons.category_outlined,
+                icon: Symbols.category_rounded,
                 color: const Color(0xFFFF8A3D),
                 title: 'Danh mục',
                 subtitle: 'Thêm, sửa, lưu trữ danh mục thu chi',
                 onTap: () => context.push('/categories'),
               ),
               _Item(
-                icon: Icons.upload_file_rounded,
+                icon: Symbols.upload_file_rounded,
                 color: const Color(0xFF2F80ED),
                 title: 'Nhập sao kê CSV',
                 subtitle: 'Đưa giao dịch từ file sao kê vào MoMa',
@@ -113,26 +147,11 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const _Label('Trợ lý AI'),
+          const _Label('Ứng dụng'),
           _Group(
             children: [
               _Item(
-                icon: Icons.auto_awesome_outlined,
-                color: const Color(0xFF8B5CF6),
-                title: 'DeepSeek Flash',
-                subtitle: aiOn
-                    ? 'Đang bật · tháng này \$${spent.toStringAsFixed(3)} / \$${cap.toStringAsFixed(2)}'
-                    : (ai == null
-                          ? 'Chưa kiểm tra được trạng thái'
-                          : 'Đang tắt'),
-              ),
-            ],
-          ),
-          const _Label('Hệ thống'),
-          _Group(
-            children: [
-              _Item(
-                icon: Icons.brightness_6_outlined,
+                icon: Symbols.brightness_6_rounded,
                 color: const Color(0xFF8B5CF6),
                 title: 'Giao diện',
                 subtitle: switch (ref.watch(themeModeProvider)) {
@@ -143,23 +162,17 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () => _pickTheme(context, ref),
               ),
               _Item(
-                icon: Icons.dns_outlined,
-                color: const Color(0xFF64748B),
-                title: 'Địa chỉ máy chủ',
-                subtitle: 'Máy chủ MoMa API',
-                onTap: () => _editApiBase(context, ref),
-              ),
-              const _Item(
-                icon: Icons.shield_outlined,
-                color: Color(0xFF1B8A5A),
-                title: 'Bảo mật',
-                subtitle: 'Phiên đăng nhập lưu trong Android Keystore',
+                icon: Symbols.menu_book_rounded,
+                color: const Color(0xFF1B8A5A),
+                title: 'Hướng dẫn sử dụng',
+                subtitle: 'Các bước thiết lập và cách dùng MoMa',
+                onTap: () => context.push('/guide'),
               ),
               _Item(
-                icon: Icons.info_outline_rounded,
+                icon: Symbols.info_rounded,
                 color: const Color(0xFF2F80ED),
                 title: 'Giới thiệu MoMa',
-                subtitle: 'MoneyManage · Bảo lưu mọi quyền',
+                subtitle: 'Phiên bản và thông tin ứng dụng',
                 onTap: () async {
                   final info = await PackageInfo.fromPlatform();
                   if (!context.mounted) return;
@@ -177,7 +190,7 @@ class SettingsPage extends ConsumerWidget {
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: () => AuthService(ref.read(apiProvider)).signOut(),
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Symbols.logout_rounded),
             label: const Text('Đăng xuất'),
           ),
         ],
@@ -194,53 +207,28 @@ class SettingsPage extends ConsumerWidget {
         ChoiceOption(
           value: ThemeMode.light,
           label: 'Sáng',
-          icon: Icons.light_mode_outlined,
+          icon: Symbols.light_mode_rounded,
         ),
         ChoiceOption(
           value: ThemeMode.dark,
           label: 'Tối',
-          icon: Icons.dark_mode_outlined,
+          icon: Symbols.dark_mode_rounded,
         ),
         ChoiceOption(
           value: ThemeMode.system,
           label: 'Hệ thống',
-          icon: Icons.brightness_6_outlined,
+          icon: Symbols.brightness_6_rounded,
         ),
       ],
       footnote: 'Chế độ Sáng dễ nhìn ngoài trời, chế độ Tối dịu mắt khi ở nơi ít ánh sáng.',
     );
     if (v != null) await ref.read(themeModeProvider.notifier).set(v);
   }
-
-  Future<void> _editApiBase(BuildContext context, WidgetRef ref) async {
-    final store = ref.read(storeProvider);
-    final c = TextEditingController(text: await store.apiBase());
-    if (!context.mounted) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Địa chỉ máy chủ'),
-        content: TextField(controller: c, keyboardType: TextInputType.url),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-    final url = c.text.trim();
-    if (ok == true && url.startsWith('https://')) await store.setApiBase(url);
-  }
 }
 
 BoxDecoration _deco(BuildContext context) => BoxDecoration(
   color: context.pal.surface,
-  borderRadius: BorderRadius.circular(22),
+  borderRadius: BorderRadius.circular(20),
 );
 
 class _Label extends StatelessWidget {
@@ -252,8 +240,8 @@ class _Label extends StatelessWidget {
     child: Text(
       text,
       style: TextStyle(
-        fontWeight: FontWeight.w800,
-        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
         color: context.pal.muted,
       ),
     ),
@@ -272,7 +260,7 @@ class _Group extends StatelessWidget {
         for (final (i, c) in children.indexed) ...[
           c,
           if (i < children.length - 1)
-            Divider(height: 1, indent: 70, color: context.pal.lineSoft),
+            Divider(height: 1, indent: 68, color: context.pal.lineSoft),
         ],
       ],
     ),
@@ -295,12 +283,15 @@ class _Item extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     onTap: onTap,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-    leading: CategoryAvatar(iconData: icon, color: color),
-    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-    subtitle: Text(subtitle),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+    leading: CategoryAvatar(iconData: icon, color: color, size: 40),
+    title: Text(
+      title,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+    ),
+    subtitle: Text(subtitle, style: const TextStyle(fontSize: 12.5)),
     trailing: onTap == null
         ? null
-        : Icon(Icons.chevron_right_rounded, color: context.pal.muted),
+        : Icon(Symbols.chevron_right_rounded, color: context.pal.muted),
   );
 }

@@ -12,6 +12,8 @@ import '../../core/ui/brand.dart';
 import '../../core/ui/motion.dart';
 import '../auth/welcome_hero.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 class _Slide {
   const _Slide(this.title, this.body, this.art);
   final String title;
@@ -39,12 +41,15 @@ class _IntroPageState extends ConsumerState<IntroPage> {
     _Slide(
       'Ghi nhanh bằng câu nói tự nhiên',
       'Gõ "ăn trưa 65k" hoặc nhờ Trợ lý AI. Trợ lý chỉ đề xuất, bạn xác nhận thì mới ghi vào sổ.',
-      _IconArt(Icons.auto_awesome_rounded, Icons.chat_bubble_outline_rounded),
+      _IconArt(
+        Symbols.auto_awesome_rounded,
+        Symbols.chat_bubble_outline_rounded,
+      ),
     ),
     _Slide(
       'Mục tiêu, ngân sách và công nợ trong tầm tay',
       'Đặt hạn mức chi tiêu, tiết kiệm cho mục tiêu và nhớ ai đang nợ bạn, bạn đang nợ ai.',
-      _IconArt(Icons.savings_rounded, Icons.pie_chart_rounded),
+      _IconArt(Symbols.savings_rounded, Symbols.pie_chart_rounded),
     ),
   ];
 
@@ -242,8 +247,8 @@ class _IconArtState extends State<_IconArt> with TickerProviderStateMixin {
                       i == 0
                           ? widget.side
                           : (i == 1
-                                ? Icons.trending_up_rounded
-                                : Icons.verified_user_outlined),
+                                ? Symbols.trending_up_rounded
+                                : Symbols.verified_user_rounded),
                       color: MomaColors.emerald,
                       size: i == 0 ? 28 : 22,
                     ),

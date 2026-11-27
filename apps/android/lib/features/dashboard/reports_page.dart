@@ -13,6 +13,8 @@ import '../../core/sheets.dart';
 import '../../core/widgets.dart';
 import '../../app/theme/palette.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 /// "Báo cáo": month selector, income/expense and where the money went (deterministic server totals).
 class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
@@ -44,7 +46,7 @@ class ReportsPage extends ConsumerWidget {
                 children: [
                   IconButton(
                     tooltip: 'Tháng trước',
-                    icon: const Icon(Icons.chevron_left_rounded),
+                    icon: const Icon(Symbols.chevron_left_rounded),
                     onPressed: () => notifier.shift(-1),
                   ),
                   Flexible(
@@ -67,7 +69,7 @@ class ReportsPage extends ConsumerWidget {
                               ChoiceOption(
                                 value: key(d),
                                 label: 'Tháng ${d.month}/${d.year}',
-                                icon: Icons.calendar_month_outlined,
+                                icon: Symbols.calendar_month_rounded,
                               ),
                           ],
                         );
@@ -93,7 +95,7 @@ class ReportsPage extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            const Icon(Icons.keyboard_arrow_down_rounded),
+                            const Icon(Symbols.keyboard_arrow_down_rounded),
                           ],
                         ),
                       ),
@@ -101,7 +103,7 @@ class ReportsPage extends ConsumerWidget {
                   ),
                   IconButton(
                     tooltip: 'Tháng sau',
-                    icon: const Icon(Icons.chevron_right_rounded),
+                    icon: const Icon(Symbols.chevron_right_rounded),
                     onPressed: () => notifier.shift(1),
                   ),
                 ],
@@ -147,7 +149,7 @@ class _Body extends StatelessWidget {
                 label: 'Thu nhập',
                 value: '+${formatVnd(s.income)}',
                 color: MomaColors.income,
-                icon: Icons.south_rounded,
+                icon: Symbols.south_rounded,
               ),
             ),
             const SizedBox(width: 12),
@@ -156,7 +158,7 @@ class _Body extends StatelessWidget {
                 label: 'Chi tiêu',
                 value: '-${formatVnd(s.expense)}',
                 color: MomaColors.expense,
-                icon: Icons.north_east_rounded,
+                icon: Symbols.north_east_rounded,
               ),
             ),
           ],

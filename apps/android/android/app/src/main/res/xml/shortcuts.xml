@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="ai"
+        android:enabled="true"
+        android:icon="@drawable/ic_widget_ai_dark"
+        android:shortcutShortLabel="@string/shortcut_ai_short"
+        android:shortcutLongLabel="@string/shortcut_ai_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="moma://app/ai"
+            android:targetClass="vn.moma.app.MainActivity"
+            android:targetPackage="vn.moma.app" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="receive"
+        android:enabled="true"
+        android:icon="@drawable/ic_widget_qr_dark"
+        android:shortcutShortLabel="@string/shortcut_receive_short"
+        android:shortcutLongLabel="@string/shortcut_receive_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="moma://app/receive"
+            android:targetClass="vn.moma.app.MainActivity"
+            android:targetPackage="vn.moma.app" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="quick_add"
+        android:enabled="true"
+        android:icon="@drawable/ic_widget_add_dark"
+        android:shortcutShortLabel="@string/shortcut_add_short"
+        android:shortcutLongLabel="@string/shortcut_add_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="moma://app/quick-entry"
+            android:targetClass="vn.moma.app.MainActivity"
+            android:targetPackage="vn.moma.app" />
+    </shortcut>
+</shortcuts>

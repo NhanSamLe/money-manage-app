@@ -29,6 +29,8 @@ const TABLE: Record<string, ErrorSpec> = {
   AI_DISABLED: { status: 422, retryable: false, message: "Trợ lý AI chưa được bật." },
   AI_BUDGET_EXCEEDED: { status: 429, retryable: false, message: "Đã dùng hết hạn mức AI của tháng này." },
   AI_UNAVAILABLE: { status: 503, retryable: true, message: "Trợ lý AI tạm thời không phản hồi." },
+  BANK_NOT_CONFIGURED: { status: 422, retryable: false, message: "Chưa bật kết nối ngân hàng." },
+  BANK_UNAVAILABLE: { status: 503, retryable: true, message: "Không kết nối được dịch vụ ngân hàng. Bạn thử lại sau ít phút." },
   UNBALANCED_JOURNAL: { status: 422, retryable: false, message: "Bút toán không cân." },
 };
 const GENERIC: ErrorSpec = { status: 503, retryable: true, message: "Hệ thống tạm thời gián đoạn." };

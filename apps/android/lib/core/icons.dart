@@ -1,51 +1,52 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Maps the server-side icon keys of system categories to Material icons.
 IconData categoryIcon(String? key) {
   switch (key) {
     case 'restaurant':
-      return Icons.restaurant_rounded;
+      return Symbols.restaurant_rounded;
     case 'directions_car':
-      return Icons.directions_car_rounded;
+      return Symbols.directions_car_rounded;
     case 'home':
-      return Icons.home_rounded;
+      return Symbols.home_rounded;
     case 'receipt_long':
-      return Icons.receipt_long_rounded;
+      return Symbols.receipt_long_rounded;
     case 'shopping_bag':
-      return Icons.shopping_bag_rounded;
+      return Symbols.shopping_bag_rounded;
     case 'sports_esports':
-      return Icons.sports_esports_rounded;
+      return Symbols.sports_esports_rounded;
     case 'favorite':
-      return Icons.favorite_rounded;
+      return Symbols.favorite_rounded;
     case 'school':
-      return Icons.school_rounded;
+      return Symbols.school_rounded;
     case 'payments':
-      return Icons.payments_rounded;
+      return Symbols.payments_rounded;
     case 'redeem':
-      return Icons.redeem_rounded;
+      return Symbols.redeem_rounded;
     case 'savings':
-      return Icons.savings_rounded;
+      return Symbols.savings_rounded;
     case 'add_card':
-      return Icons.add_card_rounded;
+      return Symbols.add_card_rounded;
     default:
-      return Icons.more_horiz_rounded;
+      return Symbols.more_horiz_rounded;
   }
 }
 
 IconData accountIcon(String kind) {
   switch (kind) {
     case 'BANK':
-      return Icons.account_balance_rounded;
+      return Symbols.account_balance_rounded;
     case 'WALLET':
-      return Icons.account_balance_wallet_rounded;
+      return Symbols.account_balance_wallet_rounded;
     case 'CASH':
-      return Icons.payments_rounded;
+      return Symbols.payments_rounded;
     case 'SAVINGS':
-      return Icons.savings_rounded;
+      return Symbols.savings_rounded;
     case 'CREDIT_CARD':
-      return Icons.credit_card_rounded;
+      return Symbols.credit_card_rounded;
     default:
-      return Icons.wallet_rounded;
+      return Symbols.wallet_rounded;
   }
 }
 

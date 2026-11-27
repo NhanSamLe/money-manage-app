@@ -6,6 +6,12 @@ export interface Env {
   BOOTSTRAP_SECRET?: string;
   /** Optional: DeepSeek API key for the AI assistant. Absent => AI is OFF (rules + manual only). */
   DEEPSEEK_API_KEY?: string;
+  /** SePay API token (userapi.sepay.vn/v2): lists verified bank accounts and polls transactions. */
+  SEPAY_API_TOKEN?: string;
+  /** Shared key SePay sends as `Authorization: Apikey <key>` with every webhook. */
+  SEPAY_WEBHOOK_KEY?: string;
+  /** Alternative: SePay HMAC-SHA256 webhook secret. */
+  SEPAY_WEBHOOK_SECRET?: string;
   OWNER_EMAIL: string;
   /** Optional: only for legacy Supabase projects that still sign tokens with a shared HS256 secret. */
   SUPABASE_JWT_SECRET?: string;
@@ -17,6 +23,9 @@ export interface Config {
   serviceRoleKey: string;
   bootstrapSecret?: string;
   deepseekKey?: string;
+  sepayToken?: string;
+  sepayWebhookKey?: string;
+  sepayWebhookSecret?: string;
   ownerEmail: string;
   jwtSecret?: string;
   dbTimeoutMs: number;
@@ -43,6 +52,9 @@ export function loadConfig(env: Env): Config {
     publishableKey: need("SUPABASE_PUBLISHABLE_KEY"),
     serviceRoleKey: need("SUPABASE_SERVICE_ROLE_KEY"),
     ownerEmail: need("OWNER_EMAIL").toLowerCase(),
+    ...(env.SEPAY_API_TOKEN ? { sepayToken: env.SEPAY_API_TOKEN } : {}),
+    ...(env.SEPAY_WEBHOOK_KEY ? { sepayWebhookKey: env.SEPAY_WEBHOOK_KEY } : {}),
+    ...(env.SEPAY_WEBHOOK_SECRET ? { sepayWebhookSecret: env.SEPAY_WEBHOOK_SECRET } : {}),
     ...(env.DEEPSEEK_API_KEY ? { deepseekKey: env.DEEPSEEK_API_KEY } : {}),
     ...(env.SUPABASE_JWT_SECRET ? { jwtSecret: env.SUPABASE_JWT_SECRET } : {}),
     dbTimeoutMs: DB_TIMEOUT_MS,

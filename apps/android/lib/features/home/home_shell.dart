@@ -13,6 +13,8 @@ import '../dashboard/reports_page.dart';
 import '../settings/settings_page.dart';
 import '../transactions/transactions_page.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
   @override
@@ -39,11 +41,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   ];
 
   static const _items = <NavItem>[
-    NavItem(Icons.home_outlined, 'Trang chủ'),
-    NavItem(Icons.swap_horiz_rounded, 'Giao dịch'),
-    NavItem(Icons.auto_awesome_outlined, 'Trợ lý AI'),
-    NavItem(Icons.bar_chart_rounded, 'Báo cáo'),
-    NavItem(Icons.settings_outlined, 'Cài đặt'),
+    NavItem(Symbols.home_rounded, 'Trang chủ'),
+    NavItem(Symbols.swap_horiz_rounded, 'Giao dịch'),
+    NavItem(Symbols.auto_awesome_rounded, 'Trợ lý AI'),
+    NavItem(Symbols.bar_chart_rounded, 'Báo cáo'),
+    NavItem(Symbols.settings_rounded, 'Cài đặt'),
   ];
 
   @override
@@ -66,7 +68,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               backgroundColor: MomaColors.emerald,
               foregroundColor: Colors.white,
               shape: const CircleBorder(),
-              child: const Icon(Icons.add_rounded, size: 32),
+              child: const Icon(Symbols.add_rounded, size: 32),
             )
           : null,
       bottomNavigationBar: MomaNavBar(
@@ -95,7 +97,7 @@ class _OutboxBanner extends ConsumerWidget {
       child: ListTile(
         dense: true,
         leading: Icon(
-          box.syncing ? Icons.sync_rounded : Icons.cloud_off_rounded,
+          box.syncing ? Symbols.sync_rounded : Symbols.cloud_off_rounded,
           color: box.failed > 0 ? MomaColors.expense : MomaColors.forest,
         ),
         title: Text(parts.join(' · ')),

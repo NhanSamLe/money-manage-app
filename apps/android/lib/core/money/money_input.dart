@@ -5,6 +5,8 @@ import '../ui/labeled_field.dart';
 import '../validators.dart';
 import 'money.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 /// Formats digits as VND with dot separators while typing; the value itself stays an integer.
 class ThousandsFormatter extends TextInputFormatter {
   @override
@@ -32,20 +34,23 @@ class MoneyField extends StatelessWidget {
     this.autofocus = false,
     this.optional = false,
     this.onChanged,
+    this.help,
   });
   final TextEditingController controller;
   final String hint;
   final bool autofocus;
   final bool optional;
   final ValueChanged<String>? onChanged;
+  final String? help;
 
   @override
   Widget build(BuildContext context) => LabeledField(
     label: hint,
     controller: controller,
     required: !optional,
+    help: help,
     autofocus: autofocus,
-    icon: Icons.payments_outlined,
+    icon: Symbols.payments_rounded,
     suffixText: '₫',
     keyboardType: TextInputType.number,
     onChanged: onChanged,

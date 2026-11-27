@@ -45,6 +45,8 @@ dependencies:
   google_fonts: ^9.0.0
   package_info_plus: ^10.2.2
   file_picker: ^13.4.1
+  material_symbols_icons: ^4.2960.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

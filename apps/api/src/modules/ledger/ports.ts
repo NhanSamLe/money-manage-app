@@ -23,6 +23,11 @@ export interface FinanceGateway {
   aiSettle(ownerId: string, reservationId: string, actualMicro: number): Promise<unknown>;
   aiMarkUnknown(ownerId: string, reservationId: string): Promise<unknown>;
   aiUsage(ownerId: string): Promise<{ period: string; spent_micro: number; reserved_micro: number; calls: number }>;
+  linkAccount(ownerId: string, accountId: string, a: { externalId: string; numberHash: string; last4: string; holder: string; bank: string; balance: number }): Promise<unknown>;
+  readLinks(ownerId: string): Promise<unknown>;
+  linkFind(numberHash: string): Promise<{ owner_id: string; account_id: string } | null>;
+  setLinkCursor(ownerId: string, accountId: string, cursor: string): Promise<unknown>;
+  ingestBankEvent(e: { externalId: string; numberHash: string; direction: "in" | "out"; amount: number; atIso: string; content: string; categoryId: string; balance: number | null; payload: unknown }): Promise<{ status: string; tx_id?: string; owner_id?: string }>;
   getOwnerId(): Promise<string | null>;
   getSetupState(): Promise<string>;
 }

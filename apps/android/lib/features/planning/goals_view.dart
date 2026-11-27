@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/ui/labeled_field.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../core/money/money.dart';
 import '../../core/money/money_input.dart';
@@ -9,8 +11,11 @@ import '../../core/planning_models.dart';
 import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import '../../app/theme/palette.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 class GoalsView extends ConsumerWidget {
   const GoalsView({super.key});
@@ -52,7 +57,7 @@ class GoalsView extends ConsumerWidget {
                 const SizedBox(
                   height: 220,
                   child: EmptyState(
-                    icon: Icons.savings_outlined,
+                    icon: Symbols.savings_rounded,
                     title: 'Chưa có mục tiêu',
                     hint: 'Tạo mục tiêu tiết kiệm đầu tiên của bạn.',
                   ),
@@ -62,7 +67,7 @@ class GoalsView extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () =>
                     showFormSheet<void>(context, (_) => const _AddGoalSheet()),
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(Symbols.add_rounded),
                 label: const Text('Tạo mục tiêu mới'),
               ),
             ],
@@ -183,12 +188,10 @@ class _AddGoalSheetState extends ConsumerState<_AddGoalSheet> {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
-        TextField(
+        LabeledField(
+          label: 'Tên mục tiêu',
+          hint: 'Nhập tên mục tiêu',
           controller: _name,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.flag_outlined),
-            hintText: 'Tên mục tiêu (vd: Du lịch Đà Lạt)',
-          ),
         ),
         const SizedBox(height: 12),
         MoneyField(controller: _target, hint: 'Số tiền cần đạt'),
@@ -265,7 +268,7 @@ class _GoalMoveSheetState extends ConsumerState<_GoalMoveSheet> {
           style: TextStyle(color: context.pal.muted),
         ),
         const SizedBox(height: 12),
-        SegmentedButton<bool>(
+        PillTabs<bool>(
           segments: const [
             ButtonSegment(value: false, label: Text('Dành thêm')),
             ButtonSegment(value: true, label: Text('Rút lại')),
@@ -274,7 +277,7 @@ class _GoalMoveSheetState extends ConsumerState<_GoalMoveSheet> {
           onSelectionChanged: (s) => setState(() => _release = s.first),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
+        PickField<String>(
           isExpanded: true,
           initialValue: _accountId,
           decoration: const InputDecoration(labelText: 'Tài khoản'),

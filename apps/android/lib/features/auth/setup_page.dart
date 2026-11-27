@@ -11,6 +11,8 @@ import '../../core/widgets.dart';
 import 'auth_service.dart';
 import '../../app/theme/palette.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 /// True while sign-up is finishing: the session exists after the code is verified, but the owner binding and
 /// device registration are still running, so the router must not jump to the main app yet.
 final ValueNotifier<bool> signupInProgress = ValueNotifier<bool>(false);
@@ -130,7 +132,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   onPressed: () => _step == 1
                       ? setState(() => _step = 0)
                       : context.go('/welcome'),
-                  icon: const Icon(Icons.arrow_back_rounded),
+                  icon: const Icon(Symbols.arrow_back_rounded),
                 ),
               ),
               const Center(child: MomaWordmark(size: 48, dark: true)),
@@ -155,7 +157,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   label: 'Email',
                   hint: 'Nhập email',
                   controller: _email,
-                  icon: Icons.mail_outline_rounded,
+                  icon: Symbols.mail_outline_rounded,
                   required: true,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -166,7 +168,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   label: 'Tên hiển thị',
                   hint: 'Nhập tên của bạn',
                   controller: _name,
-                  icon: Icons.person_outline_rounded,
+                  icon: Symbols.person_outline_rounded,
                   required: true,
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
@@ -177,7 +179,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   label: 'Mật khẩu',
                   hint: 'Nhập mật khẩu',
                   controller: _password,
-                  icon: Icons.lock_outline_rounded,
+                  icon: Symbols.lock_outline_rounded,
                   required: true,
                   obscure: _hide,
                   textInputAction: TextInputAction.next,
@@ -186,8 +188,8 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                     tooltip: _hide ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                     icon: Icon(
                       _hide
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
+                          ? Symbols.visibility_off_rounded
+                          : Symbols.visibility_rounded,
                     ),
                     onPressed: () => setState(() => _hide = !_hide),
                   ),
@@ -197,7 +199,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   label: 'Nhập lại mật khẩu',
                   hint: 'Nhập lại mật khẩu',
                   controller: _confirm,
-                  icon: Icons.lock_reset_rounded,
+                  icon: Symbols.lock_reset_rounded,
                   required: true,
                   obscure: _hide,
                   onSubmitted: (_) => _sendCode(),
@@ -211,7 +213,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   label: 'Mã xác nhận',
                   hint: 'Nhập mã trong thư',
                   controller: _code,
-                  icon: Icons.pin_outlined,
+                  icon: Symbols.pin_rounded,
                   required: true,
                   keyboardType: TextInputType.number,
                   autofocus: true,

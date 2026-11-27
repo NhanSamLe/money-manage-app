@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/ui/labeled_field.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../core/models.dart';
 import '../../core/money/money.dart';
@@ -10,8 +12,11 @@ import '../../core/planning_models.dart';
 import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import '../../app/theme/palette.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 class RecurringView extends ConsumerWidget {
   const RecurringView({super.key});
@@ -46,7 +51,7 @@ class RecurringView extends ConsumerWidget {
               const SizedBox(
                 height: 220,
                 child: EmptyState(
-                  icon: Icons.event_repeat_rounded,
+                  icon: Symbols.event_repeat_rounded,
                   title: 'Chưa có khoản định kỳ',
                   hint:
                       'Thêm tiền nhà, hóa đơn, lương... để được nhắc đúng hạn.',
@@ -57,7 +62,7 @@ class RecurringView extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () =>
                   showFormSheet<void>(context, (_) => const _RecurringSheet()),
-              icon: const Icon(Icons.add_rounded),
+              icon: const Icon(Symbols.add_rounded),
               label: const Text('Thêm khoản định kỳ'),
             ),
           ],
@@ -108,7 +113,7 @@ class _RecurringCard extends ConsumerWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading: const Icon(Icons.schedule_rounded),
+                leading: const Icon(Symbols.schedule_rounded),
                 title: Text('Đến hạn ${o.dueDate}'),
                 trailing: TextButton(
                   onPressed: () => showFormSheet<void>(
@@ -267,7 +272,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
-        SegmentedButton<String>(
+        PillTabs<String>(
           segments: const [
             ButtonSegment(value: 'EXPENSE', label: Text('Chi')),
             ButtonSegment(value: 'INCOME', label: Text('Thu')),
@@ -280,17 +285,11 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
           }),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _name,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.label_outline_rounded),
-            hintText: 'Tên (vd: Tiền nhà)',
-          ),
-        ),
+        LabeledField(label: 'Tên', hint: 'Nhập tên', controller: _name),
         const SizedBox(height: 12),
         MoneyField(controller: _amount),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
+        PickField<String>(
           isExpanded: true,
           initialValue: _accountId,
           decoration: const InputDecoration(labelText: 'Tài khoản'),
@@ -302,7 +301,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
         ),
         const SizedBox(height: 12),
         if (_kind == 'TRANSFER')
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _toAccountId,
             decoration: const InputDecoration(labelText: 'Đến tài khoản'),
@@ -313,7 +312,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
             onChanged: (v) => setState(() => _toAccountId = v),
           )
         else
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _categoryId,
             decoration: const InputDecoration(labelText: 'Danh mục'),
@@ -324,7 +323,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
             onChanged: (v) => setState(() => _categoryId = v),
           ),
         const SizedBox(height: 12),
-        SegmentedButton<String>(
+        PillTabs<String>(
           segments: const [
             ButtonSegment(value: 'WEEKLY', label: Text('Tuần')),
             ButtonSegment(value: 'MONTHLY', label: Text('Tháng')),
@@ -339,7 +338,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          leading: const Icon(Icons.event_rounded),
+          leading: const Icon(Symbols.event_rounded),
           title: Text('Kỳ đầu tiên: ${dateLabel(_next)}'),
           onTap: () async {
             final d = await showDatePicker(

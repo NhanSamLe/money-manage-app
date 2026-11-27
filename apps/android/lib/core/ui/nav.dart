@@ -40,6 +40,7 @@ class MomaNavBar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Row(
+            spacing: 4,
             children: [
               for (var i = 0; i < items.length; i++)
                 Expanded(
@@ -52,7 +53,7 @@ class MomaNavBar extends StatelessWidget {
                       onTap: () => onSelect(i),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 5),
                         decoration: BoxDecoration(
                           color: i == index
                               ? context.pal.tint
@@ -64,7 +65,7 @@ class MomaNavBar extends StatelessWidget {
                           children: [
                             Icon(
                               items[i].icon,
-                              size: 26,
+                              size: 23,
                               color: i == index
                                   ? MomaColors.emerald
                                   : context.pal.muted,
@@ -75,7 +76,7 @@ class MomaNavBar extends StatelessWidget {
                               child: Text(
                                 items[i].label,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: i == index
                                       ? FontWeight.w700
                                       : FontWeight.w500,

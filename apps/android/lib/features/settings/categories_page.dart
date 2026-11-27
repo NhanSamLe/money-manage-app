@@ -2,13 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/ui/labeled_field.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../core/icons.dart';
 import '../../core/models.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/actions.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Category management: add, rename, archive. System ledger accounts back each category; the class never changes.
 class CategoriesPage extends ConsumerWidget {
@@ -21,14 +27,14 @@ class CategoriesPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Danh mục'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(Symbols.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () =>
             showFormSheet<void>(context, (_) => const _CategorySheet()),
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(Symbols.add_rounded),
         label: const Text('Thêm'),
       ),
       body: cats.when(
@@ -142,7 +148,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         ),
         const SizedBox(height: 12),
         if (e == null)
-          SegmentedButton<String>(
+          PillTabs<String>(
             segments: const [
               ButtonSegment(value: 'EXPENSE', label: Text('Chi tiêu')),
               ButtonSegment(value: 'INCOME', label: Text('Thu nhập')),
@@ -154,20 +160,16 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
             }),
           ),
         const SizedBox(height: 12),
-        TextField(
+        LabeledField(
+          label: 'Tên danh mục',
+          hint: 'Nhập tên danh mục',
           controller: _name,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.label_outline_rounded),
-            hintText: 'Tên danh mục',
-          ),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String?>(
+        PickField<String?>(
           isExpanded: true,
           initialValue: _parentId,
-          decoration: const InputDecoration(
-            labelText: 'Danh mục cha (tùy chọn)',
-          ),
+          decoration: const InputDecoration(labelText: 'Danh mục cha'),
           items: [
             const DropdownMenuItem<String?>(value: null, child: Text('Không')),
             for (final p in parents)
@@ -177,14 +179,28 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         ),
         FormError(_run.error),
         const SizedBox(height: 16),
-        FilledButton(
-          onPressed: _run.busy ? null : _submit,
-          child: const Text('Lưu'),
-        ),
         if (e != null && e.name != 'Khác')
-          TextButton(
-            onPressed: _run.busy ? null : () => _submit(archive: true),
-            child: const Text('Lưu trữ danh mục này'),
+          ActionButtons(
+            primaryLabel: 'Lưu',
+            onPrimary: _submit,
+            secondaryLabel: 'Xóa danh mục',
+            onSecondary: () async {
+              final ok = await showConfirmDialog(
+                context,
+                title: 'Xóa danh mục "${e.name}"?',
+                message: 'Danh mục sẽ được ẩn khỏi danh sách. Các giao dịch đã ghi trước đó vẫn giữ nguyên.',
+                confirmLabel: 'Xóa',
+                destructive: true,
+              );
+              if (ok) await _submit(archive: true);
+            },
+            busy: _run.busy,
+          )
+        else
+          ActionButtons(
+            primaryLabel: 'Lưu',
+            onPrimary: _submit,
+            busy: _run.busy,
           ),
       ],
     );

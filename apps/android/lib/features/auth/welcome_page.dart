@@ -9,6 +9,8 @@ import '../../core/ui/motion.dart';
 import 'welcome_hero.dart';
 import '../../app/theme/palette.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
 
@@ -66,7 +68,7 @@ class WelcomePage extends StatelessWidget {
                 FadeSlideIn(
                   delay: const Duration(milliseconds: 350),
                   child: Text(
-                    'Chào mừng đến với MoMa 👋',
+                    'Chào mừng đến với MoMa',
                     textAlign: TextAlign.center,
                     style: text.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
@@ -105,7 +107,7 @@ class WelcomePage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: const Icon(
-                            Icons.person_outline_rounded,
+                            Symbols.person_outline_rounded,
                             color: MomaColors.emerald,
                             size: 28,
                           ),
@@ -140,7 +142,7 @@ class WelcomePage extends StatelessWidget {
                   delay: const Duration(milliseconds: 700),
                   child: _ActionButton(
                     filled: true,
-                    icon: Icons.person_outline_rounded,
+                    icon: Symbols.person_outline_rounded,
                     label: 'Tôi đã có tài khoản',
                     onTap: () => context.go('/login'),
                   ),
@@ -150,7 +152,7 @@ class WelcomePage extends StatelessWidget {
                   delay: const Duration(milliseconds: 800),
                   child: _ActionButton(
                     filled: false,
-                    icon: Icons.add_circle_outline_rounded,
+                    icon: Symbols.add_circle_outline_rounded,
                     label: 'Tạo tài khoản mới',
                     onTap: () => context.go('/register'),
                   ),
@@ -160,7 +162,7 @@ class WelcomePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(
-                      Icons.verified_user_outlined,
+                      Symbols.verified_user_rounded,
                       color: MomaColors.emerald,
                       size: 28,
                     ),
@@ -228,7 +230,7 @@ class _ActionButton extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(Icons.arrow_forward_rounded, color: fg),
+              Icon(Symbols.arrow_forward_rounded, color: fg),
             ],
           ),
         ),

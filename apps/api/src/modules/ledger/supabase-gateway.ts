@@ -47,6 +47,27 @@ export class SupabaseFinanceGateway implements FinanceGateway {
   aiUsage(ownerId: string) {
     return this.rpc<{ period: string; spent_micro: number; reserved_micro: number; calls: number }>("pf_ai_usage_read", { p_owner: ownerId });
   }
+  linkAccount(ownerId: string, accountId: string, a: { externalId: string; numberHash: string; last4: string; holder: string; bank: string; balance: number }) {
+    return this.rpc("pf_link_account", {
+      p_owner: ownerId, p_account: accountId, p_provider: "SEPAY", p_external: a.externalId, p_number_hash: a.numberHash,
+      p_last4: a.last4, p_holder: a.holder, p_bank: a.bank, p_balance: a.balance,
+    });
+  }
+  readLinks(ownerId: string) {
+    return this.rpc("pf_read_account_links", { p_owner: ownerId });
+  }
+  linkFind(numberHash: string) {
+    return this.rpc<{ owner_id: string; account_id: string } | null>("pf_link_find", { p_provider: "SEPAY", p_number_hash: numberHash });
+  }
+  setLinkCursor(ownerId: string, accountId: string, cursor: string) {
+    return this.rpc("pf_link_set_cursor", { p_owner: ownerId, p_account: accountId, p_cursor: cursor });
+  }
+  ingestBankEvent(e: { externalId: string; numberHash: string; direction: "in" | "out"; amount: number; atIso: string; content: string; categoryId: string; balance: number | null; payload: unknown }) {
+    return this.rpc<{ status: string; tx_id?: string; owner_id?: string }>("pf_ingest_bank_event", {
+      p_provider: "SEPAY", p_external: e.externalId, p_number_hash: e.numberHash, p_direction: e.direction, p_amount: e.amount,
+      p_at: e.atIso, p_content: e.content, p_category: e.categoryId, p_balance: e.balance, p_payload: e.payload,
+    });
+  }
   readAccounts(ownerId: string) {
     return this.rpc("pf_read_accounts", { p_owner: ownerId });
   }

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/ui/labeled_field.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../core/models.dart';
 import '../../core/money/money.dart';
@@ -10,7 +12,10 @@ import '../../core/planning_models.dart';
 import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 class DebtsView extends ConsumerStatefulWidget {
   const DebtsView({super.key});
@@ -42,7 +47,7 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             children: [
-              SegmentedButton<String>(
+              PillTabs<String>(
                 segments: const [
                   ButtonSegment(value: 'RECEIVABLE', label: Text('Phải thu')),
                   ButtonSegment(value: 'PAYABLE', label: Text('Phải trả')),
@@ -72,7 +77,7 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
                 const SizedBox(
                   height: 220,
                   child: EmptyState(
-                    icon: Icons.handshake_outlined,
+                    icon: Symbols.handshake_rounded,
                     title: 'Chưa có công nợ',
                     hint: 'Bấm "Thêm công nợ" để ghi một khoản cho vay hoặc đi vay.',
                   ),
@@ -84,7 +89,7 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
                   context,
                   (_) => _AddDebtSheet(initialDirection: _direction),
                 ),
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(Symbols.add_rounded),
                 label: const Text('Thêm công nợ'),
               ),
             ],
@@ -114,8 +119,8 @@ class _DebtCard extends StatelessWidget {
           backgroundColor: MomaColors.mint.withValues(alpha: 0.4),
           child: Icon(
             debt.isReceivable
-                ? Icons.south_west_rounded
-                : Icons.north_east_rounded,
+                ? Symbols.south_west_rounded
+                : Symbols.north_east_rounded,
             color: MomaColors.forest,
           ),
         ),
@@ -229,7 +234,7 @@ class _DebtActionSheetState extends ConsumerState<_DebtActionSheet> {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
-        SegmentedButton<bool>(
+        PillTabs<bool>(
           segments: [
             ButtonSegment(
               value: false,
@@ -247,15 +252,14 @@ class _DebtActionSheetState extends ConsumerState<_DebtActionSheet> {
         ),
         const SizedBox(height: 12),
         if (_writeOff)
-          TextField(
+          LabeledField(
+            label: 'Lý do',
+            hint: 'Nhập lý do',
             controller: _reason,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.edit_note_rounded),
-              hintText: 'Lý do (bắt buộc)',
-            ),
+            required: true,
           )
         else ...[
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _accountId,
             decoration: InputDecoration(
@@ -368,7 +372,7 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
-        SegmentedButton<String>(
+        PillTabs<String>(
           segments: const [
             ButtonSegment(value: 'RECEIVABLE', label: Text('Cho vay')),
             ButtonSegment(value: 'PAYABLE', label: Text('Đi vay')),
@@ -378,7 +382,7 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
         ),
         const SizedBox(height: 12),
         if (contacts.isNotEmpty)
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _contactId,
             decoration: const InputDecoration(labelText: 'Người có sẵn'),
@@ -390,24 +394,22 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
           ),
         if (_contactId == null) ...[
           const SizedBox(height: 12),
-          TextField(
+          LabeledField(
+            label: 'Người mới',
+            hint: 'Nhập tên người',
             controller: _alias,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.person_add_alt_rounded),
-              hintText: 'Hoặc nhập tên người mới',
-            ),
           ),
         ],
         const SizedBox(height: 12),
         MoneyField(controller: _principal, hint: 'Số tiền gốc'),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Khoản cũ (không phát sinh tiền mặt)'),
+        LabeledSwitch(
+          label: 'Khoản cũ',
+          help: 'Bật nếu đây là khoản đã có từ trước và bạn chỉ muốn ghi nhớ. MoMa sẽ không cộng hay trừ tiền ở tài khoản nào.',
           value: _historical,
           onChanged: (v) => setState(() => _historical = v),
         ),
         if (!_historical)
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _accountId,
             decoration: InputDecoration(
@@ -427,8 +429,8 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          leading: const Icon(Icons.event_rounded),
-          title: Text(_due == null ? 'Hạn trả (tùy chọn)' : dateLabel(_due!)),
+          leading: const Icon(Symbols.event_rounded),
+          title: Text(_due == null ? 'Hạn trả' : dateLabel(_due!)),
           onTap: () async {
             final d = await showDatePicker(
               context: context,
@@ -440,13 +442,7 @@ class _AddDebtSheetState extends ConsumerState<_AddDebtSheet> {
           },
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _note,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.edit_note_rounded),
-            hintText: 'Ghi chú (tùy chọn)',
-          ),
-        ),
+        LabeledField(label: 'Ghi chú', hint: 'Nhập ghi chú', controller: _note),
         FormError(_run.error),
         const SizedBox(height: 16),
         FilledButton(

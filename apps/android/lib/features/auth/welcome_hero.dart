@@ -6,6 +6,8 @@ import '../../app/theme/moma_theme.dart';
 import '../../app/theme/palette.dart';
 import '../../core/ui/motion.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 /// Animated vector hero: the phone floats, its chart draws itself, coins drop onto the platform and the four
 /// feature tiles bob at different rhythms (stylised version of the design's illustration, drawn in code).
 class WelcomeHero extends StatefulWidget {
@@ -111,7 +113,7 @@ class _WelcomeHeroState extends State<WelcomeHero>
                     top: height * 0.12,
                     t: tiles,
                     phase: 0.0,
-                    icon: Icons.savings_rounded,
+                    icon: Symbols.savings_rounded,
                     color: const Color(0xFF1F7A5C),
                     context: context,
                   ),
@@ -120,7 +122,7 @@ class _WelcomeHeroState extends State<WelcomeHero>
                     top: height * 0.06,
                     t: tiles,
                     phase: 0.3,
-                    icon: Icons.bar_chart_rounded,
+                    icon: Symbols.bar_chart_rounded,
                     color: const Color(0xFF2FBF8F),
                     context: context,
                   ),
@@ -129,7 +131,7 @@ class _WelcomeHeroState extends State<WelcomeHero>
                     bottom: height * 0.22,
                     t: tiles,
                     phase: 0.6,
-                    icon: Icons.restaurant_rounded,
+                    icon: Symbols.restaurant_rounded,
                     color: const Color(0xFF1F7A5C),
                     context: context,
                   ),
@@ -138,7 +140,7 @@ class _WelcomeHeroState extends State<WelcomeHero>
                     bottom: height * 0.3,
                     t: tiles,
                     phase: 0.85,
-                    icon: Icons.account_balance_wallet_rounded,
+                    icon: Symbols.account_balance_wallet_rounded,
                     color: const Color(0xFF1F7A5C),
                     context: context,
                   ),

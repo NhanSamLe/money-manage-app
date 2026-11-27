@@ -5,8 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/providers.dart';
 import '../../core/ui/header.dart';
 import '../../features/auth/login_page.dart';
+import '../../features/banks/bank_connect_page.dart';
+import '../../features/notifications/notifications.dart';
+import '../../features/banks/receive_page.dart';
+import '../../features/guide/guide_page.dart';
 import '../../features/launch/intro_page.dart';
 import '../../features/launch/splash_page.dart';
 import '../../features/accounts/accounts_page.dart';
@@ -132,6 +137,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) => _fade(state, const HomeShell()),
       ),
       GoRoute(path: '/quick-entry', builder: (_, _) => const QuickEntryPage()),
+      GoRoute(
+        path: '/guide',
+        pageBuilder: (_, state) => _fade(state, const GuidePage()),
+      ),
+      GoRoute(
+        path: '/notifications',
+        pageBuilder: (_, state) => _fade(state, const NotificationsPage()),
+      ),
+      GoRoute(
+        path: '/banks',
+        pageBuilder: (_, state) => _fade(state, const BankConnectPage()),
+      ),
+      GoRoute(
+        path: '/receive',
+        pageBuilder: (_, state) => _fade(state, const ReceivePage()),
+      ),
+      // Entry points for launcher shortcuts and the home-screen widget (moma://app/ai).
+      GoRoute(path: '/ai', builder: (_, _) => const _TabEntry(2)),
       GoRoute(path: '/import', builder: (_, _) => const CsvImportPage()),
       GoRoute(path: '/categories', builder: (_, _) => const CategoriesPage()),
       GoRoute(
@@ -151,4 +174,26 @@ class _SubPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     body: MomaPage(title: title, showBack: true, child: child),
   );
+}
+
+/// Selects a main tab and shows the shell (used by deep links such as the AI shortcut).
+class _TabEntry extends ConsumerStatefulWidget {
+  const _TabEntry(this.tab);
+  final int tab;
+  @override
+  ConsumerState<_TabEntry> createState() => _TabEntryState();
+}
+
+class _TabEntryState extends ConsumerState<_TabEntry> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(shellTabProvider.notifier).select(widget.tab);
+      if (mounted) context.go('/home');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: SizedBox.shrink());
 }

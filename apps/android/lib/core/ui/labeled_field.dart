@@ -1,9 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../app/theme/moma_theme.dart';
-import '../../app/theme/palette.dart';
 import '../validators.dart';
+import '../widgets.dart';
 
 /// Form field with the label above and a short "Nhập ..." placeholder inside (design reference).
 ///
@@ -38,6 +37,8 @@ class LabeledField extends StatefulWidget {
     this.textCapitalization = TextCapitalization.none,
     this.enabled = true,
     this.inputFormatters,
+    this.help,
+    this.helpTitle,
   });
 
   final String label;
@@ -66,6 +67,10 @@ class LabeledField extends StatefulWidget {
   final TextCapitalization textCapitalization;
   final bool enabled;
   final List<TextInputFormatter>? inputFormatters;
+
+  /// Explanation opened by the "?" next to the label (an info dialog), for anything that needs one.
+  final String? help;
+  final String? helpTitle;
 
   @override
   State<LabeledField> createState() => _LabeledFieldState();
@@ -103,26 +108,14 @@ class _LabeledFieldState extends State<LabeledField> {
 
   @override
   Widget build(BuildContext context) {
-    final ink = context.pal.ink;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text.rich(
-          TextSpan(
-            text: widget.label,
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-              color: ink,
-            ),
-            children: [
-              if (widget.required)
-                const TextSpan(
-                  text: ' *',
-                  style: TextStyle(color: MomaColors.expense),
-                ),
-            ],
-          ),
+        HelpLabel(
+          widget.label,
+          required: widget.required,
+          help: widget.help,
+          helpTitle: widget.helpTitle,
         ),
         const SizedBox(height: 6),
         TextFormField(

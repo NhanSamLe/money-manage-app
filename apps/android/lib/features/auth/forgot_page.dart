@@ -13,6 +13,8 @@ import '../../core/widgets.dart';
 import 'auth_service.dart';
 import '../../app/theme/palette.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 /// Password recovery with the emailed code (no deep links). Supabase Auth owns the credential reset.
 class ForgotPage extends ConsumerStatefulWidget {
   const ForgotPage({super.key});
@@ -98,7 +100,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 child: IconButton(
                   tooltip: 'Quay lại',
                   onPressed: () => context.go('/login'),
-                  icon: const Icon(Icons.arrow_back_rounded),
+                  icon: const Icon(Symbols.arrow_back_rounded),
                 ),
               ),
               const Center(child: MomaWordmark(size: 48, dark: true)),
@@ -122,7 +124,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 label: 'Email',
                 hint: 'Nhập email',
                 controller: _email,
-                icon: Icons.mail_outline_rounded,
+                icon: Symbols.mail_outline_rounded,
                 required: true,
                 enabled: !_sent,
                 keyboardType: TextInputType.emailAddress,
@@ -134,7 +136,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                   label: 'Mã xác nhận',
                   hint: 'Nhập mã trong thư',
                   controller: _code,
-                  icon: Icons.pin_outlined,
+                  icon: Symbols.pin_rounded,
                   required: true,
                   keyboardType: TextInputType.number,
                   maxLength: 8,
@@ -145,7 +147,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                   label: 'Mật khẩu mới',
                   hint: 'Nhập mật khẩu mới',
                   controller: _password,
-                  icon: Icons.lock_outline_rounded,
+                  icon: Symbols.lock_outline_rounded,
                   required: true,
                   obscure: _hide,
                   validator: V.newPassword,
@@ -153,8 +155,8 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                     tooltip: _hide ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                     icon: Icon(
                       _hide
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
+                          ? Symbols.visibility_off_rounded
+                          : Symbols.visibility_rounded,
                     ),
                     onPressed: () => setState(() => _hide = !_hide),
                   ),

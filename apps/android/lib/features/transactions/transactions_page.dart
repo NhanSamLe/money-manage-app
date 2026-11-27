@@ -14,6 +14,8 @@ import '../../core/widgets.dart';
 import 'tx_sheets.dart';
 import '../../app/theme/palette.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
 /// Case- and diacritic-insensitive match over merchant, note and category name.
 bool matchesQuery(MomaTx t, String? categoryName, String query) {
   final q = foldVietnamese(query.trim());
@@ -75,21 +77,21 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       title: 'Loại giao dịch',
       selected: _kind,
       options: const [
-        ChoiceOption(value: 'ALL', label: 'Tất cả', icon: Icons.apps_rounded),
+        ChoiceOption(value: 'ALL', label: 'Tất cả', icon: Symbols.apps_rounded),
         ChoiceOption(
           value: 'EXPENSE',
           label: 'Chi tiêu',
-          icon: Icons.north_east_rounded,
+          icon: Symbols.north_east_rounded,
         ),
         ChoiceOption(
           value: 'INCOME',
           label: 'Thu nhập',
-          icon: Icons.south_west_rounded,
+          icon: Symbols.south_west_rounded,
         ),
         ChoiceOption(
           value: 'TRANSFER',
           label: 'Chuyển khoản',
-          icon: Icons.swap_horiz_rounded,
+          icon: Symbols.swap_horiz_rounded,
         ),
       ],
     );
@@ -105,22 +107,22 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         ChoiceOption(
           value: 'ALL',
           label: 'Mọi thời gian',
-          icon: Icons.all_inclusive_rounded,
+          icon: Symbols.all_inclusive_rounded,
         ),
         ChoiceOption(
           value: 'MONTH',
           label: 'Tháng này',
-          icon: Icons.calendar_month_outlined,
+          icon: Symbols.calendar_month_rounded,
         ),
         ChoiceOption(
           value: 'LAST_MONTH',
           label: 'Tháng trước',
-          icon: Icons.history_rounded,
+          icon: Symbols.history_rounded,
         ),
         ChoiceOption(
           value: '7D',
           label: '7 ngày qua',
-          icon: Icons.date_range_outlined,
+          icon: Symbols.date_range_rounded,
         ),
       ],
       footnote: 'Lọc trong các giao dịch đã tải. Kéo xuống để tải thêm.',
@@ -137,7 +139,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         const ChoiceOption(
           value: '',
           label: 'Tất cả danh mục',
-          icon: Icons.apps_rounded,
+          icon: Symbols.apps_rounded,
         ),
         for (final c in cats)
           ChoiceOption(
@@ -233,9 +235,8 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                         controller: _search,
                         onChanged: (_) => setState(() {}),
                         decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search_rounded),
-                          hintText:
-                              'Tìm giao dịch (ví dụ: ăn uống, chuyển khoản...)',
+                          prefixIcon: Icon(Symbols.search_rounded),
+                          hintText: 'Tìm giao dịch',
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -244,7 +245,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                         child: Row(
                           children: [
                             _FilterChip(
-                              icon: Icons.check_rounded,
+                              icon: Symbols.check_rounded,
                               label: 'Tất cả',
                               active: !_filtering,
                               onTap: () => setState(() {
@@ -254,7 +255,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                               }),
                             ),
                             _FilterChip(
-                              icon: Icons.swap_vert_rounded,
+                              icon: Symbols.swap_vert_rounded,
                               label: _kind == 'ALL'
                                   ? 'Loại'
                                   : _kindLabels[_kind]!,
@@ -263,7 +264,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                               onTap: _pickKind,
                             ),
                             _FilterChip(
-                              icon: Icons.calendar_month_outlined,
+                              icon: Symbols.calendar_month_rounded,
                               label: _period == 'ALL'
                                   ? 'Thời gian'
                                   : _periodLabels[_period]!,
@@ -272,7 +273,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                               onTap: _pickPeriod,
                             ),
                             _FilterChip(
-                              icon: Icons.sell_outlined,
+                              icon: Symbols.sell_rounded,
                               label: _categoryId.isEmpty
                                   ? 'Danh mục'
                                   : (categories[_categoryId]?.name ??
@@ -297,7 +298,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                 label: 'Thu nhập',
                                 value: '+${formatVnd(summary.income)}',
                                 color: MomaColors.income,
-                                icon: Icons.south_rounded,
+                                icon: Symbols.south_rounded,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -306,7 +307,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                 label: 'Chi tiêu',
                                 value: '-${formatVnd(summary.expense)}',
                                 color: MomaColors.expense,
-                                icon: Icons.north_east_rounded,
+                                icon: Symbols.north_east_rounded,
                               ),
                             ),
                           ],
@@ -320,7 +321,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   const SizedBox(
                     height: 260,
                     child: EmptyState(
-                      icon: Icons.receipt_long_rounded,
+                      icon: Symbols.receipt_long_rounded,
                       title: 'Chưa có giao dịch',
                       hint: 'Bấm nút + để thêm giao dịch đầu tiên.',
                     ),
@@ -329,7 +330,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   const SizedBox(
                     height: 200,
                     child: EmptyState(
-                      icon: Icons.search_off_rounded,
+                      icon: Symbols.search_off_rounded,
                       title: 'Không có kết quả',
                       hint: 'Thử từ khóa khác hoặc bỏ bộ lọc.',
                     ),
@@ -404,7 +405,7 @@ class _FilterChip extends StatelessWidget {
               if (dropdown) ...[
                 const SizedBox(width: 2),
                 Icon(
-                  Icons.keyboard_arrow_down_rounded,
+                  Symbols.keyboard_arrow_down_rounded,
                   size: 20,
                   color: active ? MomaColors.emerald : context.pal.muted,
                 ),
@@ -621,7 +622,7 @@ class TxTile extends StatelessWidget {
           children: [
             tx.kind == 'TRANSFER'
                 ? const CategoryAvatar(
-                    iconData: Icons.swap_horiz_rounded,
+                    iconData: Symbols.swap_horiz_rounded,
                     color: Color(0xFF2F80ED),
                   )
                 : CategoryAvatar(iconKey: category?.icon),

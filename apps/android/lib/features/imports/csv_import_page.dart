@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/ui/labeled_field.dart';
+
+import '../../core/ui/select_field.dart';
+
 import '../../app/theme/moma_theme.dart';
 import '../../core/csv_statement.dart';
 import '../../core/models.dart';
@@ -14,6 +18,8 @@ import '../../core/providers.dart';
 import '../../core/quick_parse.dart';
 import '../../core/sheets.dart';
 import '../../app/theme/palette.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 class _Line {
   _Line(this.row, this.kind, this.categoryId, this.categoryName);
@@ -151,7 +157,7 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
       appBar: AppBar(
         title: const Text('Nhập sao kê CSV'),
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(Symbols.close_rounded),
           onPressed: () => context.pop(),
         ),
       ),
@@ -169,7 +175,7 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
             ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
+          PickField<String>(
             isExpanded: true,
             initialValue: _accountId,
             decoration: const InputDecoration(
@@ -187,14 +193,12 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
-            leading: const Icon(Icons.event_rounded),
-            title: Text(
-              _from == null ? 'Từ ngày (tùy chọn)' : 'Từ ${dateLabel(_from!)}',
-            ),
+            leading: const Icon(Symbols.event_rounded),
+            title: Text(_from == null ? 'Từ ngày' : 'Từ ${dateLabel(_from!)}'),
             trailing: _from == null
                 ? null
                 : IconButton(
-                    icon: const Icon(Icons.clear_rounded),
+                    icon: const Icon(Symbols.clear_rounded),
                     onPressed: () => setState(() => _from = null),
                   ),
             onTap: () async {
@@ -210,17 +214,15 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _busy ? null : _pickFile,
-            icon: const Icon(Icons.upload_file_rounded),
+            icon: const Icon(Symbols.upload_file_rounded),
             label: const Text('Chọn tệp CSV'),
           ),
           const SizedBox(height: 12),
-          TextField(
+          LabeledField(
+            label: 'Nội dung CSV',
+            hint: 'Dán nội dung sao kê',
             controller: _paste,
-            minLines: 3,
             maxLines: 6,
-            decoration: const InputDecoration(
-              hintText: 'Hoặc dán nội dung CSV (có dòng tiêu đề: Ngày, Diễn giải, Ghi nợ, Ghi có)',
-            ),
           ),
           const SizedBox(height: 8),
           FilledButton(

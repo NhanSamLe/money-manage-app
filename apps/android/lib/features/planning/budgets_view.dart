@@ -11,8 +11,11 @@ import '../../core/planning_models.dart';
 import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import '../../app/theme/palette.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 String _currentMonth() {
   final n = DateTime.now();
@@ -47,7 +50,7 @@ class BudgetsView extends ConsumerWidget {
               const SizedBox(
                 height: 220,
                 child: EmptyState(
-                  icon: Icons.pie_chart_outline_rounded,
+                  icon: Symbols.pie_chart_outline_rounded,
                   title: 'Chưa có ngân sách',
                   hint: 'Đặt hạn mức chi tiêu cho tháng này.',
                 ),
@@ -57,7 +60,7 @@ class BudgetsView extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () =>
                   showFormSheet<void>(context, (_) => const _BudgetSheet()),
-              icon: const Icon(Icons.add_rounded),
+              icon: const Icon(Symbols.add_rounded),
               label: const Text('Thêm ngân sách'),
             ),
           ],
@@ -198,7 +201,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String?>(
+        PickField<String?>(
           isExpanded: true,
           initialValue: _categoryId,
           decoration: const InputDecoration(labelText: 'Danh mục'),

@@ -1,4 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+
+import '../../core/ui/labeled_field.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +15,10 @@ import '../../core/network/api_client.dart';
 import '../../core/outbox.dart';
 import '../../core/providers.dart';
 import '../../core/quick_parse.dart';
+import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
 
 enum _Kind { expense, income, transfer }
 
@@ -170,7 +176,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
       appBar: AppBar(
         title: const Text('Thêm giao dịch'),
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(Symbols.close_rounded),
           onPressed: () => context.pop(),
         ),
       ),
@@ -183,7 +189,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
         data: (accs) {
           if (accs.isEmpty) {
             return const EmptyState(
-              icon: Icons.account_balance_wallet_rounded,
+              icon: Symbols.account_balance_wallet_rounded,
               title: 'Chưa có tài khoản',
               hint: 'Hãy thêm một tài khoản ở tab Tài khoản trước khi nhập giao dịch.',
             );
@@ -191,22 +197,15 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              TextField(
+              LabeledField(
+                label: 'Mô tả nhanh',
+                hint: 'Nhập khoản thu chi bằng lời thường',
                 controller: _quick,
-                textInputAction: TextInputAction.done,
                 onSubmitted: _applyQuick,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.bolt_rounded),
-                  hintText: 'Gõ nhanh: ăn trưa 65k, nhận lương 15tr...',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.auto_fix_high_rounded),
-                    tooltip: 'Điền vào biểu mẫu',
-                    onPressed: () => _applyQuick(_quick.text),
-                  ),
-                ),
+                textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 16),
-              SegmentedButton<_Kind>(
+              PillTabs<_Kind>(
                 segments: const [
                   ButtonSegment(value: _Kind.expense, label: Text('Chi tiêu')),
                   ButtonSegment(value: _Kind.income, label: Text('Thu nhập')),
@@ -237,7 +236,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+              PickField<String>(
                 isExpanded: true,
                 initialValue: _accountId,
                 decoration: InputDecoration(
@@ -256,7 +255,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
               ),
               if (_kind == _Kind.transfer) ...[
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+                PickField<String>(
                   isExpanded: true,
                   initialValue: _toAccountId,
                   decoration: const InputDecoration(labelText: 'Đến tài khoản'),
@@ -295,12 +294,10 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 ),
               ],
               const SizedBox(height: 16),
-              TextField(
+              LabeledField(
+                label: 'Ghi chú',
+                hint: 'Nhập ghi chú',
                 controller: _note,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.edit_note_rounded),
-                  hintText: 'Ghi chú (tùy chọn)',
-                ),
               ),
               const SizedBox(height: 12),
               ListTile(
@@ -308,11 +305,11 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                leading: const Icon(Icons.event_rounded),
+                leading: const Icon(Symbols.event_rounded),
                 title: Text(
                   '${_when.day.toString().padLeft(2, '0')}/${_when.month.toString().padLeft(2, '0')}/${_when.year}',
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                trailing: const Icon(Symbols.chevron_right_rounded),
                 onTap: _pickDate,
               ),
               if (_error != null)
