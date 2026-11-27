@@ -1,4 +1,4 @@
-<#
+﻿<#
 MoMa Android release: bump version, analyze + test, build APK, publish a GitHub Release.
 Usage: scripts\release.ps1 <minor|patch|X.Y.Z> [-Notes "text" | -NotesFile path] [-DryRun]
 Policy (docs/RELEASE.md): every release gets a new version; 0.MINOR.PATCH until 1.0.0;
@@ -10,7 +10,20 @@ param(
     [string]$NotesFile,
     [switch]$DryRun
 )
-$ErrorActionPreference = 'Stop'
+# Native tools (git, gh, flutter) write progress to stderr; under 'Stop' Windows PowerShell 5.1 would abort on it.
+# Every native call below is checked through $LASTEXITCODE instead.
+$ErrorActionPreference = 'Continue'
+
+# Windows PowerShell 5.1 turns any stderr line of a native command into a terminating error under 'Stop'.
+# Run probes whose failure is an expected answer (e.g. "release not found") with errors relaxed; return the exit code.
+function Invoke-Probe([scriptblock]$Block) {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $Block *> $null } catch { }
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+    return $code
+}
 
 function Fail([string]$msg) { Write-Host "Loi: $msg" -ForegroundColor Red; exit 1 }
 function Run([string]$what, [scriptblock]$cmd) {
@@ -28,8 +41,7 @@ if ($NotesFile -and -not (Test-Path $NotesFile)) { Fail "khong thay file ghi chu
 foreach ($tool in 'git', 'gh', 'flutter') {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { Fail "khong tim thay $tool trong PATH" }
 }
-gh auth status *> $null
-if ($LASTEXITCODE -ne 0) { Fail 'gh chua dang nhap (gh auth login)' }
+if ((Invoke-Probe { gh auth status }) -ne 0) { Fail 'gh chua dang nhap (gh auth login)' }
 
 # 1. Clean tree
 if (git status --porcelain) { Fail 'cay git chua sach; commit hoac stash truoc khi phat hanh' }
@@ -60,8 +72,7 @@ if ($LASTEXITCODE -ne 0) { Fail 'khong fetch duoc tag tu origin' }
 if (git tag --list $tag) { Fail "tag $tag da ton tai" }
 $sameVersion = git tag --list "v$new+*"
 if ($sameVersion) { Fail "phien ban $new da duoc phat hanh ($($sameVersion -join ', '))" }
-gh release view $tag *> $null
-if ($LASTEXITCODE -eq 0) { Fail "GitHub Release $tag da ton tai" }
+if ((Invoke-Probe { gh release view $tag }) -eq 0) { Fail "GitHub Release $tag da ton tai" }
 
 # 4. Analyze + tests
 Push-Location $App
