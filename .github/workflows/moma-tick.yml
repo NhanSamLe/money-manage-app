@@ -13,4 +13,7 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Trigger reminders tick
-        run: curl -fsS -X POST -H "x-cron-secret: ${{ secrets.MOMA_CRON_SECRET }}" https://moma-api.superaicore.indevs.in/v1/internal/tick
+        env:
+          CRON_SECRET: ${{ secrets.MOMA_CRON_SECRET }}
+        run: |
+          curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" https://moma-api.superaicore.indevs.in/v1/internal/tick
