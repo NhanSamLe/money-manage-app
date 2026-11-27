@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -13,12 +11,24 @@ import '../../notify_capture/parser.dart' show notifyBankNames;
 class BankLink {
   BankLink(Map<String, dynamic> j)
     : accountId = '${j['account_id']}',
+      externalId = j['external_id'] as String?,
       last4 = j['last4'] as String?,
+      number = j['number'] as String?,
+      holder = j['holder_name'] as String?,
       bankName = j['bank_name'] as String?,
+      bankBalance = int.tryParse('${j['bank_balance'] ?? ''}'),
+      ledgerBalance = int.tryParse('${j['ledger_balance'] ?? ''}'),
       bankBalanceAt = DateTime.tryParse('${j['bank_balance_at'] ?? ''}');
   final String accountId;
+  final String? externalId;
   final String? last4;
+
+  /// Full account number (owner only; shown masked until revealed). Null when SePay was unreachable.
+  final String? number;
+  final String? holder;
   final String? bankName;
+  final int? bankBalance;
+  final int? ledgerBalance;
 
   /// When SePay last reported this account's balance (the closest thing to a "last sync" time).
   final DateTime? bankBalanceAt;
@@ -72,6 +82,9 @@ abstract class NotifySyncStore {
 
   /// Removes every app mapped to [accountId].
   Future<void> unmapAccount(String accountId);
+
+  /// Stops recording one app.
+  Future<void> unmapPackage(String package);
   Future<bool> autoRecord();
   Future<void> setAutoRecord(bool v);
 }
@@ -79,13 +92,8 @@ abstract class NotifySyncStore {
 /// Real store: reads and writes the same secure-storage entries as [NotifyCapturePrefs].
 class SecureNotifySyncStore implements NotifySyncStore {
   SecureNotifySyncStore([FlutterSecureStorage? storage])
-    : _storage = storage ?? const FlutterSecureStorage(),
-      _prefs = NotifyCapturePrefs(storage);
-  final FlutterSecureStorage _storage;
+    : _prefs = NotifyCapturePrefs(storage);
   final NotifyCapturePrefs _prefs;
-
-  /// Must match NotifyCapturePrefs._mapKey (that class has no "remove" method yet).
-  static const _mapKey = 'notify_account_map';
 
   @override
   Future<Map<String, String>> accountMap() => _prefs.accountMap();
@@ -95,11 +103,11 @@ class SecureNotifySyncStore implements NotifySyncStore {
       _prefs.setAccount(package, accountId);
 
   @override
-  Future<void> unmapAccount(String accountId) async {
-    final m = await _prefs.accountMap()
-      ..removeWhere((_, v) => v == accountId);
-    await _storage.write(key: _mapKey, value: jsonEncode(m));
-  }
+  Future<void> unmapAccount(String accountId) =>
+      _prefs.removeAccount(accountId);
+
+  @override
+  Future<void> unmapPackage(String package) => _prefs.removePackage(package);
 
   @override
   Future<bool> autoRecord() => _prefs.autoRecord();
@@ -113,6 +121,9 @@ abstract class NotifyAccess {
   Future<bool> isGranted();
   Future<void> openSettings();
   Future<int> pendingCount();
+
+  /// Supported bank / wallet apps installed on this phone.
+  Future<List<String>> installedApps();
 }
 
 class ChannelNotifyAccess implements NotifyAccess {
@@ -124,6 +135,8 @@ class ChannelNotifyAccess implements NotifyAccess {
   Future<void> openSettings() => _ch.openPermissionSettings();
   @override
   Future<int> pendingCount() async => (await _ch.pending()).length;
+  @override
+  Future<List<String>> installedApps() => _ch.installedSupportedApps();
 }
 
 final notifySyncStoreProvider = Provider<NotifySyncStore>(

@@ -134,7 +134,7 @@ class _DebtCard extends StatelessWidget {
                       ? MomaColors.income
                       : MomaColors.expense,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: context.pal.surface, width: 1.5),
                 ),
                 child: Icon(
                   debt.isReceivable

@@ -10,6 +10,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import io.flutter.FlutterInjector
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
@@ -55,7 +56,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
             WidgetBridge.attach(e.dartExecutor.binaryMessenger, app, null) { handler.post { finish() } }
             val loader = FlutterInjector.instance().flutterLoader()
             e.dartExecutor.executeDartEntrypoint(
-                DartExecutor.DartEntrypoint(loader.findAppBundlePath(), MomaWidgets.ENTRY_LIB, "widgetRefreshMain"),
+                DartExecutor.DartEntrypoint(loader.findAppBundlePath(), "widgetRefreshMain"),
             )
         } catch (e: Exception) {
             finish()
@@ -77,7 +78,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
 class QuickEntryActivity : FlutterActivity() {
     override fun getDartEntrypointFunctionName(): String = "quickEntryMain"
 
-    override fun getDartEntrypointLibraryUri(): String = MomaWidgets.ENTRY_LIB
+    // Entry points live in the root library (lib/main.dart): URI lookup fails in release builds.
+    override fun getDartEntrypointLibraryUri(): String? = null
 
     override fun getDartEntrypointArgs(): List<String> =
         listOf(intent?.getStringExtra(EXTRA_KIND) ?: "expense")
@@ -134,7 +136,10 @@ class QrOverlayActivity : Activity() {
             val holder = WidgetStore.str(this, "qr_holder")
             findViewById<TextView>(R.id.qo_masked).text = if (holder.isEmpty()) masked else "$masked · $holder"
             primary.setOnClickListener { open("receive") }
+            bindCopy(masked)
         } else {
+            findViewById<View>(R.id.qo_number_row).visibility = View.GONE
+            findViewById<View>(R.id.qo_copy_row).visibility = View.GONE
             findViewById<View>(R.id.qo_qr_frame).visibility = View.GONE
             findViewById<View>(R.id.qo_bank).visibility = View.GONE
             findViewById<View>(R.id.qo_masked).visibility = View.GONE
@@ -144,6 +149,43 @@ class QrOverlayActivity : Activity() {
             primary.text = getString(if (unlinked) R.string.wg_qr_link_long else R.string.wg_qr_open_btn)
             primary.setOnClickListener { open(if (unlinked) "banks" else "receive") }
         }
+    }
+
+    /** Full account number (masked until the eye is tapped) and the two copy buttons. */
+    private fun bindCopy(masked: String) {
+        val number = WidgetStore.str(this, "qr_number")
+        val payload = WidgetStore.str(this, "qr_payload")
+        val numberView = findViewById<TextView>(R.id.qo_number)
+        val reveal = findViewById<ImageView>(R.id.qo_reveal)
+        if (number.isEmpty()) {
+            findViewById<View>(R.id.qo_number_row).visibility = View.GONE
+            findViewById<View>(R.id.qo_copy_number).visibility = View.GONE
+        } else {
+            var shown = false
+            val render = {
+                numberView.text = if (shown) number else masked.ifEmpty { "•••• ${number.takeLast(4)}" }
+                reveal.setImageResource(if (shown) R.drawable.ic_wg_eye_off else R.drawable.ic_wg_eye)
+                reveal.contentDescription = getString(if (shown) R.string.wg_hide else R.string.wg_reveal)
+            }
+            render()
+            reveal.setOnClickListener {
+                shown = !shown
+                render()
+            }
+            findViewById<View>(R.id.qo_copy_number).setOnClickListener {
+                CopyActivity.copyToClipboard(this, number, "STK")
+                Toast.makeText(this, R.string.wg_copied_number, Toast.LENGTH_SHORT).show()
+            }
+        }
+        if (payload.isEmpty()) {
+            findViewById<View>(R.id.qo_copy_payload).visibility = View.GONE
+        } else {
+            findViewById<View>(R.id.qo_copy_payload).setOnClickListener {
+                CopyActivity.copyToClipboard(this, payload, "VietQR")
+                Toast.makeText(this, R.string.wg_copied_payload, Toast.LENGTH_SHORT).show()
+            }
+        }
+        if (number.isEmpty() && payload.isEmpty()) findViewById<View>(R.id.qo_copy_row).visibility = View.GONE
     }
 
     private fun open(path: String) {

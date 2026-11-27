@@ -41,8 +41,8 @@
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:background="@drawable/wg_icon_circle"
-            android:contentDescription="@string/wg_act_scan_long"
+            android:contentDescription="@string/wg_act_voice"
             android:padding="8dp"
-            android:src="@drawable/ic_wg_camera" />
+            android:src="@drawable/ic_wg_mic" />
     </LinearLayout>
 </FrameLayout>

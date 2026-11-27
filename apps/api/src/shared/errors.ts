@@ -31,6 +31,8 @@ const TABLE: Record<string, ErrorSpec> = {
   AI_UNAVAILABLE: { status: 503, retryable: true, message: "Trợ lý AI tạm thời không phản hồi." },
   BANK_NOT_CONFIGURED: { status: 422, retryable: false, message: "Chưa bật kết nối ngân hàng." },
   BANK_UNAVAILABLE: { status: 503, retryable: true, message: "Không kết nối được dịch vụ ngân hàng. Bạn thử lại sau ít phút." },
+  ACCOUNT_ALREADY_LINKED: { status: 409, retryable: false, message: "Tài khoản MoMa này đã gắn với một tài khoản ngân hàng khác." },
+  BANK_ALREADY_LINKED: { status: 409, retryable: false, message: "Tài khoản ngân hàng này đã gắn với một tài khoản MoMa khác." },
   UNBALANCED_JOURNAL: { status: 422, retryable: false, message: "Bút toán không cân." },
 };
 const GENERIC: ErrorSpec = { status: 503, retryable: true, message: "Hệ thống tạm thời gián đoạn." };

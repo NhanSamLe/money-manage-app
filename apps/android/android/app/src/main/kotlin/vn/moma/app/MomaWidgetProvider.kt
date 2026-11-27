@@ -195,6 +195,7 @@ class QrWidgetProvider : MomaWidgetBase() {
                 views.setTextViewText(R.id.r_masked, masked)
                 views.setTextViewText(R.id.r_holder, holder)
                 views.setOnClickPendingIntent(R.id.r_amount_btn, MomaWidgets.openApp(ctx, "receive"))
+                views.setOnClickPendingIntent(R.id.r_copy, MomaWidgets.copyNumber(ctx))
             }
         }
     }
@@ -230,6 +231,7 @@ class AssistantWidgetProvider : MomaWidgetBase() {
         val ai = MomaWidgets.openApp(ctx, "ai")
         views.setOnClickPendingIntent(R.id.widget_root, ai)
         views.setOnClickPendingIntent(R.id.a_pill, ai)
-        views.setOnClickPendingIntent(R.id.a_photo, ai)
+        // Mic: opens the assistant already listening (Vietnamese speech input).
+        views.setOnClickPendingIntent(R.id.a_photo, MomaWidgets.openApp(ctx, "ai?voice=1"))
     }
 }

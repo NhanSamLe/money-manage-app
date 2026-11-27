@@ -152,4 +152,159 @@ void main() {
       isFalse,
     );
   });
+
+  group('MoMo (app, email, shared receipt)', () {
+    test('real MoMo notification: money in with "kèm lời nhắn" and the sender in the title', () {
+      final r = p(
+        'com.mservice.momotransfer',
+        'Nhận tiền chuyển khoản từ NGUYEN VAN B',
+        'Số tiền 10.000 đ, kèm lời nhắn: "LE DAO NHAN SAM chuyen tien"',
+      );
+      expect(r.bank, 'MoMo');
+      expect(r.direction, NotifyDirection.inflow);
+      expect(r.amount, 10000);
+      expect(r.description, 'LE DAO NHAN SAM chuyen tien');
+      expect(r.counterparty, 'NGUYEN VAN B');
+      expect(r.isTransaction, isTrue);
+    });
+
+    test('receipt "Chuyển tiền thành công 50.000đ" is money out', () {
+      final r = p(momoPackage, '', 'Chuyển tiền thành công 50.000đ');
+      expect(r.direction, NotifyDirection.outflow);
+      expect(r.amount, 50000);
+    });
+
+    test('receipt "Thanh toán thành công -120.000đ" with "Số dư ví"', () {
+      final r = p(
+        momoPackage,
+        '',
+        'Thanh toán thành công -120.000đ\nSố dư ví: 1.234.000đ',
+      );
+      expect(r.direction, NotifyDirection.outflow);
+      expect(r.amount, 120000);
+      expect(r.balance, 1234000);
+    });
+
+    test('MoMo email: subject + snippet, amount from "Số tiền", code from "Mã giao dịch"', () {
+      final r = p(
+        momoPackage,
+        'MoMo',
+        'Giao dịch thành công\nBạn đã thanh toán thành công. Số tiền: 120.000 VND. Mã giao dịch: 43918273645. Dịch vụ: Highlands Coffee',
+      );
+      expect(r.direction, NotifyDirection.outflow);
+      expect(r.amount, 120000);
+      expect(r.txCode, '43918273645');
+    });
+
+    test('MoMo email "Chuyển tiền thành công" with -50.000đ', () {
+      final r = p(
+        momoPackage,
+        'Ví MoMo',
+        'Chuyển tiền thành công -50.000đ tới NGUYEN VAN C. Mã giao dịch: 51234567890',
+      );
+      expect(r.direction, NotifyDirection.outflow);
+      expect(r.amount, 50000);
+      expect(r.txCode, '51234567890');
+    });
+
+    test('MoMo email without an amount stays a non-transaction', () {
+      final r = p(momoPackage, 'MoMo', 'Xác nhận giao dịch của bạn');
+      expect(r.isTransaction, isFalse);
+    });
+  });
+
+  group('account last 4 digits', () {
+    test('"TK 1234", "TK xx1234", "tai khoan ...1234", full number', () {
+      expect(p('com.VCB', '', 'TK 1234 +50,000VND').last4, '1234');
+      expect(p('com.VCB', '', 'TK xx1234 -50,000VND').last4, '1234');
+      expect(
+        p('com.VCB', '', 'tai khoan ...5678 nhan +1,000VND').last4,
+        '5678',
+      );
+      expect(
+        p('com.vnpay.bidv', '', 'TK 1234567890 tai BIDV -200.000VND').last4,
+        '7890',
+      );
+      expect(
+        p('com.mbmobile', '', 'TK 0123xxx789|GD: -50,000VND').last4,
+        isNull,
+      );
+    });
+    test('the account number is never read as the amount', () {
+      final r = p('com.VCB', '', 'TK 0451000123456 nhan duoc 75.000 VND');
+      expect(r.amount, 75000);
+      expect(r.last4, '3456');
+    });
+  });
+
+  test('wallet / bank detection from shared text', () {
+    expect(
+      detectPackageFromText('Ví MoMo - Thanh toán thành công'),
+      momoPackage,
+    );
+    expect(
+      detectPackageFromText('ZaloPay: nhận 20.000đ'),
+      'vn.com.vng.zalopay',
+    );
+    expect(
+      detectPackageFromText('Techcombank: TK 1234 +50,000'),
+      'vn.com.techcombank.bb.app',
+    );
+    expect(detectPackageFromText('xin chao'), isNull);
+  });
+
+  group('exact extras from the owner phone', () {
+    test('MoMo money in, "₫" without and with a space, FT bank reference', () {
+      for (final text in [
+        'Số tiền 10.000₫, kèm lời nhắn: "LE DAO NHAN SAM chuyen FT26332327719412".',
+        'Số tiền 10.000 ₫, kèm lời nhắn: "LE DAO NHAN SAM chuyen FT26332327719412".',
+      ]) {
+        final r = p(
+          'com.mservice.momotransfer',
+          'Nhận tiền chuyển khoản từ LE DAO NHAN SAM',
+          text,
+        );
+        expect(r.direction, NotifyDirection.inflow);
+        expect(r.amount, 10000);
+        expect(r.description, 'LE DAO NHAN SAM chuyen FT26332327719412');
+        expect(r.counterparty, 'LE DAO NHAN SAM');
+        expect(r.bankRef, 'FT26332327719412');
+      }
+    });
+
+    test(
+      'TPBank with an empty title: time, last4, PS and SD (not SD KHA DUNG)',
+      () {
+        final r = p(
+          'com.tpb.mb.gprsandroid',
+          '',
+          '(TPBank): 28/11/26;03:08\nTK: xxxx4102004\nPS:+4.000VND\nSD: 4.000VND\nSD KHA DUNG: 4.000VND',
+        );
+        expect(r.direction, NotifyDirection.inflow);
+        expect(r.amount, 4000);
+        expect(r.balance, 4000);
+        expect(r.last4, '2004');
+        expect(r.postedAt, DateTime(2026, 11, 28, 3, 8));
+      },
+    );
+  });
+
+  test('exact Vietcombank sample: comma thousands, full account number, time, balance, Ref', () {
+    final r = p(
+      'com.VCB',
+      '',
+      'Số dư TK VCB 1026746096 +4,000 VND lúc 28-11-2026 03:24:23. Số dư 13,684,007 VND. Ref 159036437923-LE DAO NHAN SAM chuyen tien qua MoMo-CHUYEN TIEN-OQCH000PN',
+    );
+    expect(r.direction, NotifyDirection.inflow);
+    expect(r.amount, 4000);
+    expect(r.accountNumber, '1026746096');
+    expect(r.last4, '6096');
+    expect(r.postedAt, DateTime(2026, 11, 28, 3, 24, 23));
+    expect(r.balance, 13684007);
+    expect(r.bankRef, '159036437923');
+    expect(
+      r.description,
+      '159036437923-LE DAO NHAN SAM chuyen tien qua MoMo-CHUYEN TIEN-OQCH000PN',
+    );
+  });
 }

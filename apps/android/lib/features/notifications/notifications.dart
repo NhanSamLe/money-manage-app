@@ -11,6 +11,8 @@ import '../../core/planning_providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
+import 'inbox.dart';
+import '../notify_capture/capture_state.dart' show captureNoticesProvider;
 
 /// A reminder or alert derived from the owner's own data (no server push needed): overdue debts, budgets about to
 /// be exceeded, recurring items that are due, and offline commands that still need attention.
@@ -22,6 +24,7 @@ class Notice {
     required this.title,
     required this.text,
     required this.route,
+    this.onOpen,
   });
   final String id;
   final IconData icon;
@@ -29,6 +32,9 @@ class Notice {
   final String title;
   final String text;
   final String route;
+
+  /// Opens something other than a route (e.g. a sheet to resolve a balance gap); [route] is the fallback.
+  final void Function(BuildContext context)? onOpen;
 }
 
 final noticesProvider = Provider.autoDispose<AsyncValue<List<Notice>>>((ref) {
@@ -36,7 +42,7 @@ final noticesProvider = Provider.autoDispose<AsyncValue<List<Notice>>>((ref) {
   final budgets = ref.watch(budgetsProvider);
   final recurring = ref.watch(recurringProvider);
   final outbox = ref.watch(outboxProvider);
-  final out = <Notice>[];
+  final out = <Notice>[...ref.watch(captureNoticesProvider)];
   final today = DateTime.now();
   final todayKey =
       '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
@@ -146,7 +152,8 @@ final seenNoticesProvider = NotifierProvider<_Seen, Set<String>>(_Seen.new);
 final unreadNoticesProvider = Provider.autoDispose<int>((ref) {
   final seen = ref.watch(seenNoticesProvider);
   final list = ref.watch(noticesProvider).value ?? const [];
-  return list.where((n) => !seen.contains(n.id)).length;
+  final inbox = ref.watch(inboxProvider).value?.unread ?? 0;
+  return list.where((n) => !seen.contains(n.id)).length + inbox;
 });
 
 class NotificationsPage extends ConsumerStatefulWidget {
@@ -159,9 +166,12 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() async {
       final list = ref.read(noticesProvider).value ?? const [];
       ref.read(seenNoticesProvider.notifier).markAll(list.map((n) => n.id));
+      // Opening the bell reads everything; refresh so the badge drops after the server confirms.
+      await markInboxRead(ref);
+      ref.invalidate(inboxProvider);
     });
   }
 
@@ -169,6 +179,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final list = ref.watch(noticesProvider);
+    final inbox = ref.watch(inboxProvider).value ?? const Inbox();
     return Scaffold(
       body: MomaPage(
         title: 'Thông báo',
@@ -184,71 +195,93 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             },
           ),
           data: (items) {
-            if (items.isEmpty) {
+            if (items.isEmpty && inbox.items.isEmpty) {
               return const EmptyState(
                 icon: Symbols.notifications_rounded,
                 title: 'Chưa có thông báo',
-                hint: 'MoMa sẽ nhắc bạn khi có khoản nợ quá hạn, ngân sách sắp hết, khoản định kỳ đến hạn hoặc giao dịch chờ xử lý.',
+                hint: 'Tiền vào, tiền ra, nhắc nhở, tổng kết và các việc cần xử lý đều hiện ở đây.',
               );
             }
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                for (final n in items)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: pal.surface,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () => context.push(n.route),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CategoryAvatar(
-                              iconData: n.icon,
-                              color: n.color,
-                              size: 42,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    n.title,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 15,
-                                      color: pal.ink,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    n.text,
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      height: 1.4,
-                                      color: pal.muted,
-                                    ),
-                                  ),
-                                ],
+            Widget head(String t) => Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 10),
+              child: Text(
+                t,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: pal.muted,
+                ),
+              ),
+            );
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(inboxProvider);
+                await ref.read(inboxProvider.future);
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  if (items.isNotEmpty) head('Cần xử lý'),
+                  for (final n in items)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: pal.surface,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => n.onOpen != null
+                            ? n.onOpen!(context)
+                            : context.push(n.route),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CategoryAvatar(
+                                iconData: n.icon,
+                                color: n.color,
+                                size: 42,
                               ),
-                            ),
-                            Icon(
-                              Symbols.chevron_right_rounded,
-                              color: pal.muted,
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      n.title,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 15,
+                                        color: pal.ink,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      n.text,
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        height: 1.4,
+                                        color: pal.muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Symbols.chevron_right_rounded,
+                                color: pal.muted,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                  if (inbox.items.isNotEmpty) head('Gần đây'),
+                  for (final it in inbox.items) InboxTile(item: it),
+                ],
+              ),
             );
           },
         ),

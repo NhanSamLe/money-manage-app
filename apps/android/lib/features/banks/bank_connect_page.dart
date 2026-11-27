@@ -12,6 +12,15 @@ import '../../core/ui/actions.dart';
 import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
 import '../../core/account_presets.dart';
+import '../../core/models.dart';
+import '../../core/sheets.dart';
+import '../accounts/sync/sync_sources.dart'
+    show
+        BankLink,
+        bankLinksProvider,
+        notifySyncStateProvider,
+        notifySyncStoreProvider;
+import 'masked_number.dart';
 
 class BankAccountInfo {
   BankAccountInfo(this.j);
@@ -20,6 +29,15 @@ class BankAccountInfo {
   String get bank => '${j['bank']}';
   String get holder => '${j['holder']}';
   String get masked => '${j['number_masked']}';
+
+  /// Full account number (owner only); shown masked until revealed.
+  String? get number => j['number'] as String?;
+  String get last4 {
+    final n = number ?? masked;
+    final d = n.replaceAll(RegExp(r'\D'), '');
+    return d.length >= 4 ? d.substring(d.length - 4) : d;
+  }
+
   int get balance => parseVnd('${j['balance']}');
   bool get linked => j['linked'] == true;
   String get label => '${j['label'] ?? ''}';
@@ -47,15 +65,72 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
   String? _busyId;
   bool _syncing = false;
 
+  /// Asks where the bank account goes: an existing MoMa account (suggested by bank and last 4 digits) or a new
+  /// one. Returns null when the sheet was dismissed, '' for a new account.
+  Future<String?> _pickTarget(BankAccountInfo a) async {
+    final accounts = await ref.read(accountsProvider.future);
+    final links = await ref
+        .read(bankLinksProvider.future)
+        .catchError((_) => <BankLink>[]);
+    final candidates = linkCandidates(
+      a,
+      accounts,
+      linked: {for (final l in links) l.accountId},
+    );
+    if (candidates.isEmpty || !mounted) return '';
+    return showChoiceSheet<String>(
+      context,
+      title: 'Gắn vào tài khoản đã có',
+      options: [
+        for (final c in candidates)
+          ChoiceOption(
+            value: c.id,
+            label: c.last4 == null ? c.name : '${c.name} · •••• ${c.last4}',
+            leading: AccountBadge(
+              institution: c.institution,
+              kind: c.kind,
+              size: 32,
+            ),
+          ),
+        const ChoiceOption(
+          value: '',
+          label: 'Tạo tài khoản mới',
+          icon: Symbols.add_rounded,
+        ),
+      ],
+      footnote:
+          'Gắn vào tài khoản đã có giữ nguyên lịch sử giao dịch; từ nay tài khoản đó chỉ nhận giao dịch từ ngân hàng '
+          'qua SePay (không đọc thông báo nữa để tránh ghi trùng).',
+    );
+  }
+
   Future<void> _link(BankAccountInfo a) async {
+    final target = await _pickTarget(a);
+    if (target == null || !mounted) return;
     setState(() => _busyId = a.id);
     try {
-      await ref.read(apiProvider).post('/banks/sepay/link', {
+      final r = await ref.read(apiProvider).post('/banks/sepay/link', {
         'external_id': a.id,
+        if (target.isNotEmpty) 'account_id': target,
       });
+      final accountId = r is Map ? '${r['account_id']}' : target;
+      // SePay is now the only source for this account: stop reading its app's notifications.
+      if (accountId.isNotEmpty) {
+        await ref.read(notifySyncStoreProvider).unmapAccount(accountId);
+      }
       refreshAll(ref);
-      ref.invalidate(bankAccountsProvider);
-      if (mounted) showSnack(context, 'Đã kết nối ${a.bank} ${a.masked}');
+      ref
+        ..invalidate(bankAccountsProvider)
+        ..invalidate(bankLinksProvider)
+        ..invalidate(notifySyncStateProvider);
+      if (mounted) {
+        showSnack(
+          context,
+          target.isEmpty
+              ? 'Đã kết nối ${a.bank} ${a.masked}'
+              : 'Đã gắn ${a.bank} ${a.masked} vào tài khoản có sẵn',
+        );
+      }
     } on ApiException catch (e) {
       if (mounted) await showErrorDialog(context, e.message);
     } finally {
@@ -175,11 +250,20 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                                       color: pal.ink,
                                     ),
                                   ),
-                                  Text(
-                                    '${a.masked}  ${a.holder}',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: pal.muted,
+                                  MaskedNumber(
+                                    key: ValueKey('sepay-number-${a.id}'),
+                                    number: a.number,
+                                    last4: a.last4,
+                                  ),
+                                  CopyOnLongPress(
+                                    value: a.holder,
+                                    what: 'tên chủ tài khoản',
+                                    child: Text(
+                                      a.holder,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: pal.muted,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -199,11 +283,15 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                                 ),
                               ),
                             ),
-                            Text(
-                              formatVnd(a.balance),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
+                            CopyOnLongPress(
+                              value: '${a.balance}',
+                              what: 'số dư',
+                              child: Text(
+                                formatVnd(a.balance),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           ],
@@ -262,4 +350,28 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
       ),
     );
   }
+}
+
+/// MoMa accounts a SePay bank account may attach to: same bank or same last 4 digits, not a card, not linked yet.
+/// Best matches (bank and last 4) first.
+List<Account> linkCandidates(
+  BankAccountInfo a,
+  List<Account> accounts, {
+  required Set<String> linked,
+}) {
+  final code = brandFor(institution: a.bank)?.code;
+  int score(Account x) {
+    var s = 0;
+    if (code != null && brandFor(institution: x.institution)?.code == code) {
+      s += 1;
+    }
+    if (x.last4 != null && x.last4 == a.last4) s += 2;
+    return s;
+  }
+
+  final list = [
+    for (final x in accounts)
+      if (!x.isCard && !linked.contains(x.id) && score(x) > 0) x,
+  ]..sort((p, q) => score(q).compareTo(score(p)));
+  return list;
 }

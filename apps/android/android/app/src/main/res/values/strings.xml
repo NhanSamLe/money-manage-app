@@ -69,4 +69,13 @@
     <string name="wg_sample_holder">NGUYEN VAN A</string>
     <string name="wg_sample_bank_line">MB Bank · •••• 6789</string>
     <string name="wg_sample_masked_holder">•••• 6789 · NGUYEN VAN A</string>
+    <string name="wg_copy_number_btn">Sao chép STK</string>
+    <string name="wg_copy_payload_btn">Sao chép nội dung mã</string>
+    <string name="wg_copied_number">Đã sao chép số tài khoản</string>
+    <string name="wg_copied_payload">Đã sao chép nội dung mã QR</string>
+    <string name="wg_copy_missing">Mở MoMa một lần để cập nhật số tài khoản</string>
+    <string name="wg_reveal">Hiện số tài khoản</string>
+    <string name="wg_hide">Ẩn số tài khoản</string>
+    <string name="share_label">Ghi vào MoMa</string>
+    <string name="wg_act_voice">Nói với Trợ lý</string>
 </resources>

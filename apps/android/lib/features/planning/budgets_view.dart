@@ -90,7 +90,7 @@ class _BudgetCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(categoryIcon(b.icon), color: MomaColors.forest),
+                  Icon(categoryIcon(b.icon), color: context.pal.accentInk),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

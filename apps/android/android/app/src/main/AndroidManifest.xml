@@ -2,6 +2,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- In-app update: lets MoMa open the system installer for a downloaded release APK. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Assistant voice input (speech_to_text): audio goes to the phone's speech service, MoMa keeps none. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:label="MoMa"
         android:allowBackup="false"
@@ -105,6 +107,37 @@
             android:excludeFromRecents="true"
             android:taskAffinity="vn.moma.app.qroverlay"
             android:theme="@style/MomaOverlayTheme"/>
+        <!-- Share target: "Chia sẻ" a receipt screenshot or a transaction text from MoMo / a bank app into MoMa. -->
+        <activity
+            android:name=".ShareReceiveActivity"
+            android:label="@string/share_label"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="vn.moma.app.share"
+            android:launchMode="singleTask"
+            android:theme="@style/MomaOverlayTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+        </activity>
+        <!-- Copy icon on the QR widget: copies the account number and finishes at once. -->
+        <activity
+            android:name=".CopyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="vn.moma.app.copy"
+            android:theme="@style/MomaOverlayTheme"/>
         <!-- Reads balance-change notifications of allow-listed bank / wallet apps only (user must grant access). -->
         <service
             android:name=".MomaNotificationListener"
@@ -137,6 +170,43 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Supported bank / wallet apps (MomaNotificationListener.ALLOWED_PACKAGES): lets MoMa see which are installed
+             on Android 11+ ("Phát hiện trên máy"). Keep in sync with the listener's allow-list. -->
+        <package android:name="com.VCB"/>
+        <package android:name="vn.com.techcombank.bb.app"/>
+        <package android:name="com.mbmobile"/>
+        <package android:name="com.tpb.mb.gprsandroid"/>
+        <package android:name="com.vnpay.bidv"/>
+        <package android:name="com.vietinbank.ipay"/>
+        <package android:name="mobile.acb.com.vn"/>
+        <package android:name="com.vnpay.vpbankonline"/>
+        <package android:name="com.sacombank.ewallet"/>
+        <package android:name="com.vnpay.Agribank3g"/>
+        <package android:name="com.mservice.momotransfer"/>
+        <package android:name="vn.com.vng.zalopay"/>
+        <package android:name="com.beeasy.toppay"/>
+        <package android:name="com.vib.myvib2"/>
+        <package android:name="com.vnpay.hdbank"/>
+        <package android:name="vn.com.msb.smartBanking"/>
+        <package android:name="vn.com.ocb.awe"/>
+        <package android:name="xyz.be.cake"/>
+        <package android:name="vn.com.seabank.mb1"/>
+        <package android:name="vn.shb.saha.mbanking"/>
+        <package android:name="vn.shb.mbanking"/>
+        <package android:name="com.vnpay.EximBankOmni"/>
+        <package android:name="io.lifestyle.plus"/>
+        <package android:name="com.bplus.vtpay"/>
+        <package android:name="vnptpay.vnptmedia.vnpt.com.vnptpay"/>
+        <package android:name="vn.com.lpbank.digibank"/>
+        <package android:name="vn.com.lpb.lienviet24h"/>
+        <package android:name="vnpay.smartacccount"/>
+        <!-- Android 11+: see the speech recognizer (voice input) and the text-to-speech engine (spoken replies). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

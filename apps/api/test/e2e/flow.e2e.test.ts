@@ -390,7 +390,7 @@ describe("bank connection via SePay (SePay faked, database real)", () => {
     const list = await req("GET", "/v1/banks/sepay/accounts");
     expect(list.status).toBe(200);
     expect(list.json.data[0]).toMatchObject({ external_id: ACC_ID, number_masked: "••••8888", balance: "2500000", linked: false, holder: "NGUYEN VAN A" });
-    expect(JSON.stringify(list.json)).not.toContain(NUMBER); // the full number never reaches the app
+    expect(list.json.data[0].number).toBe(NUMBER); // full number for the authenticated owner (masked by default in the app)
 
     const link = await req("POST", "/v1/banks/sepay/link", { body: { external_id: ACC_ID } });
     expect(link.status).toBe(200);
@@ -426,6 +426,16 @@ describe("bank connection via SePay (SePay faked, database real)", () => {
     expect(tx).toMatchObject({ amount: 65000, kind: "EXPENSE", name: "Ăn uống" });
     const accounts = (await call("GET", "/v1/accounts")).json.data as any[];
     expect(accounts.find((a) => a.name === "VCB chinh").balance).toBe("2435000"); // 2.500.000 - 65.000, equals the bank
+    // The same push is in the in-app inbox, unread, and opens the recorded transaction.
+    const stored = (await h.db.query("select count(*)::int as n from pf_notification")).rows[0].n;
+    expect(stored).toBeGreaterThanOrEqual(1);
+    const inbox = (await req("GET", "/v1/notifications")).json.data as { unread: number; items: any[] };
+    const latestTx = (await h.db.query("select id from pf_tx order by created_at desc limit 1")).rows[0].id;
+    expect(inbox.items[0]).toMatchObject({ type: "bank_tx", title: "Tiền ra -65.000 đ", read: false });
+    expect(inbox.items[0].data.route).toBe(`/tx/${latestTx}`);
+    expect(inbox.items.filter((i: any) => i.title === "Tiền ra -65.000 đ")).toHaveLength(1); // redelivery not stored twice
+    expect((await req("POST", "/v1/notifications/read", { body: {} })).json.data.updated).toBeGreaterThanOrEqual(1);
+    expect(((await req("GET", "/v1/notifications")).json.data as { unread: number }).unread).toBe(0);
   });
 
   it("money in is posted as income; an unlinked account number is acknowledged but never posted", async () => {

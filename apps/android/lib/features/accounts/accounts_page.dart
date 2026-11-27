@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,7 +13,12 @@ import '../../core/sheets.dart';
 import '../../core/ui/labeled_field.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+import '../../core/money/money_input.dart';
+import '../banks/masked_number.dart';
+import '../banks/qr_share.dart' show copyText;
+import '../notify_capture/capture_state.dart' show capturedNumbersProvider;
 import 'add_account_sheet.dart';
+import 'sync/detected_apps.dart';
 import 'sync/account_sync_card.dart';
 import 'sync/integrations_tab.dart';
 import 'sync/sync_sources.dart';
@@ -115,6 +121,7 @@ class _AccountsTab extends ConsumerWidget {
             children: [
               const _SyncBanner(),
               const SizedBox(height: 12),
+              const DetectedAppsCard(compact: true),
               _TotalCard(list),
               const SizedBox(height: 16),
               if (list.isEmpty)
@@ -134,7 +141,7 @@ class _AccountsTab extends ConsumerWidget {
                     notify: notify.value,
                     onOpen: () => showFormSheet<void>(
                       context,
-                      (_) => _EditAccountSheet(account: a),
+                      (_) => EditAccountSheet(account: a, link: linkOf[a.id]),
                     ),
                   ),
               const SizedBox(height: 4),
@@ -317,36 +324,80 @@ class _AddButton extends StatelessWidget {
   }
 }
 
-class _EditAccountSheet extends ConsumerStatefulWidget {
-  const _EditAccountSheet({required this.account});
+/// Edits an account: name, bank / wallet name, last 4 digits and the current balance (an unknown balance is set;
+/// a different one is posted as an adjustment, outside income / expense). Archive keeps the history.
+class EditAccountSheet extends ConsumerStatefulWidget {
+  const EditAccountSheet({super.key, required this.account, this.link});
   final Account account;
+  final BankLink? link;
   @override
-  ConsumerState<_EditAccountSheet> createState() => _EditAccountSheetState();
+  ConsumerState<EditAccountSheet> createState() => _EditAccountSheetState();
 }
 
-class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
+class _EditAccountSheetState extends ConsumerState<EditAccountSheet> {
   late final FormRunner _run = FormRunner(setState);
   late final TextEditingController _name = TextEditingController(
     text: widget.account.name,
   );
+  late final TextEditingController _institution = TextEditingController(
+    text: widget.account.institution,
+  );
+  late final TextEditingController _last4 = TextEditingController(
+    text: widget.account.last4 ?? '',
+  );
+  late final TextEditingController _balance = TextEditingController(
+    text: _initialBalance,
+  );
+  String? _nameError;
+  String? _institutionError;
+  String? _last4Error;
   final String _id = ApiClient.newId();
+
+  String get _initialBalance {
+    final b = widget.account.balance;
+    if (b == null) return '';
+    return formatVnd(widget.account.isCard ? -b : b).replaceAll(' ₫', '');
+  }
 
   @override
   void dispose() {
     _name.dispose();
+    _institution.dispose();
+    _last4.dispose();
+    _balance.dispose();
     super.dispose();
   }
 
   Future<void> _submit({bool archive = false}) async {
-    if (_name.text.trim().isEmpty) {
-      setState(() => _run.error = 'Nhập tên tài khoản.');
+    final a = widget.account;
+    final name = _name.text.trim();
+    final inst = _institution.text.trim();
+    final last4 = _last4.text.trim();
+    setState(() {
+      _nameError = name.isEmpty ? 'Nhập tên tài khoản.' : null;
+      _institutionError = inst.isEmpty ? 'Nhập ngân hàng hoặc ví.' : null;
+      _last4Error = last4.isNotEmpty && !RegExp(r'^\d{4}$').hasMatch(last4)
+          ? 'Nhập đúng 4 chữ số cuối.'
+          : null;
+    });
+    if (_nameError != null ||
+        _institutionError != null ||
+        _last4Error != null) {
       return;
     }
+    final typed = _balance.text.trim().isEmpty
+        ? null
+        : parseVndInput(_balance.text);
+    final balanceChanged =
+        typed != null && _balance.text.trim() != _initialBalance;
     final ok = await _run.run(
       () => ref.read(apiProvider).command('ACCOUNT_UPDATE', {
-        'account_id': widget.account.id,
-        'expected_version': widget.account.version,
-        'name': _name.text.trim(),
+        'account_id': a.id,
+        'expected_version': a.version,
+        'name': name,
+        if (inst != a.institution) 'institution': inst,
+        if (last4 != (a.last4 ?? '')) 'last4': last4,
+        if (balanceChanged) 'balance': (a.isCard ? -typed : typed).toString(),
         if (archive) 'archived': true,
       }, commandId: _id),
     );
@@ -358,31 +409,93 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final a = widget.account;
+    final link = widget.link;
+    final number =
+        link?.number ?? ref.watch(capturedNumbersProvider).value?[a.id];
+    final pal = context.pal;
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           'Sửa tài khoản',
           style: Theme.of(context).textTheme.titleLarge
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
+        if (number != null || link != null) ...[
+          const SizedBox(height: 8),
+          MaskedNumber(
+            key: const ValueKey('edit-number'),
+            prefix: 'STK: ',
+            number: number,
+            last4: link?.last4 ?? a.last4,
+            style: TextStyle(color: pal.ink, fontSize: 14),
+          ),
+          if (link?.holder != null)
+            CopyOnLongPress(
+              value: link!.holder!,
+              what: 'tên chủ tài khoản',
+              child: Text(
+                link.holder!,
+                style: TextStyle(color: pal.muted, fontSize: 13),
+              ),
+            ),
+        ],
         const SizedBox(height: 12),
         LabeledField(
           label: 'Tên tài khoản',
           hint: 'Nhập tên tài khoản',
           controller: _name,
+          errorText: _nameError,
+        ),
+        const SizedBox(height: 12),
+        LabeledField(
+          label: 'Ngân hàng hoặc ví',
+          hint: 'Ví dụ: Vietcombank, MoMo',
+          controller: _institution,
+          errorText: _institutionError,
+          suffix: IconButton(
+            tooltip: 'Sao chép',
+            icon: const Icon(Symbols.content_copy_rounded, size: 18),
+            onPressed: () => copyText(
+              context,
+              _institution.text.trim(),
+              'Đã sao chép tên ngân hàng',
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        LabeledField(
+          label: '4 số cuối tài khoản',
+          hint: 'Không bắt buộc',
+          controller: _last4,
+          keyboardType: TextInputType.number,
+          maxLength: 4,
+          errorText: _last4Error,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          enabled: link == null,
+        ),
+        const SizedBox(height: 4),
+        MoneyField(
+          controller: _balance,
+          hint: a.isCard ? 'Dư nợ hiện tại' : 'Số dư hiện tại',
+          optional: true,
+          help:
+              'Nhập số dư đúng như ngân hàng hoặc ví đang hiển thị. Chưa biết số dư thì MoMa lấy làm số dư đầu kỳ; '
+              'khác số dư hiện tại thì phần chênh lệch được ghi là điều chỉnh số dư, không tính vào thu chi.',
         ),
         Padding(
-          padding: EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: 8),
           child: Text(
             'Lưu trữ tài khoản giữ nguyên lịch sử nhưng không cho ghi giao dịch mới.',
-            style: TextStyle(color: context.pal.muted),
+            style: TextStyle(color: pal.muted),
           ),
         ),
         FormError(_run.error),
         const SizedBox(height: 16),
         FilledButton(
+          key: const ValueKey('save-account'),
           onPressed: _run.busy ? null : _submit,
           child: const Text('Lưu'),
         ),

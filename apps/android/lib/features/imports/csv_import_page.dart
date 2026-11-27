@@ -165,13 +165,14 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Card(
-            color: Color(0xFFFFF4D6),
+          Card(
+            color: context.pal.warnBg,
             child: Padding(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               child: Text(
                 'Nếu tài khoản đã có số dư đầu kỳ, chỉ nhập các dòng phát sinh SAU ngày đó '
                 '(chọn "Từ ngày"). Dòng không nhận diện được danh mục sẽ vào mục "chưa phân loại".',
+                style: TextStyle(color: context.pal.warnInk, height: 1.4),
               ),
             ),
           ),
@@ -190,7 +191,7 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
           ),
           const SizedBox(height: 12),
           ListTile(
-            tileColor: Colors.white,
+            tileColor: context.pal.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),

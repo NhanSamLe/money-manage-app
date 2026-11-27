@@ -35,8 +35,7 @@ class _AboutPageState extends State<AboutPage> {
   String get _version {
     final i = _info;
     if (i == null) return 'Phiên bản …';
-    final build = i.buildNumber.isEmpty ? '' : ' (build ${i.buildNumber})';
-    return 'Phiên bản ${i.version}$build';
+    return 'Phiên bản ${i.version}';
   }
 
   void _openLicenses() {
@@ -44,7 +43,7 @@ class _AboutPageState extends State<AboutPage> {
     showLicensePage(
       context: context,
       applicationName: 'MoMa — MoneyManage',
-      applicationVersion: i == null ? null : '${i.version} (${i.buildNumber})',
+      applicationVersion: i == null ? null : 'Phiên bản ${i.version}',
       applicationIcon: const Padding(
         padding: EdgeInsets.all(12),
         child: MomaAppIcon(size: 64),

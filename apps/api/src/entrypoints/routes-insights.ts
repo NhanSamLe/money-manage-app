@@ -23,6 +23,8 @@ import { ReminderSettingsPatch, resolveSettings } from "../modules/reminders/set
 import { DomainError } from "../shared/errors";
 import type { MemoryGateway } from "../modules/ai/memory-gateway";
 import { REFLECT_FROM_MIN, runReflection } from "./routes-memory";
+import { runTransferSweep } from "./routes-transfers";
+import type { TransferGateway } from "../modules/transfers/gateway";
 
 // Smart reminders + spending insights: HTTP routes (registered from http.ts) and the cron entry (scheduled()).
 
@@ -35,6 +37,8 @@ export interface InsightDeps {
   rg?: RemindersGateway;
   /** Assistant memory gateway (nightly reflection); defaults to the Supabase RPC gateway. */
   mg?: MemoryGateway;
+  /** Own-account transfer pairing (reconciliation sweep); defaults to the Supabase RPC gateway. */
+  tg?: TransferGateway;
 }
 
 const PERIOD = z.enum(["DAY", "WEEK", "MONTH"]);
@@ -264,6 +268,8 @@ export async function runScheduled(d: InsightDeps, now: Date): Promise<string[]>
         logFailure("reflect", e, key);
       }
     }
+    // Own-account transfers whose two legs arrived out of order or while the hook failed (idempotent, never throws).
+    await runTransferSweep(d, owner);
   } catch (e) {
     logFailure("run", e);
   }

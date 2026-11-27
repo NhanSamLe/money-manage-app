@@ -1,31 +1,34 @@
-# Hướng dẫn đóng góp và quy trình làm việc
+# Đóng góp
 
-Đọc `AGENTS.md`, `spec/README.md` và `spec/docs/11-engineering-standards.md` trước khi sửa code. Các tài liệu đó có tính bắt buộc.
+MoMa là sản phẩm cá nhân của một chủ sở hữu, mã nguồn công khai để tham khảo (xem [`LICENSE`](LICENSE)). Báo lỗi và góp ý
+qua [Issues](https://github.com/NhanSamLe/money-manage-app/issues) luôn được hoan nghênh. Pull request chỉ được nhận khi đã
+thống nhất trước trong issue; khi gửi, bạn đồng ý chuyển quyền sử dụng phần đóng góp cho chủ sở hữu theo giấy phép hiện hành.
+Lỗ hổng bảo mật: báo riêng theo [`SECURITY.md`](SECURITY.md), không mở issue.
 
-## Nhánh và commit
+## Trước khi sửa code
 
-- Nhánh: `main` (ổn định, gắn thẻ phát hành), `dev` (tích hợp), `feature/<mô-tả>`, `fix/<mô-tả>`.
-- Commit theo [Conventional Commits](https://www.conventionalcommits.org/): `feat(api): ...`, `fix(db): ...`, `docs: ...`, `chore: ...`, `test: ...`.
-- Mỗi commit nhỏ, một mục đích. Không commit secret, `.env`, keystore.
+Đọc [`AGENTS.md`](AGENTS.md), [`spec/README.md`](spec/README.md), [`spec/docs/11-engineering-standards.md`](spec/docs/11-engineering-standards.md)
+và [`docs/architecture.md`](docs/architecture.md). Các tài liệu đó có tính bắt buộc.
 
-## Quy tắc code
+## Quy tắc chính
 
-- **Tiền**: số nguyên VND; `bigint` trong SQL/TypeScript, `int` trong Dart; truyền qua JSON dạng chuỗi số. Không dùng số thực cho tiền.
-- **Sổ cái**: chỉ ghi qua RPC trong `supabase/migrations`. Bút toán đã ghi là bất biến, sửa bằng đảo bút toán rồi ghi lại.
-- **Kiến trúc**: presentation → application → domain; hạ tầng cài đặt các port (xem `spec/docs/11-engineering-standards.md` mục 2). Không có logic nghiệp vụ trong route/widget.
-- **Migration**: chỉ thêm file mới (`YYYYMMDDHHMMSS_tên.sql`), không sửa file đã áp dụng lên môi trường thật.
-- **Hợp đồng**: thay đổi `spec/contracts/*` phải tăng phiên bản và cập nhật `CHANGELOG.md`.
+- **Tiền**: số nguyên VND (`bigint` SQL/TypeScript, `int` Dart, chuỗi số trên JSON). Không dùng số thực.
+- **Sổ cái**: chỉ ghi qua RPC trong `supabase/migrations`; bút toán bất biến, sửa bằng đảo bút toán.
+- **Migration**: chỉ thêm file mới `YYYYMMDDHHMMSS_tên.sql`, không sửa file đã áp dụng.
+- **Kiến trúc**: không đặt nghiệp vụ trong route hay widget; hợp đồng `spec/contracts/*` đổi thì tăng phiên bản.
+- **Commit**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat(api): …`, `fix(app): …`, `docs: …`), nhỏ, một mục đích.
+- **Giao diện**: theo [`docs/UX-STANDARD.md`](docs/UX-STANDARD.md); văn bản hiển thị bằng tiếng Việt.
 
-## Trước khi mở pull request
+## Kiểm tra trước khi mở pull request
 
 ```bash
-node scripts/check-versions.mjs          # phiên bản đồng bộ
-cd apps/api && npm run typecheck && npm test
-cd apps/android && flutter analyze && flutter test
+node scripts/check-versions.mjs
+cd apps/api && npm run typecheck && npm test && npm run test:e2e
+cd apps/android && dart format lib test && flutter analyze --fatal-infos && flutter test
+PGHOST=localhost PGPORT=54329 PGUSER=postgres PGPASSWORD=local bash scripts/db-test.sh
 ```
 
-Pull request cần: mô tả thay đổi, requirement/test liên quan, kết quả lệnh đã **thực sự chạy**, tác động dữ liệu/migration, và cập nhật `IMPLEMENTATION_STATUS.md`. Không ghi "đã test" khi chưa chạy.
+Mô tả pull request gồm: thay đổi gì, vì sao, lệnh đã **thực sự chạy** và kết quả, tác động dữ liệu/migration. Không ghi
+"đã test" khi chưa chạy. Thay đổi giao diện thì kèm ảnh chụp (có thể tạo bằng `test/screenshots`, xem README).
 
-## Phát hành
-
-Xem `docs/RELEASING.md`.
+Phát hành chỉ do chủ sở hữu thực hiện: [`docs/RELEASE.md`](docs/RELEASE.md).

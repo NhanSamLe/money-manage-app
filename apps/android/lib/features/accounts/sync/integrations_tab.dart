@@ -11,6 +11,8 @@ import '../../../core/widgets.dart';
 import '../../banks/bank_connect_page.dart' show bankAccountsProvider;
 import '../../notify_capture/notify_capture_page.dart'
     show openNotifyCaptureSettings;
+import '../../banks/masked_number.dart';
+import 'detected_apps.dart';
 import 'sync_sources.dart';
 
 String _when(DateTime t) {
@@ -106,6 +108,34 @@ class _IntegrationsTabState extends ConsumerState<IntegrationsTab> {
               if (links.hasValue) 'Đã liên kết với MoMa: ${linkList.length}',
               if (lastSync != null) 'Cập nhật gần nhất: ${_when(lastSync)}',
             ],
+            extra: [
+              for (final l in linkList)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: CopyOnLongPress(
+                          value: l.bankName ?? '',
+                          what: 'tên ngân hàng',
+                          child: Text(
+                            '${l.bankName ?? 'Ngân hàng'} ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.pal.ink,
+                            ),
+                          ),
+                        ),
+                      ),
+                      MaskedNumber(
+                        key: ValueKey('link-number-${l.accountId}'),
+                        number: l.number,
+                        last4: l.last4,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
             actions: [
               if (linkList.isNotEmpty)
                 FilledButton.icon(
@@ -130,6 +160,8 @@ class _IntegrationsTabState extends ConsumerState<IntegrationsTab> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          const DetectedAppsCard(),
           const SizedBox(height: 12),
           _StatusCard(
             icon: Symbols.notifications_rounded,
@@ -198,6 +230,7 @@ class _StatusCard extends StatelessWidget {
     required this.status,
     required this.lines,
     required this.actions,
+    this.extra = const [],
   });
   final IconData icon;
   final String title;
@@ -206,6 +239,9 @@ class _StatusCard extends StatelessWidget {
   final (String, bool)? status;
   final List<String> lines;
   final List<Widget> actions;
+
+  /// Extra rows under [lines] (e.g. linked accounts with their numbers).
+  final List<Widget> extra;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +313,7 @@ class _StatusCard extends StatelessWidget {
                 ),
               ),
           ],
+          ...extra,
           if (actions.isNotEmpty) ...[
             const SizedBox(height: 8),
             // Buttons are full width by theme (minimumSize: fromHeight), so they stack.

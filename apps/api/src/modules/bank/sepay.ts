@@ -67,6 +67,8 @@ export interface BankEvent {
   content: string;
   balance: number | null;
   bankName: string;
+  /** Bank reference (e.g. FT26332327719412) when SePay sends one; used to pair own-account transfers. */
+  reference?: string;
 }
 
 /** SePay timestamps are Vietnam time without an offset. */
@@ -98,6 +100,7 @@ export async function parseWebhook(json: unknown): Promise<BankEvent | null> {
     content: (d.content ?? d.description ?? "").trim(),
     balance: d.accumulated && d.accumulated > 0 ? d.accumulated : null,
     bankName: d.gateway ?? "",
+    ...(d.referenceCode?.trim() ? { reference: d.referenceCode.trim().slice(0, 64) } : {}),
   };
 }
 
@@ -243,6 +246,7 @@ export class SepayClient {
         content: (t.transaction_content ?? "").trim(),
         balance: Number(t.accumulated) > 0 ? Math.trunc(Number(t.accumulated)) : null,
         bankName: t.bank_brand_name ?? "",
+        ...(t.reference_number?.trim() ? { reference: t.reference_number.trim().slice(0, 64) } : {}),
       });
     }
     return out;

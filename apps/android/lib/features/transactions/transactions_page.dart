@@ -662,9 +662,17 @@ class _TotalsCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          col('Thu nhập', '+${formatVnd(income)}', MomaColors.income),
+          col(
+            'Thu nhập',
+            '${income == 0 ? '' : '+'}${formatVnd(income)}',
+            MomaColors.income,
+          ),
           sep(),
-          col('Chi tiêu', '-${formatVnd(expense)}', MomaColors.expense),
+          col(
+            'Chi tiêu',
+            '${expense == 0 ? '' : '-'}${formatVnd(expense)}',
+            MomaColors.expense,
+          ),
           sep(),
           col('Chênh lệch', '$sign${formatVnd(net.abs())}', pal.ink),
         ],
@@ -744,7 +752,8 @@ class _DayCard extends StatelessWidget {
                       children: [
                         const TextSpan(text: 'Thu: '),
                         TextSpan(
-                          text: '+${formatVnd(group.income)}',
+                          text:
+                              '${group.income == 0 ? '' : '+'}${formatVnd(group.income)}',
                           style: const TextStyle(
                             color: MomaColors.income,
                             fontWeight: FontWeight.w700,
@@ -752,7 +761,8 @@ class _DayCard extends StatelessWidget {
                         ),
                         const TextSpan(text: '  |  Chi: '),
                         TextSpan(
-                          text: '-${formatVnd(group.expense)}',
+                          text:
+                              '${group.expense == 0 ? '' : '-'}${formatVnd(group.expense)}',
                           style: const TextStyle(
                             color: MomaColors.expense,
                             fontWeight: FontWeight.w700,
@@ -802,7 +812,7 @@ class TxTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = tx.isIncome
         ? MomaColors.income
-        : (tx.isExpense ? MomaColors.expense : MomaColors.forest);
+        : (tx.isExpense ? MomaColors.expense : context.pal.accentInk);
     final sign = tx.isIncome ? '+' : (tx.isExpense ? '-' : '');
     final d = tx.effectiveAt.toLocal();
     final time =
@@ -870,6 +880,8 @@ String txKindLabel(String kind) {
       return 'Tiền ra chưa phân loại';
     case 'OPENING':
       return 'Số dư đầu kỳ';
+    case 'ADJUSTMENT':
+      return 'Điều chỉnh số dư';
     case 'LOAN_GIVEN':
       return 'Cho vay';
     case 'LOAN_RECEIVED':

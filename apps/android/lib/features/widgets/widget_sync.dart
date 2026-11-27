@@ -12,6 +12,7 @@ import '../../core/models.dart';
 import '../../core/network/api_client.dart';
 import '../../core/planning_models.dart';
 import '../../core/providers.dart';
+import '../banks/qr_share.dart' show vietQrAccountNumber;
 
 /// Pushes the numbers shown by the home-screen widgets to the native side (channel "moma/widgets").
 /// Widgets never fetch by themselves; they render what was pushed last, so they also work offline.
@@ -192,6 +193,11 @@ class WidgetSync {
             'qr_bank': '${qr['bank'] ?? a['bank'] ?? ''}',
             'qr_masked': '${qr['number_masked'] ?? a['number_masked'] ?? ''}',
             'qr_holder': '${qr['holder'] ?? a['holder'] ?? ''}',
+            // Full number + QR text for the overlay's "Sao chép STK" / "Sao chép nội dung mã" and the copy icon.
+            'qr_number':
+                vietQrAccountNumber('${qr['payload']}') ??
+                '${a['number'] ?? ''}',
+            'qr_payload': '${qr['payload']}',
           });
           // Keep "ok" only when a QR image exists (new one now, or the previous file natively).
           if (png != null) data['qr_state'] = 'ok';
@@ -262,6 +268,16 @@ class WidgetSync {
     if (!supported) return false;
     try {
       return await channel.invokeMethod<bool>('canPin') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens MoMa's permission screen (MIUI permission editor when available).
+  static Future<bool> openPermissions() async {
+    if (!supported) return false;
+    try {
+      return await channel.invokeMethod<bool>('openPermissions') ?? false;
     } catch (_) {
       return false;
     }

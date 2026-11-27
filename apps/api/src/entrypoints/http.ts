@@ -15,8 +15,11 @@ import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
 import { currentVnDate, currentVnMonth, monthRangeUtc } from "../shared/report-period";
 import { registerInsightRoutes, runScheduled } from "./routes-insights";
+import { registerNotificationRoutes } from "./routes-notifications";
 import { afterAgentTurn, agentMemory, observeCommand, registerMemoryRoutes } from "./routes-memory";
 import type { MemoryGateway } from "../modules/ai/memory-gateway";
+import { pairAfterCommand, pairAfterTx, registerTransferRoutes } from "./routes-transfers";
+import type { TransferGateway } from "../modules/transfers/gateway";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_PAGE = 50;
@@ -35,6 +38,8 @@ interface Deps {
   pushFetch?: typeof fetch;
   /** Assistant memory gateway (tests); defaults to the Supabase RPC gateway. */
   mg?: MemoryGateway;
+  /** Own-account transfer pairing gateway (tests); defaults to the Supabase RPC gateway. */
+  tg?: TransferGateway;
 }
 type Vars = { Variables: { rid: string; session: Session; owner: string; deviceId: string } };
 
@@ -218,15 +223,15 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const { messages, bytes } = buildMessages(text, today, accounts, categories);
     const est = estimateMicro(bytes);
     // Reserve the worst case first (fails closed at the monthly cap); a provider failure keeps the reservation (spec 05 s5).
-    const { id: reservation } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    const reservation = await reserveAi(d, owner, est);
     let out;
     try {
       out = await d.ai(buildRequestBody(messages));
     } catch (e) {
-      await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined); // vendor may still bill: keep it counted
+      if (reservation) await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined); // vendor may still bill: keep it counted
       throw e instanceof DomainError ? e : new DomainError("AI_UNAVAILABLE");
     }
-    await d.gw.aiSettle(owner, reservation, actualMicro(out.usage));
+    if (reservation) await d.gw.aiSettle(owner, reservation, actualMicro(out.usage)).catch(() => undefined);
     const result = resolveOutput(parseModelJson(out.content), { today, nowIso: now.toISOString(), accounts, categories });
     if (result.type === "query_summary") {
       const { from, to } = monthRangeUtc(result.month);
@@ -273,15 +278,15 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const memory = await agentMemory(d, owner, body.text);
     const { messages, bytes } = buildAgentMessages(body.text, body.history ?? [], ctx, { auto: body.auto === true, previous: body.previous, memory });
     const est = estimateMicro(bytes, AGENT_MAX_OUTPUT_TOKENS);
-    const { id: reservation } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    const reservation = await reserveAi(d, owner, est);
     let out;
     try {
       out = await d.ai(buildRequestBody(messages, AGENT_MAX_OUTPUT_TOKENS));
     } catch (e) {
-      await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined);
+      if (reservation) await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined);
       throw e instanceof DomainError ? e : new DomainError("AI_UNAVAILABLE");
     }
-    await d.gw.aiSettle(owner, reservation, actualMicro(out.usage));
+    if (reservation) await d.gw.aiSettle(owner, reservation, actualMicro(out.usage)).catch(() => undefined);
     const raw = parseModelJson(out.content);
     const result = resolveAgentOutput(raw, ctx);
     // Write after acting: aliases / people / preferences the model reported (validated, best effort).
@@ -340,9 +345,10 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     if (!categoryId) return c.json({ success: true, note: "no category" });
     const ingested = await d.gw.ingestBankEvent({
       externalId: ev.externalId, numberHash, direction: ev.direction, amount: ev.amount, atIso: ev.atIso,
-      content: ev.content, categoryId, balance: ev.balance, payload: { source: "webhook", gateway: ev.bankName, content: ev.content },
+      content: ev.content, categoryId, balance: ev.balance, payload: { source: "webhook", gateway: ev.bankName, content: ev.content, reference: ev.reference ?? null },
     });
     if (ingested.status === "APPLIED") await notifyBankEvent(c, d, link.owner_id, ev, ingested.tx_id);
+    if (ingested.status === "APPLIED") await pairAfterTx(d, link.owner_id, ingested.tx_id, "webhook"); // own-account transfer (best effort)
     return c.json({ success: true });
   });
 
@@ -363,17 +369,24 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     return ok(
       c as unknown as Context<Vars>,
       list.map((a) => ({
-        external_id: a.id, bank: a.bank, holder: a.holder, number_masked: `••••${a.number.slice(-4)}`, balance: String(a.balance),
+        // The full number goes to the authenticated owner only (masked by default in the app, revealed / copied on demand).
+        external_id: a.id, bank: a.bank, holder: a.holder, number: a.number, number_masked: `••••${a.number.slice(-4)}`, balance: String(a.balance),
         active: a.active, label: a.label, linked: links.some((l) => l.external_id === a.id),
       })),
     );
   });
 
+  // Links a SePay-verified bank account to MoMa. Without account_id a new MoMa account is created at the bank balance;
+  // with account_id the bank account is attached to that EXISTING MoMa account (history kept; an unknown opening
+  // balance is set from the bank, missing last 4 digits are filled in). Idempotent per bank account.
   app.post("/v1/banks/sepay/link", auth, async (c) => {
     const d = getDeps(c.env);
     if (!d.cfg.sepayToken) throw new DomainError("BANK_NOT_CONFIGURED");
     needDevice(c);
-    const { external_id } = z.object({ external_id: z.string().min(8).max(64) }).parse(await c.req.json().catch(() => ({})));
+    const body = z
+      .object({ external_id: z.string().min(8).max(64), account_id: z.string().uuid().optional() })
+      .parse(await c.req.json().catch(() => ({})));
+    const { external_id } = body;
     const owner = c.get("owner");
     let list;
     try {
@@ -386,14 +399,48 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const a = list.find((x) => x.id === external_id);
     if (!a) throw new DomainError("NOT_FOUND");
     const last4 = a.number.slice(-4);
+    const ctx: CommandContext = { ownerId: owner, sessionId: c.get("session").sessionId, deviceId: c.get("deviceId") };
+    const reply = (accountId: string, attached: boolean) =>
+      ok(c as unknown as Context<Vars>, { account_id: accountId, bank: a.bank, holder: a.holder, last4, balance: String(a.balance), attached });
+    type AccountRow = { id: string; kind: string; last4: string | null; archived?: boolean; version: number; baseline_known?: boolean };
+    // Attached accounts: fill in what the bank knows and MoMa does not (last 4 digits, an unknown opening balance).
+    // Safe to repeat: once filled, nothing is sent.
+    const finishAttach = async (accountId: string) => {
+      const acc = ((await d.gw.readAccounts(owner)) as AccountRow[]).find((x) => x.id === accountId);
+      if (!acc) return;
+      const payload: Record<string, unknown> = {};
+      if (!acc.last4) payload.last4 = last4;
+      if (acc.baseline_known === false) payload.balance = String(a.balance);
+      if (Object.keys(payload).length === 0) return;
+      const commandId = crypto.randomUUID();
+      const parsed = implementedCommand.parse({
+        command_id: commandId, command_type: "ACCOUNT_UPDATE", schema_version: 1,
+        payload: { account_id: acc.id, expected_version: acc.version, ...payload },
+      });
+      const hash = await sha256Hex(canonicalJson({ owner, command: parsed }));
+      await d.gw.executeCommand(ctx, commandId, hash, parsed);
+    };
     // Linking is idempotent: an already linked bank account just returns its MoMa account.
-    const existing = ((await d.gw.readLinks(owner)) as { external_id: string; account_id: string }[]).find((l) => l.external_id === a.id);
+    const links = (await d.gw.readLinks(owner)) as { external_id: string; account_id: string }[];
+    const existing = links.find((l) => l.external_id === a.id);
     if (existing) {
-      return ok(c as unknown as Context<Vars>, { account_id: existing.account_id, bank: a.bank, holder: a.holder, last4, balance: String(a.balance) });
+      if (body.account_id && body.account_id !== existing.account_id) throw new DomainError("BANK_ALREADY_LINKED");
+      if (body.account_id) await finishAttach(existing.account_id);
+      return reply(existing.account_id, body.account_id !== undefined);
+    }
+    if (body.account_id) {
+      const acc = ((await d.gw.readAccounts(owner)) as AccountRow[]).find((x) => x.id === body.account_id && !x.archived);
+      if (!acc) throw new DomainError("NOT_FOUND");
+      if (acc.kind === "CREDIT_CARD") throw new DomainError("VALIDATION_FAILED");
+      if (links.some((l) => l.account_id === acc.id)) throw new DomainError("ACCOUNT_ALREADY_LINKED");
+      await d.gw.linkAccount(owner, acc.id, {
+        externalId: a.id, numberHash: await hmacHex(d.cfg.sepayToken, a.number), last4, holder: a.holder, bank: a.bank, balance: a.balance,
+      });
+      await finishAttach(acc.id);
+      return reply(acc.id, true);
     }
     const name = (a.label || `${a.bank} ${last4}`).slice(0, 120);
     const commandId = await uuidFrom(`moma-bank-link:${external_id}`);
-    const ctx: CommandContext = { ownerId: owner, sessionId: c.get("session").sessionId, deviceId: c.get("deviceId") };
     const command = {
       command_id: commandId, command_type: "ACCOUNT_CREATE", schema_version: 1,
       payload: { kind: "BANK", institution: (a.bank || "Ngân hàng").slice(0, 40), name, last4, opening_amount: String(a.balance), baseline_at: new Date().toISOString() },
@@ -406,7 +453,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     await d.gw.linkAccount(owner, accountId, {
       externalId: a.id, numberHash: await hmacHex(d.cfg.sepayToken, a.number), last4, holder: a.holder, bank: a.bank, balance: a.balance,
     });
-    return ok(c as unknown as Context<Vars>, { account_id: accountId, bank: a.bank, holder: a.holder, last4, balance: String(a.balance) });
+    return reply(accountId, false);
   });
 
   // Receive-money QR (VietQR) for a linked bank account. The full account number is fetched from SePay on demand
@@ -433,7 +480,23 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     return ok(c as unknown as Context<Vars>, { payload, bank: a.bank, holder: a.holder, number_masked: `••••${a.number.slice(-4)}` });
   });
 
-  app.get("/v1/banks/links", auth, async (c) => ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readLinks(c.get("owner"))));
+  // Linked accounts. MoMa does not store the full account number: it is added from SePay's list when reachable
+  // (owner only) and left out when SePay is not configured or unavailable.
+  app.get("/v1/banks/links", auth, async (c) => {
+    const d = getDeps(c.env);
+    const links = (await d.gw.readLinks(c.get("owner"))) as { external_id: string }[];
+    if (!d.cfg.sepayToken || links.length === 0) return ok(c as unknown as Context<Vars>, links);
+    let numbers = new Map<string, string>();
+    try {
+      numbers = new Map((await new SepayClient(d.cfg.sepayToken, d.sepayFetch).accounts()).map((a) => [a.id, a.number]));
+    } catch (e) {
+      console.log(JSON.stringify({ op: "sepay_failed", err: String((e as Error)?.message ?? e).slice(0, 200) }));
+    }
+    return ok(
+      c as unknown as Context<Vars>,
+      links.map((l) => (numbers.has(l.external_id) ? { ...l, number: numbers.get(l.external_id) } : l)),
+    );
+  });
 
   // Safety net for missed webhooks: pull what is new for every linked account.
   app.post("/v1/banks/sepay/sync", auth, async (c) => {
@@ -458,11 +521,12 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
         if (!categoryId) continue;
         const r = await d.gw.ingestBankEvent({
           externalId: ev.externalId, numberHash, direction: ev.direction, amount: ev.amount, atIso: ev.atIso,
-          content: ev.content, categoryId, balance: ev.balance, payload: { source: "poll", content: ev.content },
+          content: ev.content, categoryId, balance: ev.balance, payload: { source: "poll", content: ev.content, reference: ev.reference ?? null },
         });
         if (r.status === "APPLIED") {
           applied++;
           await notifyBankEvent(c, d, owner, ev, r.tx_id);
+          await pairAfterTx(d, owner, r.tx_id, "sync"); // own-account transfer (best effort)
         }
       }
       const last = events.length ? (events[events.length - 1] as unknown as { rawId?: string }).rawId : undefined;
@@ -491,11 +555,15 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const res = await d.gw.executeCommand(ctx, key, hash, parsed.data);
     // Feedback for the assistant: edits / reversals of transactions it created (best effort, after the write).
     await observeCommand(c, d, ctx.ownerId, parsed.data, res);
+    // A captured notification may be the other half of an own-account transfer (best effort, never fails the command).
+    await pairAfterCommand(d, ctx.ownerId, parsed.data, res);
     return ok(c as unknown as Context<Vars>, res);
   });
 
   registerInsightRoutes(app, getDeps, auth); // reminders + insights (routes-insights.ts)
   registerMemoryRoutes(app, getDeps, auth); // assistant memory (routes-memory.ts)
+  registerTransferRoutes(app, getDeps, auth); // own-account transfer pairing (routes-transfers.ts)
+  registerNotificationRoutes(app, getDeps, auth); // notification inbox (routes-notifications.ts)
 
   return app;
 }
@@ -535,15 +603,15 @@ async function classifyBankEvent(d: Deps, owner: string, ev: BankEvent, categori
     ];
     const bytes = new TextEncoder().encode(messages.map((m) => m.content).join("\n")).length;
     const est = estimateMicro(bytes, 60);
-    const { id: reservation } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    const reservation = await reserveAi(d, owner, est);
     let out;
     try {
       out = await d.ai(buildRequestBody(messages, 60));
     } catch {
-      await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined);
+      if (reservation) await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined);
       return fallback;
     }
-    await d.gw.aiSettle(owner, reservation, actualMicro(out.usage));
+    if (reservation) await d.gw.aiSettle(owner, reservation, actualMicro(out.usage)).catch(() => undefined);
     const j = parseModelJson(out.content) as { category?: string };
     return pool.find((c) => c.id === j.category)?.id ?? fallback;
   } catch {
@@ -629,3 +697,16 @@ async function scheduled(event: { scheduledTime: number }, env: Env, ctx: { wait
 }
 
 export default { fetch: app.fetch, scheduled };
+
+// AI usage is only recorded, never capped (D-015). A missing/failed accounting RPC (e.g. migration 006 not yet
+// applied) must not take the assistant down: log once per request and continue without a reservation.
+async function reserveAi(d: Deps, owner: string, est: number): Promise<string | null> {
+  try {
+    const { id } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    return id;
+  } catch (e) {
+    if (e instanceof DomainError && e.code === "AI_BUDGET_EXCEEDED") throw e;
+    console.log(JSON.stringify({ op: "ai_reserve_skipped", code: e instanceof DomainError ? e.code : "Error" }));
+    return null;
+  }
+}

@@ -38,7 +38,8 @@ function makeApp(cronSecret?: string) {
   const verifier = { verify: vi.fn() } as unknown as SessionVerifier;
   const reflectStats = { days: 30, meals: [], keywords: [], weekdays: [], preferences: [] };
   const mg = { confirmRecent: async () => 0, reflectStats: async () => reflectStats, replace: async () => 0, decay: async () => ({ decayed: 0, dropped: 0 }) } as unknown as MemoryGateway;
-  const app = buildApp(() => ({ cfg, gw, verifier, rg, pushFetch, mg }) as any);
+  const tg = { sweep: async () => ({ checked: 0, auto: 0, suggested: 0, failed: 0 }) };
+  const app = buildApp(() => ({ cfg, gw, verifier, rg, pushFetch, mg, tg }) as any);
   const tick = (secret?: string) =>
     app.request("/v1/internal/tick", { method: "POST", headers: secret === undefined ? {} : { "x-cron-secret": secret } }, env);
   return { tick, claimed, pushes };

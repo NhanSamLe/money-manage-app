@@ -20,6 +20,9 @@ import '../../core/widgets.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/ui/moma_switch.dart';
+import '../../app/theme/palette.dart';
+
 enum _Kind { expense, income, transfer }
 
 /// Manual quick entry. Intent only: the server decides the journal (no ledger logic here).
@@ -37,6 +40,8 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
   String? _toAccountId;
   String? _categoryId;
   DateTime _when = DateTime.now();
+  bool _datePicked = false;
+  DateTime get _shownDate => _datePicked ? _when : DateTime.now();
   bool _busy = false;
   String? _error;
 
@@ -88,7 +93,9 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
       },
       'account_id': _accountId,
       'amount': amount.toString(),
-      'effective_at': _when.toUtc().toIso8601String(),
+      'effective_at': (_datePicked ? _when : DateTime.now())
+          .toUtc()
+          .toIso8601String(),
       if (_kind != _Kind.transfer) 'category_id': _categoryId,
       if (_kind == _Kind.transfer) 'to_account_id': _toAccountId,
       if (_note.text.trim().isNotEmpty) 'note': _note.text.trim(),
@@ -153,20 +160,6 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
     });
   }
 
-  Future<void> _pickDate() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _when,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-    );
-    if (d != null) {
-      setState(() {
-        _when = DateTime(d.year, d.month, d.day, _when.hour, _when.minute);
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider);
@@ -228,7 +221,7 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: MomaColors.forest,
+                  color: context.pal.accentInk,
                 ),
                 decoration: const InputDecoration(
                   hintText: '0 ₫',
@@ -300,17 +293,26 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 controller: _note,
               ),
               const SizedBox(height: 12),
-              ListTile(
-                tileColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                leading: const Icon(Symbols.event_rounded),
-                title: Text(
-                  '${_when.day.toString().padLeft(2, '0')}/${_when.month.toString().padLeft(2, '0')}/${_when.year}',
-                ),
-                trailing: const Icon(Symbols.chevron_right_rounded),
-                onTap: _pickDate,
+              DateField(
+                label: 'Ngày giao dịch',
+                value: _shownDate,
+                required: true,
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now().add(const Duration(days: 1)),
+                onChanged: (d) {
+                  if (d == null) return;
+                  final now = DateTime.now();
+                  setState(() {
+                    _datePicked = true;
+                    _when = DateTime(
+                      d.year,
+                      d.month,
+                      d.day,
+                      now.hour,
+                      now.minute,
+                    );
+                  });
+                },
               ),
               if (_error != null)
                 Padding(

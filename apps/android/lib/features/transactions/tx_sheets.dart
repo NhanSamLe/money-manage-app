@@ -91,8 +91,10 @@ class _TxDetailSheetState extends ConsumerState<TxDetailSheet> {
       children: [
         Text(
           formatVnd(tx.amount),
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w800, color: MomaColors.forest),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: context.pal.accentInk,
+          ),
         ),
         const SizedBox(height: 8),
         for (final r in rows)
@@ -318,7 +320,7 @@ class _TxEditSheetState extends ConsumerState<TxEditSheet> {
           ),
           const SizedBox(height: 12),
           ListTile(
-            tileColor: Colors.white,
+            tileColor: context.pal.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),

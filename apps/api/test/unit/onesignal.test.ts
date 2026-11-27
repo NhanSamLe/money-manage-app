@@ -95,7 +95,7 @@ describe("bank event message", () => {
   it("money in / money out titles and bank • content body", () => {
     const a = bankEventPush(OWNER, { direction: "in", amount: 1500000, bankName: "Vietcombank", content: "LUONG T11" }, "tx-1");
     expect(a).toMatchObject({ ownerId: OWNER, title: "Tiền vào +1.500.000 đ", body: "Vietcombank • LUONG T11", androidGroup: "moma_bank" });
-    expect(a.data).toEqual({ type: "bank_tx", direction: "in", amount: "1500000", tx_id: "tx-1" });
+    expect(a.data).toEqual({ type: "bank_tx", direction: "in", amount: "1500000", tx_id: "tx-1", route: "/tx/tx-1" });
     const b = bankEventPush(OWNER, { direction: "out", amount: 200000, bankName: "MBBank", content: "GRAB" });
     expect(b.title).toBe("Tiền ra -200.000 đ");
     expect(b.body).toBe("MBBank • GRAB");

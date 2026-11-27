@@ -19,11 +19,14 @@ export interface PushMessage {
  * Disabled (returns false, no request) when the REST key is not configured.
  */
 export async function sendPush(
-  cfg: Pick<Config, "onesignalAppId" | "onesignalRestKey">,
+  cfg: Pick<Config, "onesignalAppId" | "onesignalRestKey"> & Partial<Pick<Config, "supabaseUrl" | "serviceRoleKey">>,
   fetchImpl: typeof fetch = fetch,
   msg: PushMessage,
 ): Promise<boolean> {
-  if (!cfg.onesignalRestKey || !msg.ownerId) return false;
+  if (!msg.ownerId) return false;
+  // The in-app bell shows the same item (stored even when push delivery is off or fails).
+  await saveToInbox(cfg, msg);
+  if (!cfg.onesignalRestKey) return false;
   try {
     const res = await fetchImpl(ONESIGNAL_URL, {
       method: "POST",
@@ -52,6 +55,42 @@ export async function sendPush(
   }
 }
 
+/** Where a notification opens in the app; every pushed item carries one. */
+export function routeFor(msg: PushMessage): string {
+  const r = msg.data?.route;
+  if (typeof r === "string" && r.startsWith("/")) return r;
+  return "/notifications";
+}
+
+/** Stores the push in pf_notification (migration 012). Best effort: never throws, 3 s timeout. */
+async function saveToInbox(
+  cfg: Partial<Pick<Config, "supabaseUrl" | "serviceRoleKey">>,
+  msg: PushMessage,
+): Promise<void> {
+  if (!cfg.supabaseUrl || !cfg.serviceRoleKey) return;
+  try {
+    const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/pf_notification_add`, {
+      method: "POST",
+      headers: {
+        apikey: cfg.serviceRoleKey,
+        authorization: `Bearer ${cfg.serviceRoleKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        p_owner: msg.ownerId,
+        p_type: String(msg.data?.type ?? "general"),
+        p_title: msg.title,
+        p_body: msg.body,
+        p_data: { ...(msg.data ?? {}), route: routeFor(msg) },
+      }),
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) console.log(JSON.stringify({ op: "push.inbox", outcome: "error", upstream_status: res.status }));
+  } catch (e) {
+    console.log(JSON.stringify({ op: "push.inbox", outcome: "error", err: (e as Error)?.name ?? "Error" }));
+  }
+}
+
 /** 1500000 -> "1.500.000" (Vietnamese thousands separator). */
 export function formatVnd(amount: number): string {
   const n = Math.round(Math.abs(amount));
@@ -74,7 +113,14 @@ export function bankEventPush(
     ownerId,
     title,
     body,
-    data: { type: "bank_tx", direction: ev.direction, amount: String(ev.amount), ...(txId ? { tx_id: txId } : {}) },
+    data: {
+      type: "bank_tx",
+      direction: ev.direction,
+      amount: String(ev.amount),
+      ...(txId ? { tx_id: txId } : {}),
+      // Tapping opens the recorded transaction (or the list when the id is unknown).
+      route: txId ? `/tx/${txId}` : "/home",
+    },
     androidGroup: "moma_bank",
   };
 }

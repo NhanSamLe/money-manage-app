@@ -157,6 +157,15 @@ object MomaWidgets {
         return PendingIntent.getActivity(ctx, 9101, intent, flags())
     }
 
+    /** Copy icon on the QR widget: an invisible activity copies the account number and shows a toast. */
+    fun copyNumber(ctx: Context): PendingIntent {
+        val intent = Intent(ctx, CopyActivity::class.java).apply {
+            putExtra(CopyActivity.EXTRA_WHAT, "number")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        }
+        return PendingIntent.getActivity(ctx, 9103, intent, flags())
+    }
+
     fun refresh(ctx: Context): PendingIntent {
         val intent = Intent(ctx, WidgetActionReceiver::class.java).apply {
             action = WidgetActionReceiver.ACTION_REFRESH
@@ -257,6 +266,30 @@ object WidgetBridge {
                         val ok = cls != null && Build.VERSION.SDK_INT >= 26 &&
                             AppWidgetManager.getInstance(app).requestPinAppWidget(ComponentName(app, cls), null, null)
                         result.success(ok)
+                    }
+                    "openPermissions" -> {
+                        // Xiaomi/MIUI blocks pinning silently unless "Home screen shortcuts" is allowed: open its
+                        // permission editor when present, else the standard app details screen.
+                        val miui = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+                            putExtra("extra_pkgname", app.packageName)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        val details = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.fromParts("package", app.packageName, null)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        val opened = try {
+                            app.startActivity(miui)
+                            true
+                        } catch (_: Exception) {
+                            try {
+                                app.startActivity(details)
+                                true
+                            } catch (_: Exception) {
+                                false
+                            }
+                        }
+                        result.success(opened)
                     }
                     "openApp" -> {
                         val path = (call.argument<String>("path") ?: "home").trimStart('/')

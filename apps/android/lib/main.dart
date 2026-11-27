@@ -10,10 +10,26 @@ import 'core/storage/local_store.dart';
 import 'core/config/app_config.dart';
 import 'core/storage/secure_session_storage.dart';
 import 'features/lock/lock_screen.dart';
+import 'features/notify_capture/entrypoints.dart' as capture_entry;
+import 'features/widgets/entrypoints.dart' as widget_entry;
 
-// Keep the home-screen widget entry points (quick-entry sheet, background refresh) in the release snapshot:
-// they are launched by Android directly, so nothing else in the app references them.
-export 'features/widgets/entrypoints.dart' show quickEntryMain, widgetRefreshMain;
+// Secondary Dart entry points started by Android directly (QuickEntryActivity, WidgetActionReceiver,
+// BackgroundCapture, ShareReceiveActivity). They MUST be declared in this root library: in release (AOT) builds
+// a lookup by library URI ("package:moma/features/.../entrypoints.dart") fails with "Could not resolve main
+// entrypoint function", leaving an empty window. The Kotlin side therefore starts them without a library URI.
+@pragma('vm:entry-point')
+Future<void> quickEntryMain(List<String> args) =>
+    widget_entry.quickEntryMain(args);
+
+@pragma('vm:entry-point')
+Future<void> widgetRefreshMain() => widget_entry.widgetRefreshMain();
+
+@pragma('vm:entry-point')
+Future<void> captureMain() => capture_entry.captureMain();
+
+@pragma('vm:entry-point')
+Future<void> shareEntryMain(List<String> args) =>
+    capture_entry.shareEntryMain(args);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

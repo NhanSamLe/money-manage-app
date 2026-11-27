@@ -38,12 +38,13 @@ class RecurringView extends ConsumerWidget {
         data: (list) => ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           children: [
-            const Card(
-              color: Color(0xFFE9F6EE),
+            Card(
+              color: context.pal.tint,
               child: Padding(
-                padding: EdgeInsets.all(14),
+                padding: const EdgeInsets.all(14),
                 child: Text(
                   'MoMa không tự ghi giao dịch định kỳ. Đến hạn, bạn xác nhận từng khoản.',
+                  style: TextStyle(color: context.pal.ink),
                 ),
               ),
             ),
@@ -331,7 +332,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
         ),
         const SizedBox(height: 12),
         ListTile(
-          tileColor: Colors.white,
+          tileColor: context.pal.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

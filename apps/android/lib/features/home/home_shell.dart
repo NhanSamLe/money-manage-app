@@ -18,6 +18,8 @@ import '../widgets/widgets.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../app/theme/palette.dart';
+
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
   @override
@@ -107,12 +109,12 @@ class _OutboxBanner extends ConsumerWidget {
       if (box.failed > 0) '${box.failed} lỗi cần xử lý',
     ];
     return Material(
-      color: box.failed > 0 ? const Color(0xFFFDE8E8) : const Color(0xFFFFF4D6),
+      color: box.failed > 0 ? context.pal.dangerBg : context.pal.warnBg,
       child: ListTile(
         dense: true,
         leading: Icon(
           box.syncing ? Symbols.sync_rounded : Symbols.cloud_off_rounded,
-          color: box.failed > 0 ? MomaColors.expense : MomaColors.forest,
+          color: box.failed > 0 ? MomaColors.expense : context.pal.warnInk,
         ),
         title: Text(parts.join(' · ')),
         trailing: TextButton(

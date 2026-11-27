@@ -16,6 +16,11 @@ class Pal extends ThemeExtension<Pal> {
     required this.tintSoft,
     required this.bubble,
     required this.hint,
+    required this.accentInk,
+    required this.warnBg,
+    required this.warnInk,
+    required this.dangerBg,
+    required this.okBg,
   });
 
   /// Page background behind cards.
@@ -39,6 +44,15 @@ class Pal extends ThemeExtension<Pal> {
   final Color bubble;
   final Color hint;
 
+  /// Strong brand-green text/icons (selected labels, highlighted values): forest on light, mint on dark.
+  final Color accentInk;
+
+  /// Notice banners (warning / error / success) that stay readable in both modes.
+  final Color warnBg;
+  final Color warnInk;
+  final Color dangerBg;
+  final Color okBg;
+
   static const light = Pal(
     bg: Color(0xFFF5F7F6),
     surface: Color(0xFFFFFFFF),
@@ -51,6 +65,11 @@ class Pal extends ThemeExtension<Pal> {
     tintSoft: Color(0xFFEAF7F0),
     bubble: Color(0xFFE3F5EC),
     hint: Color(0xFF8A9A92),
+    accentInk: Color(0xFF073D33),
+    warnBg: Color(0xFFFFF4D6),
+    warnInk: Color(0xFF7A5200),
+    dangerBg: Color(0xFFFDE8E8),
+    okBg: Color(0xFFEAF7EC),
   );
 
   static const dark = Pal(
@@ -65,6 +84,11 @@ class Pal extends ThemeExtension<Pal> {
     tintSoft: Color(0xFF18322A),
     bubble: Color(0xFF1B3329),
     hint: Color(0xFF6F837A),
+    accentInk: Color(0xFF7BE0B4),
+    warnBg: Color(0xFF3A2F12),
+    warnInk: Color(0xFFF5D58A),
+    dangerBg: Color(0xFF3A1D1D),
+    okBg: Color(0xFF173528),
   );
 
   @override
@@ -85,6 +109,11 @@ class Pal extends ThemeExtension<Pal> {
       tintSoft: Color.lerp(tintSoft, other.tintSoft, t)!,
       bubble: Color.lerp(bubble, other.bubble, t)!,
       hint: Color.lerp(hint, other.hint, t)!,
+      accentInk: Color.lerp(accentInk, other.accentInk, t)!,
+      warnBg: Color.lerp(warnBg, other.warnBg, t)!,
+      warnInk: Color.lerp(warnInk, other.warnInk, t)!,
+      dangerBg: Color.lerp(dangerBg, other.dangerBg, t)!,
+      okBg: Color.lerp(okBg, other.okBg, t)!,
     );
   }
 }

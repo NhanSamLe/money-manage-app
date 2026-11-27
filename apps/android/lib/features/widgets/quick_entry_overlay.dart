@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -69,9 +70,18 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
   String? _error;
   final bool _signedIn = Supabase.instance.client.auth.currentSession != null;
 
+  /// Flips once the theme's Google Fonts have loaded: chips measured with the fallback font keep a too-narrow
+  /// size ("Khoản ch"), so the type chips are rebuilt (new key) after the real font arrives.
+  bool _fontsReady = false;
+
   @override
   void initState() {
     super.initState();
+    unawaited(
+      GoogleFonts.pendingFonts().then((_) {
+        if (mounted) setState(() => _fontsReady = true);
+      }, onError: (_) {}),
+    );
     if (_signedIn) unawaited(_unlockThenLoad());
   }
 
@@ -348,6 +358,7 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
         ),
         const SizedBox(height: 10),
         Row(
+          key: ValueKey(_fontsReady),
           children: [
             ChoiceChip(
               label: const Text('Khoản chi'),
@@ -377,6 +388,9 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
         TextField(
           controller: _amount,
           autofocus: true,
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
@@ -410,7 +424,10 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
                   avatar: Icon(categoryIcon(c.icon), size: 18),
                   label: Text(c.name),
                   selected: _categoryId == c.id,
-                  onSelected: (_) => setState(() => _categoryId = c.id),
+                  onSelected: (_) => setState(() {
+                    _categoryId = c.id;
+                    _error = null;
+                  }),
                 ),
             ],
           ),

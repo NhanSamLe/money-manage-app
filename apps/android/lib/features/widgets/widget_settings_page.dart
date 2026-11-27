@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/ui/header.dart';
 import 'widget_sync.dart';
+import '../../core/ui/actions.dart';
+import '../../core/widgets.dart';
 
 /// Opens "Tiện ích màn hình chính" (privacy option + add-widget buttons).
 Future<void> openWidgetSettings(BuildContext context) => Navigator.of(context)
@@ -61,6 +63,68 @@ class _WidgetSettingsPageState extends ConsumerState<WidgetSettingsPage> {
     });
   }
 
+  /// Requests the launcher pin, then always explains what to expect: some launchers (Xiaomi/MIUI) drop the
+  /// request silently until MoMa may create home-screen shortcuts.
+  Future<void> _add(String kind, String title) async {
+    final sent = _canPin && await WidgetSync.pin(kind);
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                sent
+                    ? 'Đã gửi yêu cầu thêm "$title"'
+                    : 'Thêm "$title" vào màn hình chính',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                sent
+                    ? 'Nếu điện thoại hiện hộp thoại, bấm "Thêm". Nếu không thấy hộp thoại nào, '
+                          'máy đang chặn MoMa tạo lối tắt: bật quyền "Lối tắt màn hình chính" rồi thử lại, '
+                          'hoặc thêm bằng tay như bên dưới.'
+                    : 'Máy này không cho ứng dụng tự thêm tiện ích. Bạn thêm bằng tay như bên dưới.',
+                style: const TextStyle(fontSize: 14, height: 1.45),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Thêm bằng tay: nhấn giữ chỗ trống trên màn hình chính → Tiện ích → tìm MoMa → kéo "'
+                'tiện ích muốn dùng" ra màn hình.',
+                style: TextStyle(fontSize: 13.5, height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              ActionButtons(
+                primaryLabel: 'Mở quyền của MoMa',
+                onPrimary: () async {
+                  Navigator.pop(ctx);
+                  final ok = await WidgetSync.openPermissions();
+                  if (!ok && mounted) {
+                    showSnack(
+                      context,
+                      'Mở Cài đặt điện thoại → Ứng dụng → MoMa → Quyền',
+                    );
+                  }
+                },
+                secondaryLabel: 'Đóng',
+                onSecondary: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,13 +165,11 @@ class _WidgetSettingsPageState extends ConsumerState<WidgetSettingsPage> {
                   leading: Icon(w.$2),
                   title: Text(w.$3),
                   subtitle: Text(w.$4),
-                  trailing: _canPin
-                      ? IconButton(
-                          tooltip: 'Thêm vào màn hình chính',
-                          icon: const Icon(Symbols.add_circle_rounded),
-                          onPressed: () => WidgetSync.pin(w.$1),
-                        )
-                      : null,
+                  trailing: IconButton(
+                    tooltip: 'Thêm vào màn hình chính',
+                    icon: const Icon(Symbols.add_circle_rounded),
+                    onPressed: () => _add(w.$1, w.$3),
+                  ),
                 ),
               ),
             const SizedBox(height: 12),

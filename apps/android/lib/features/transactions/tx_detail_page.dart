@@ -18,6 +18,7 @@ import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
 import 'transactions_page.dart' show txKindLabel;
 import 'tx_sheets.dart' show TxEditSheet;
+import '../transfers/transfer_pair_section.dart';
 
 /// How a transaction entered the ledger (server column `source`, migration 009).
 String txSourceLabel(MomaTx tx) => switch (tx.source) {
@@ -309,6 +310,7 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
             ]),
           ),
         ),
+        if (isTransfer && !tx.isVoid) TransferPairSection(txId: tx.id),
         if (tx.debtLinked) ...[
           const SizedBox(height: 12),
           Text(

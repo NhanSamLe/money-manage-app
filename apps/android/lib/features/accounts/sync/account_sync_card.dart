@@ -11,6 +11,9 @@ import '../../../core/money/money.dart';
 import '../../../core/sheets.dart';
 import '../../../core/ui/moma_switch.dart';
 import '../../../core/widgets.dart';
+import '../../banks/masked_number.dart';
+import '../../notify_capture/capture_state.dart';
+import '../../notify_capture/notify_capture_service.dart' show BalanceGap;
 import '../../notify_capture/parser.dart' show bankNameOf;
 import 'sync_sources.dart';
 
@@ -61,9 +64,16 @@ class AccountSyncCard extends ConsumerWidget {
     final pal = context.pal;
     final a = account;
     final last4 = link?.last4 ?? a.last4;
-    final sub = last4 == null || last4.isEmpty
-        ? a.institution
-        : 'STK: *** $last4';
+    final number =
+        link?.number ?? ref.watch(capturedNumbersProvider).value?[a.id];
+    final hasNumber =
+        (last4 != null && last4.isNotEmpty) ||
+        (number != null && number.isNotEmpty);
+    final gaps = [
+      for (final g
+          in ref.watch(balanceGapsProvider).value ?? const <BalanceGap>[])
+        if (g.accountId == a.id) g,
+    ];
     final kind = syncKindOf(a);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -97,12 +107,24 @@ class AccountSyncCard extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          sub,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: pal.muted, fontSize: 13),
-                        ),
+                        if (hasNumber)
+                          MaskedNumber(
+                            key: ValueKey('number-${a.id}'),
+                            prefix: 'STK: ',
+                            number: number,
+                            last4: last4,
+                          )
+                        else
+                          CopyOnLongPress(
+                            value: a.institution,
+                            what: 'tên ngân hàng',
+                            child: Text(
+                              a.institution,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: pal.muted, fontSize: 13),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -116,18 +138,24 @@ class AccountSyncCard extends ConsumerWidget {
                           a.isCard ? 'Dư nợ' : 'Số dư hiện tại',
                           style: TextStyle(color: pal.muted, fontSize: 13),
                         ),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            a.balance == null
-                                ? 'Chưa biết'
-                                : formatVnd(
-                                    a.isCard ? -a.balance! : a.balance!,
-                                  ),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: pal.ink,
+                        CopyOnLongPress(
+                          value: a.balance == null
+                              ? ''
+                              : '${a.isCard ? -a.balance! : a.balance!}',
+                          what: 'số dư',
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              a.balance == null
+                                  ? 'Chưa biết'
+                                  : formatVnd(
+                                      a.isCard ? -a.balance! : a.balance!,
+                                    ),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                color: pal.ink,
+                              ),
                             ),
                           ),
                         ),
@@ -139,6 +167,52 @@ class AccountSyncCard extends ConsumerWidget {
               ),
             ),
           ),
+          for (final g in gaps)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+              child: Material(
+                color:
+                    (g.missingOutflow ? MomaColors.expense : MomaColors.income)
+                        .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  key: ValueKey('gap-${g.id}'),
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => openBalanceGap(context, g),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          g.missingOutflow
+                              ? Symbols.trending_down_rounded
+                              : Symbols.trending_up_rounded,
+                          size: 18,
+                          color: g.missingOutflow
+                              ? MomaColors.expense
+                              : MomaColors.income,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${g.missingOutflow ? 'Có khoản chi' : 'Có khoản thu'} ${formatVnd(g.amount.abs())} chưa ghi',
+                            style: TextStyle(fontSize: 13, color: pal.ink),
+                          ),
+                        ),
+                        Icon(
+                          Symbols.chevron_right_rounded,
+                          size: 18,
+                          color: pal.muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Divider(height: 1, color: pal.lineSoft, indent: 14, endIndent: 14),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),

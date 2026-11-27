@@ -17,6 +17,12 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/widgets.dart';
+import '../lock/lock_controller.dart' show lockControllerProvider;
+import '../voice/speech_service.dart';
+import '../voice/tts_service.dart';
+import '../voice/voice_controller.dart';
+import '../voice/voice_prefs.dart';
+import '../voice/voice_widgets.dart';
 import 'memory_page.dart';
 
 /// The finance assistant ("Trợ lý tài chính"), the owner's finance assistant: an agent, not a chat. One sentence becomes concrete steps (record,
@@ -127,7 +133,15 @@ class AssistantPage extends ConsumerStatefulWidget {
   ConsumerState<AssistantPage> createState() => _AssistantPageState();
 }
 
-class _AssistantPageState extends ConsumerState<AssistantPage> {
+/// Text of an agent turn read aloud: the reply and any question it asks.
+String _spoken(_Turn t) => [
+  t.reply.trim(),
+  for (final s in t.steps)
+    if (s.type == 'ASK') '${s.json['question'] ?? ''}'.trim(),
+].where((s) => s.isNotEmpty).join('. ');
+
+class _AssistantPageState extends ConsumerState<AssistantPage>
+    with WidgetsBindingObserver {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
@@ -137,11 +151,158 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
   /// Picking a photo / running OCR.
   bool _reading = false;
 
+  /// Voice input (speech recognizer behind [speechServiceProvider]).
+  late final VoiceController _voice;
+
+  /// Text-to-speech for replies; [_speaking] is the turn being read.
+  late final TtsService _tts;
+  _Turn? _speaking;
+
+  /// Preparing the microphone (permission / recognizer) so taps during that time are ignored.
+  bool _arming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _tts = ref.read(ttsServiceProvider);
+    _tts.onDone = () {
+      if (mounted && _speaking != null) setState(() => _speaking = null);
+    };
+    _voice = VoiceController(ref.read(speechServiceProvider))
+      ..onPartial = _onVoiceText
+      ..onFinal = _onVoiceFinal
+      ..onIssue = _onVoiceIssue
+      ..onLocaleFallback = _onLocaleFallback
+      ..addListener(_onVoicePhase);
+    // Opened from the home-screen widget mic (moma://app/ai?voice=1): start listening at once.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(voiceLaunchProvider.notifier).consume()) {
+        _startVoice();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _voice.cancel();
+    _voice.dispose();
+    _tts.onDone = null;
+    _tts.stop();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Not `inactive`: the microphone permission prompt makes the app inactive while it is still in front.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _quiet();
+    }
+  }
+
+  /// Leaving the assistant (tab switch, app in background): stop listening and speaking.
+  void _quiet() {
+    _voice.cancel();
+    _stopSpeaking();
+  }
+
+  void _onVoicePhase() {
+    if (mounted) setState(() {});
+  }
+
+  void _onVoiceText(String words) {
+    _input.value = TextEditingValue(
+      text: words,
+      selection: TextSelection.collapsed(offset: words.length),
+    );
+  }
+
+  void _onVoiceFinal(String words) {
+    _onVoiceText(words);
+    if (ref.read(voicePrefsProvider).autoSend) _send();
+  }
+
+  void _onVoiceIssue(VoiceIssue issue) {
+    if (!mounted) return;
+    if (issue == VoiceIssue.permission) {
+      showMicSettingsDialog(context);
+    } else if (issue == VoiceIssue.languageUnavailable ||
+        issue == VoiceIssue.noRecognizer) {
+      showErrorDialog(context, voiceIssueMessage(issue));
+    } else {
+      showSnack(context, voiceIssueMessage(issue));
+    }
+  }
+
+  Future<void> _onLocaleFallback() async {
+    final prefs = ref.read(voicePrefsProvider.notifier);
+    if (await prefs.localeWarned()) return;
+    await prefs.setLocaleWarned();
+    if (mounted) {
+      showSnack(
+        context,
+        'Điện thoại chưa có nhận dạng tiếng Việt, MoMa dùng ngôn ngữ mặc định của máy. Bạn có thể thêm Tiếng Việt trong Gõ bằng giọng nói của Google.',
+      );
+    }
+  }
+
+  /// Mic tap: start listening, or stop (the words heard so far are kept / sent).
+  Future<void> _toggleVoice() async {
+    if (_voice.listening) {
+      await _voice.stop();
+    } else {
+      await _startVoice();
+    }
+  }
+
+  Future<void> _startVoice() async {
+    if (_arming || _voice.listening || ref.read(_busyProvider)) return;
+    _stopSpeaking();
+    _arming = true;
+    try {
+      final ready = await ensureVoiceReady(
+        context,
+        speech: _voice.speech,
+        prepare: _voice.prepare,
+        prefs: ref.read(voicePrefsProvider.notifier),
+      );
+      if (!ready || !mounted) return;
+      FocusScope.of(context).unfocus();
+      await _voice.start();
+    } finally {
+      _arming = false;
+    }
+  }
+
+  void _stopSpeaking() {
+    if (_speaking != null && mounted) setState(() => _speaking = null);
+    _tts.stop();
+  }
+
+  /// "Đọc" on a reply (tap again to stop).
+  Future<void> _speak(_Turn t) async {
+    if (_speaking == t) {
+      _stopSpeaking();
+      return;
+    }
+    final text = _spoken(t);
+    if (text.isEmpty) return;
+    await _tts.stop();
+    if (!mounted) return;
+    setState(() => _speaking = t);
+    final r = await _tts.speak(text);
+    if (r == TtsOutcome.ok || !mounted) return;
+    setState(() => _speaking = null);
+    showSnack(
+      context,
+      r == TtsOutcome.noVietnamese
+          ? 'Điện thoại chưa có giọng đọc tiếng Việt. Bạn cài "Dịch vụ giọng nói của Google" và tải giọng Tiếng Việt.'
+          : 'Không đọc được câu trả lời. Bạn thử lại nhé.',
+    );
   }
 
   void _toEnd() => WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -209,6 +370,8 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
   Future<void> _send([String? preset, Uint8List? image]) async {
     final text = (preset ?? _input.text).trim();
     if (text.isEmpty || ref.read(_busyProvider)) return;
+    _voice.cancel(); // sent by hand while listening: the field text wins
+    _stopSpeaking();
     if (preset == null) _input.clear();
     final chat = ref.read(_chatProvider.notifier);
     final history = _history();
@@ -237,6 +400,9 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
       _setWaiting(false);
       chat.add(turn);
       _toEnd();
+      if (ref.read(voicePrefsProvider).autoRead && mounted) {
+        _speak(turn).ignore();
+      }
       if (ref.read(aiAutoProvider)) {
         for (final s in steps.where((s) => s.isCommand && s.low)) {
           await _run(s);
@@ -306,8 +472,27 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
       if (!mounted) return;
       setState(() => _reading = false);
       await _send(_photoRequest(ocr), bytes);
-    } on PlatformException {
-      if (mounted) showSnack(context, 'Không mở được ảnh');
+    } on PlatformException catch (e) {
+      // Visible in `adb logcat` (I/flutter) even in release builds.
+      debugPrint('MoMa photo: PlatformException ${e.code}: ${e.message}');
+      if (mounted) {
+        final denied =
+            e.code.contains('denied') || e.code.contains('permission');
+        await showErrorDialog(
+          context,
+          denied
+              ? 'MoMa chưa có quyền dùng máy ảnh hoặc thư viện ảnh. Bạn bật quyền trong Cài đặt điện thoại rồi thử lại.'
+              : 'Không đọc được ảnh này (${e.code}). Bạn thử chọn ảnh khác hoặc chụp lại rõ hơn.',
+        );
+      }
+    } catch (e) {
+      debugPrint('MoMa photo: ${e.runtimeType}: $e');
+      if (mounted) {
+        await showErrorDialog(
+          context,
+          'Không đọc được ảnh này. Bạn thử chọn ảnh khác hoặc chụp lại rõ hơn.',
+        );
+      }
     } finally {
       if (mounted && _reading) setState(() => _reading = false);
     }
@@ -371,6 +556,24 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
     final busy = ref.watch(_busyProvider);
     final auto = ref.watch(aiAutoProvider);
     final pal = context.pal;
+    final listening = _voice.listening;
+    // The assistant lives in the shell's IndexedStack: switching tab is "leaving the page".
+    ref.listen<int>(shellTabProvider, (prev, next) {
+      if (prev == 2 && next != 2) _quiet();
+    });
+    ref.listen<bool>(voiceLaunchProvider, (_, next) {
+      if (next && ref.read(voiceLaunchProvider.notifier).consume()) {
+        _startVoice();
+      }
+    });
+    // A widget-mic launch that arrived while the app lock was up starts once the app is unlocked.
+    ref.listen(lockControllerProvider, (_, next) {
+      if (next.loaded &&
+          !next.locked &&
+          ref.read(voiceLaunchProvider.notifier).consume()) {
+        _startVoice();
+      }
+    });
     return ColoredBox(
       color: pal.bg,
       child: Column(
@@ -388,6 +591,8 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
                             ? _UserBubble(turn: t)
                             : _AgentTurn(
                                 turn: t,
+                                speaking: identical(_speaking, t),
+                                onSpeak: () => _speak(t),
                                 onRun: _run,
                                 onUndo: _undo,
                                 onRunAll: () async {
@@ -420,58 +625,65 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () =>
-                            ref.read(aiAutoProvider.notifier).set(!auto),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                auto
-                                    ? Symbols.bolt_rounded
-                                    : Symbols.touch_app_rounded,
-                                size: 18,
-                                color: auto ? MomaColors.emerald : pal.muted,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                auto ? 'Tự động ghi: Bật' : 'Tự động ghi: Tắt',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
+                  if (listening)
+                    ListeningBar(level: _voice.level)
+                  else
+                    Row(
+                      children: [
+                        InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () =>
+                              ref.read(aiAutoProvider.notifier).set(!auto),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  auto
+                                      ? Symbols.bolt_rounded
+                                      : Symbols.touch_app_rounded,
+                                  size: 18,
                                   color: auto ? MomaColors.emerald : pal.muted,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  auto
+                                      ? 'Tự động ghi: Bật'
+                                      : 'Tự động ghi: Tắt',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: auto
+                                        ? MomaColors.emerald
+                                        : pal.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      InkResponse(
-                        radius: 18,
-                        onTap: () => showInfoDialog(
-                          context,
-                          title: 'Tự động ghi',
-                          message: 'Khi bật, Trợ lý tự ghi các khoản thu chi và chuyển khoản mà Trợ lý hiểu chắc chắn, rồi cho bạn hoàn tác nếu sai. Các việc quan trọng như công nợ, ngân sách hay hủy giao dịch luôn chờ bạn xác nhận.',
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Icon(
-                            Symbols.help_rounded,
-                            size: 18,
-                            color: pal.muted,
+                        InkResponse(
+                          radius: 18,
+                          onTap: () => showInfoDialog(
+                            context,
+                            title: 'Tự động ghi',
+                            message: 'Khi bật, Trợ lý tự ghi các khoản thu chi và chuyển khoản mà Trợ lý hiểu chắc chắn, rồi cho bạn hoàn tác nếu sai. Các việc quan trọng như công nợ, ngân sách hay hủy giao dịch luôn chờ bạn xác nhận.',
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              Symbols.help_rounded,
+                              size: 18,
+                              color: pal.muted,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -510,7 +722,9 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
                           onSubmitted: (_) => _send(),
                           decoration: InputDecoration(
                             counterText: '',
-                            hintText: 'Nhắn cho Trợ lý',
+                            hintText: listening
+                                ? 'Đang nghe…'
+                                : 'Nhắn hoặc nói với Trợ lý',
                             filled: true,
                             fillColor: pal.surfaceAlt,
                             contentPadding: const EdgeInsets.symmetric(
@@ -536,20 +750,34 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      IconButton.filled(
-                        tooltip: 'Gửi',
-                        onPressed: busy ? null : () => _send(),
-                        style: IconButton.styleFrom(
-                          backgroundColor: MomaColors.emerald,
-                          disabledBackgroundColor: MomaColors.emerald
-                              .withValues(alpha: 0.4),
-                          shape: const CircleBorder(),
-                          minimumSize: const Size(48, 48),
-                        ),
-                        icon: const Icon(
-                          Symbols.arrow_upward_rounded,
-                          color: Colors.white,
-                        ),
+                      // Chat-app style: send when there is text, microphone when the field is empty.
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _input,
+                        builder: (context, value, _) =>
+                            listening || value.text.trim().isEmpty
+                            ? VoiceMicButton(
+                                listening: listening,
+                                enabled: !busy,
+                                level: _voice.level,
+                                onTap: _toggleVoice,
+                                onHoldStart: _startVoice,
+                                onHoldEnd: () => _voice.stop(),
+                              )
+                            : IconButton.filled(
+                                tooltip: 'Gửi',
+                                onPressed: busy ? null : () => _send(),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: MomaColors.emerald,
+                                  disabledBackgroundColor: MomaColors.emerald
+                                      .withValues(alpha: 0.4),
+                                  shape: const CircleBorder(),
+                                  minimumSize: const Size(48, 48),
+                                ),
+                                icon: const Icon(
+                                  Symbols.arrow_upward_rounded,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ],
                   ),
@@ -589,11 +817,12 @@ class _AssistantAvatar extends StatelessWidget {
 }
 
 /// Persona header (the shared plain app bar has no avatar / subtitle slot).
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header();
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final pal = context.pal;
+    final voice = ref.watch(voicePrefsProvider);
     return Container(
       decoration: BoxDecoration(
         color: pal.surface,
@@ -637,6 +866,27 @@ class _Header extends StatelessWidget {
                   Symbols.psychology_rounded,
                   color: MomaColors.emerald,
                 ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Giọng nói',
+                icon: Icon(Symbols.more_vert_rounded, color: pal.muted),
+                onSelected: (v) {
+                  final n = ref.read(voicePrefsProvider.notifier);
+                  if (v == 'send') n.setAutoSend(!voice.autoSend);
+                  if (v == 'read') n.setAutoRead(!voice.autoRead);
+                },
+                itemBuilder: (_) => [
+                  CheckedPopupMenuItem(
+                    value: 'send',
+                    checked: voice.autoSend,
+                    child: const Text('Tự gửi sau khi nói'),
+                  ),
+                  CheckedPopupMenuItem(
+                    value: 'read',
+                    checked: voice.autoRead,
+                    child: const Text('Tự đọc câu trả lời'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -993,12 +1243,18 @@ class _ThinkingState extends State<_Thinking>
 class _AgentTurn extends StatelessWidget {
   const _AgentTurn({
     required this.turn,
+    required this.speaking,
+    required this.onSpeak,
     required this.onRun,
     required this.onUndo,
     required this.onRunAll,
     required this.onSkip,
   });
   final _Turn turn;
+
+  /// This reply is being read aloud ("Đọc" shows "Dừng").
+  final bool speaking;
+  final VoidCallback onSpeak;
   final Future<void> Function(_Step) onRun;
   final Future<void> Function(_Step) onUndo;
   final Future<void> Function() onRunAll;
@@ -1117,9 +1373,47 @@ class _AgentTurn extends StatelessWidget {
                   ),
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: Text(
-                    _hhmm(turn.at),
-                    style: TextStyle(fontSize: 11, color: pal.hint),
+                  child: Row(
+                    children: [
+                      Text(
+                        _hhmm(turn.at),
+                        style: TextStyle(fontSize: 11, color: pal.hint),
+                      ),
+                      if (_spoken(turn).isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: onSpeak,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  speaking
+                                      ? Symbols.stop_circle_rounded
+                                      : Symbols.volume_up_rounded,
+                                  size: 15,
+                                  color: MomaColors.emerald,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  speaking ? 'Dừng' : 'Đọc',
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: MomaColors.emerald,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],

@@ -25,7 +25,7 @@ class PlanningPage extends StatelessWidget {
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               dividerColor: Colors.transparent,
-              labelColor: MomaColors.forest,
+              labelColor: context.pal.accentInk,
               unselectedLabelColor: context.pal.muted,
               labelStyle: const TextStyle(fontWeight: FontWeight.w800),
               unselectedLabelStyle: const TextStyle(

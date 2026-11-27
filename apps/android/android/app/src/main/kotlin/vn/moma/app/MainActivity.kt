@@ -1,9 +1,6 @@
 package vn.moma.app
 
-import android.content.ComponentName
-import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -29,26 +26,7 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(flutterEngine)
         WidgetBridge.attach(flutterEngine.dartExecutor.binaryMessenger, applicationContext, null)
         ApkInstaller.attach(flutterEngine.dartExecutor.binaryMessenger, applicationContext) // in-app update
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "moma/notify_capture").setMethodCallHandler { call, result ->
-            when (call.method) {
-                "isPermissionGranted" -> result.success(isListenerEnabled())
-                "openPermissionSettings" -> {
-                    try {
-                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                        result.success(true)
-                    } catch (e: Exception) {
-                        result.success(false)
-                    }
-                }
-                "pending" -> result.success(NotifyQueue.pending(applicationContext))
-                "ack" -> {
-                    val keys = call.argument<List<String>>("keys") ?: emptyList()
-                    NotifyQueue.ack(applicationContext, keys)
-                    result.success(null)
-                }
-                else -> result.notImplemented()
-            }
-        }
+        NotifyCaptureBridge.attach(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         // App lock: "Ẩn nội dung khi chuyển ứng dụng" (blank thumbnail in recents, no screenshots).
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "moma/secure").setMethodCallHandler { call, result ->
             when (call.method) {
@@ -63,11 +41,5 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
-    }
-
-    private fun isListenerEnabled(): Boolean {
-        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
-        val mine = ComponentName(this, MomaNotificationListener::class.java)
-        return flat.split(":").any { ComponentName.unflattenFromString(it) == mine }
     }
 }

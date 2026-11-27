@@ -32,6 +32,7 @@ import '../../features/settings/categories_page.dart';
 import '../../features/auth/forgot_page.dart';
 import '../../features/transactions/quick_entry_page.dart';
 import '../../features/transactions/tx_detail_page.dart';
+import '../../features/voice/voice_prefs.dart';
 
 const _publicRoutes = {
   '/splash',
@@ -161,8 +162,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/receive',
         pageBuilder: (_, state) => _fade(state, const ReceivePage()),
       ),
-      // Entry points for launcher shortcuts and the home-screen widget (moma://app/ai).
-      GoRoute(path: '/ai', builder: (_, _) => const _TabEntry(2)),
+      // Entry points for launcher shortcuts and the home-screen widget (moma://app/ai, ?voice=1 starts listening).
+      GoRoute(
+        path: '/ai',
+        builder: (_, state) =>
+            _TabEntry(2, voice: state.uri.queryParameters['voice'] == '1'),
+      ),
       GoRoute(path: '/import', builder: (_, _) => const CsvImportPage()),
       GoRoute(path: '/export', builder: (_, _) => const ExportPage()),
       GoRoute(path: '/categories', builder: (_, _) => const CategoriesPage()),
@@ -209,8 +214,11 @@ class _SubPage extends StatelessWidget {
 
 /// Selects a main tab and shows the shell (used by deep links such as the AI shortcut).
 class _TabEntry extends ConsumerStatefulWidget {
-  const _TabEntry(this.tab);
+  const _TabEntry(this.tab, {this.voice = false});
   final int tab;
+
+  /// Opened from the widget's microphone: the assistant starts listening.
+  final bool voice;
   @override
   ConsumerState<_TabEntry> createState() => _TabEntryState();
 }
@@ -221,6 +229,7 @@ class _TabEntryState extends ConsumerState<_TabEntry> {
     super.initState();
     Future.microtask(() {
       ref.read(shellTabProvider.notifier).select(widget.tab);
+      if (widget.voice) ref.read(voiceLaunchProvider.notifier).request();
       if (mounted) context.go('/home');
     });
   }

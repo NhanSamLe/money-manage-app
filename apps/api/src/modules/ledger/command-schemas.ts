@@ -135,7 +135,23 @@ const occurrenceMatch = command("OCCURRENCE_MATCH", z.object({ occurrence_id: uu
 
 const accountUpdate = command(
   "ACCOUNT_UPDATE",
-  z.object({ account_id: uuid, expected_version: version, name: z.string().min(1).max(120).optional(), archived: z.boolean().optional(), hidden: z.boolean().optional() }).strict(),
+  z
+    .object({
+      account_id: uuid,
+      expected_version: version,
+      name: z.string().min(1).max(120).optional(),
+      archived: z.boolean().optional(),
+      hidden: z.boolean().optional(),
+      /** Bank / wallet name (migration 011). */
+      institution: z.string().min(1).max(40).optional(),
+      /** Last 4 digits of the account number; "" clears it (migration 011). */
+      last4: z.string().regex(/^(?:[0-9]{4})?$/).optional(),
+      /** Current balance as reported by the owner or the bank: sets the opening balance or posts an ADJUSTMENT (migration 011). */
+      balance: anyMoney.optional(),
+      balance_at: iso.optional(),
+    })
+    .strict()
+    .refine((p) => p.balance_at === undefined || p.balance !== undefined, "balance_at needs balance"),
 );
 
 const txAnnotate = command(

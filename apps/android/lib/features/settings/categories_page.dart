@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/ui/labeled_field.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../core/icons.dart';
 import '../../core/models.dart';
 import '../../core/network/api_client.dart';
@@ -15,6 +14,8 @@ import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
+
+import '../../app/theme/palette.dart';
 
 /// Category management: add, rename, archive. System ledger accounts back each category; the class never changes.
 class CategoriesPage extends ConsumerWidget {
@@ -51,9 +52,9 @@ class CategoriesPage extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
                 child: Text(
                   type == 'EXPENSE' ? 'Chi tiêu' : 'Thu nhập',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    color: MomaColors.forest,
+                    color: context.pal.accentInk,
                   ),
                 ),
               ),
@@ -61,10 +62,10 @@ class CategoriesPage extends ConsumerWidget {
                 Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: MomaColors.mint.withValues(alpha: 0.4),
+                      backgroundColor: context.pal.tint,
                       child: Icon(
                         categoryIcon(c.icon),
-                        color: MomaColors.forest,
+                        color: context.pal.accentInk,
                       ),
                     ),
                     title: Text(c.name),

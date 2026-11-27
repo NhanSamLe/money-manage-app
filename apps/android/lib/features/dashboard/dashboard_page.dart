@@ -15,6 +15,7 @@ import '../../core/widgets.dart';
 import '../../core/ui/money_pattern.dart';
 import '../reminders/today_meals_card.dart';
 import '../transactions/transactions_page.dart';
+import '../transfers/transfer_suggestions.dart';
 
 /// "Trang chủ" (design): green hero header, net-worth card, income / expense / savings, savings rate,
 /// quick actions, accounts and the latest transactions.
@@ -77,6 +78,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   _SetupCard(onTap: () => context.push('/onboarding')),
                   const SizedBox(height: 12),
                 ],
+                const TransferSuggestionsCard(),
                 _NetWorthCard(
                   summary: s,
                   hidden: _hidden,
