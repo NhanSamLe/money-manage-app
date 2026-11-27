@@ -71,7 +71,9 @@ class ReminderSettings {
 
   factory ReminderSettings.fromJson(Map<String, dynamic> j) {
     final meals = j['meals'] is Map ? j['meals'] as Map : const {};
-    final weekly = j['weekly_review'] is Map ? j['weekly_review'] as Map : const {};
+    final weekly = j['weekly_review'] is Map
+        ? j['weekly_review'] as Map
+        : const {};
     final wd = weekly['weekday'];
     final weekday = wd is int ? wd : int.tryParse('${wd ?? ''}') ?? 7;
     return ReminderSettings(
@@ -123,7 +125,11 @@ final reminderSettingsProvider = FutureProvider.autoDispose<ReminderSettings>((
 
 /// State of today's meals from GET /v1/reminders/today.
 class TodayReminders {
-  TodayReminders({required this.date, required this.skipped, required this.done});
+  TodayReminders({
+    required this.date,
+    required this.skipped,
+    required this.done,
+  });
   final String date;
   final Set<String> skipped;
   final Map<String, bool> done;
@@ -132,9 +138,7 @@ class TodayReminders {
     final done = j['done'] is Map ? j['done'] as Map : const {};
     return TodayReminders(
       date: '${j['date'] ?? ''}',
-      skipped: {
-        for (final s in (j['skipped'] as List? ?? const [])) '$s',
-      },
+      skipped: {for (final s in (j['skipped'] as List? ?? const [])) '$s'},
       done: {for (final k in mealKinds) k: done[k] == true},
     );
   }

@@ -14,6 +14,7 @@ import '../../core/ui/charts/sparkline.dart';
 import '../../core/ui/header.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+import '../insights/insights_entry_card.dart';
 import '../reports/month_picker_sheet.dart';
 import '../reports/report_data.dart';
 
@@ -54,6 +55,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
+            const InsightsEntryCard(),
+            const SizedBox(height: 12),
             _MonthBar(month: month),
             const SizedBox(height: 12),
             PillTabs<_Tab>(

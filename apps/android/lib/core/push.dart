@@ -86,7 +86,10 @@ class Push {
     try {
       if (actionId != null && actionId.startsWith('skip_')) {
         final kind = actionId.substring(5);
-        await apiFactory().post('/reminders/skip', {'kind': kind, 'skip': true});
+        await apiFactory().post('/reminders/skip', {
+          'kind': kind,
+          'skip': true,
+        });
         remindersChanged.value++;
         return;
       }

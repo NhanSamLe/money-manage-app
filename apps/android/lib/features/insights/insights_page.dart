@@ -54,10 +54,15 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
       final res = await runInsight(ref.read(apiProvider), _period);
       if (!mounted) return;
       if (res.reused) {
-        showSnack(context, 'Đã có phân tích gần đây, hiển thị kết quả mới nhất');
+        showSnack(
+          context,
+          'Đã có phân tích gần đây, hiển thị kết quả mới nhất',
+        );
       }
       ref.invalidate(insightsProvider(_period));
-      await ref.read(insightsProvider(_period).future).catchError((_) => <Insight>[]);
+      await ref
+          .read(insightsProvider(_period).future)
+          .catchError((_) => <Insight>[]);
     } catch (e) {
       if (!mounted) return;
       await showErrorDialog(
@@ -112,13 +117,13 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                         embedded: true,
                         icon: Symbols.insights_rounded,
                         title: 'Tính năng sắp có',
-                        hint:
-                            'Phân tích và đề xuất chi tiêu đang được chuẩn bị. Bạn quay lại sau nhé.',
+                        hint: 'Phân tích và đề xuất chi tiêu đang được chuẩn bị. Bạn quay lại sau nhé.',
                       )
                     else
                       ErrorView(
                         error: e,
-                        onRetry: () => ref.invalidate(insightsProvider(_period)),
+                        onRetry: () =>
+                            ref.invalidate(insightsProvider(_period)),
                       ),
                   ],
                   data: (list) => [
@@ -135,8 +140,10 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                       if (list.length > 1) ...[
                         const SizedBox(height: 8),
                         const _SectionTitle('Các lần phân tích trước'),
-                        _Card(
-                          padding: EdgeInsets.zero,
+                        Material(
+                          color: context.pal.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          clipBehavior: Clip.antiAlias,
                           child: Column(
                             children: [
                               for (final (i, it) in list.skip(1).indexed) ...[
@@ -225,9 +232,11 @@ class InsightView extends StatelessWidget {
     final pal = context.pal;
     final n = insight.numbers;
     final cats = [...n.byCategory]
-      ..sort((a, b) => (b.amount - b.prevAmount).abs().compareTo(
-        (a.amount - a.prevAmount).abs(),
-      ));
+      ..sort(
+        (a, b) => (b.amount - b.prevAmount).abs().compareTo(
+          (a.amount - a.prevAmount).abs(),
+        ),
+      );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -543,10 +552,7 @@ class _HistoryRow extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
-      subtitle: Text(
-        _range(insight),
-        style: const TextStyle(fontSize: 12.5),
-      ),
+      subtitle: Text(_range(insight), style: const TextStyle(fontSize: 12.5)),
       trailing: Icon(Symbols.chevron_right_rounded, color: pal.muted),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -43,8 +45,7 @@ class ReminderSettingsPage extends ConsumerWidget {
               ? const EmptyState(
                   icon: Symbols.notifications_rounded,
                   title: 'Tính năng sắp có',
-                  hint:
-                      'Cài đặt nhắc nhở đang được chuẩn bị trên máy chủ. Bạn quay lại sau nhé.',
+                  hint: 'Cài đặt nhắc nhở đang được chuẩn bị trên máy chủ. Bạn quay lại sau nhé.',
                 )
               : ErrorView(
                   error: e,
@@ -67,6 +68,14 @@ class _Form extends ConsumerStatefulWidget {
 class _FormState extends ConsumerState<_Form> {
   late final ReminderSettings _s = widget.initial;
   bool _busy = false;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
   Map<String, String> _errors = {};
 
   /// Enabled meals must be in order: breakfast before lunch before dinner.
@@ -97,7 +106,17 @@ class _FormState extends ConsumerState<_Form> {
   Future<void> _save() async {
     final errors = _validate();
     setState(() => _errors = errors);
-    if (errors.isNotEmpty) return;
+    if (errors.isNotEmpty) {
+      // Meal fields are at the top: bring the first error into view.
+      unawaited(
+        _scroll.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        ),
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       await ref.read(apiProvider).put('/reminders/settings', _s.toJson());
@@ -117,30 +136,35 @@ class _FormState extends ConsumerState<_Form> {
     }
   }
 
-  Widget _slot(String label, TimedReminder r, {String? errorKey, String? help}) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LabeledSwitch(
-            label: label,
-            help: help,
-            value: r.enabled,
-            onChanged: (v) => _changed(() => r.enabled = v),
-          ),
-          const SizedBox(height: 6),
-          TimeField(
-            label: 'Giờ nhắc',
-            value: r.time,
-            enabled: r.enabled,
-            errorText: errorKey == null ? null : _errors[errorKey],
-            onChanged: (t) => _changed(() => r.time = t),
-          ),
-        ],
-      );
+  Widget _slot(
+    String label,
+    TimedReminder r, {
+    String? errorKey,
+    String? help,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      LabeledSwitch(
+        label: label,
+        help: help,
+        value: r.enabled,
+        onChanged: (v) => _changed(() => r.enabled = v),
+      ),
+      const SizedBox(height: 6),
+      TimeField(
+        label: 'Giờ nhắc',
+        value: r.time,
+        enabled: r.enabled,
+        errorText: errorKey == null ? null : _errors[errorKey],
+        onChanged: (t) => _changed(() => r.time = t),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         const _Section('Bữa ăn'),
@@ -156,8 +180,7 @@ class _FormState extends ConsumerState<_Form> {
             _slot(
               'Kiểm tra tiền mặt',
               _s.cashCheck,
-              help:
-                  'Nhắc bạn đếm lại tiền mặt trong ví để số dư trên MoMa khớp với thực tế.',
+              help: 'Nhắc bạn đếm lại tiền mặt trong ví để số dư trên MoMa khớp với thực tế.',
             ),
           ],
         ),
@@ -171,8 +194,7 @@ class _FormState extends ConsumerState<_Form> {
                 LabeledSwitch(
                   label: 'Tổng kết tuần',
                   value: _s.weeklyReview.enabled,
-                  onChanged: (v) =>
-                      _changed(() => _s.weeklyReview.enabled = v),
+                  onChanged: (v) => _changed(() => _s.weeklyReview.enabled = v),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -184,7 +206,10 @@ class _FormState extends ConsumerState<_Form> {
                         initialValue: _s.weeklyWeekday,
                         items: [
                           for (final e in _weekdays.entries)
-                            DropdownMenuItem(value: e.key, child: Text(e.value)),
+                            DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value),
+                            ),
                         ],
                         onChanged: _s.weeklyReview.enabled
                             ? (v) => _changed(
@@ -219,8 +244,7 @@ class _FormState extends ConsumerState<_Form> {
           children: [
             LabeledSwitch(
               label: 'Báo khi sắp vượt ngân sách',
-              help:
-                  'Thông báo khi chi tiêu của một danh mục gần chạm hoặc vượt hạn mức bạn đặt trong Ngân sách.',
+              help: 'Thông báo khi chi tiêu của một danh mục gần chạm hoặc vượt hạn mức bạn đặt trong Ngân sách.',
               value: _s.budgetAlerts,
               onChanged: (v) => _changed(() => _s.budgetAlerts = v),
             ),
@@ -276,9 +300,8 @@ class TimeField extends StatelessWidget {
                         context: context,
                         initialTime: value,
                         builder: (ctx, child) => MediaQuery(
-                          data: MediaQuery.of(
-                            ctx,
-                          ).copyWith(alwaysUse24HourFormat: true),
+                          data: MediaQuery.of(ctx)
+                              .copyWith(alwaysUse24HourFormat: true),
                           child: child ?? const SizedBox.shrink(),
                         ),
                       );
@@ -286,7 +309,10 @@ class TimeField extends StatelessWidget {
                     },
               child: Container(
                 constraints: const BoxConstraints(minHeight: 54),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(

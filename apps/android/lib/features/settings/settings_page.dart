@@ -158,6 +158,13 @@ class SettingsPage extends ConsumerWidget {
           _Group(
             children: [
               _Item(
+                icon: Symbols.notifications_rounded,
+                color: const Color(0xFF21896E),
+                title: 'Nhắc nhở & thông báo',
+                subtitle: 'Bữa ăn, kiểm tra tiền mặt, tổng kết, ngân sách',
+                onTap: () => context.push('/reminders'),
+              ),
+              _Item(
                 icon: Symbols.brightness_6_rounded,
                 color: const Color(0xFF8B5CF6),
                 title: 'Giao diện',

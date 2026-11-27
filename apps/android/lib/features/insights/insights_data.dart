@@ -30,8 +30,12 @@ double? _num(Object? v) {
   return double.tryParse('$v');
 }
 
-List<String> _strings(Object? v) =>
-    v is List ? [for (final s in v) if (s != null) '$s'] : const [];
+List<String> _strings(Object? v) => v is List
+    ? [
+        for (final s in v)
+          if (s != null) '$s',
+      ]
+    : const [];
 
 class CategoryChange {
   CategoryChange({
@@ -156,7 +160,8 @@ final insightsProvider = FutureProvider.autoDispose
           if (j is Map<String, dynamic>) Insight.fromJson(j),
       ];
       list.sort(
-        (a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)),
+        (a, b) =>
+            (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)),
       );
       return list;
     });

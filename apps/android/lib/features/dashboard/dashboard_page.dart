@@ -12,6 +12,7 @@ import '../../core/providers.dart';
 import '../../core/ui/header.dart';
 import '../../core/ui/motion.dart';
 import '../../core/widgets.dart';
+import '../reminders/today_meals_card.dart';
 import '../transactions/transactions_page.dart';
 
 /// "Trang chủ" (design): green hero header, net-worth card, income / expense / savings, savings rate,
@@ -117,6 +118,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   rate: rate,
                   onTap: () => ref.read(shellTabProvider.notifier).select(3),
                 ),
+                const SizedBox(height: 12),
+                const TodayMealsCard(),
                 const SizedBox(height: 18),
                 _Title('Thao tác nhanh'),
                 const SizedBox(height: 10),
