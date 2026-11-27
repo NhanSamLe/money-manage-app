@@ -67,7 +67,7 @@ Cấu hình bí mật và triển khai: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.m
 |---|---|---|
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | `apps/api/wrangler.toml`, ứng dụng | Có |
 | `SUPABASE_SERVICE_ROLE_KEY` (Secret key) | Cloudflare Worker secret | **Không** |
-| `BOOTSTRAP_SECRET` (≥ 32 ký tự) | Cloudflare Worker secret | **Không** |
+| `DEEPSEEK_API_KEY` (tùy chọn, bật Trợ lý AI) | Cloudflare Worker secret | **Không** |
 | `OWNER_EMAIL` | Cloudflare Worker secret | Không |
 | Khóa ký APK | Máy phát hành, ngoài repo | **Không** |
 

@@ -36,7 +36,9 @@ Xem nhật ký thời gian thực: `npx wrangler tail`. Nhật ký chỉ chứa 
 
 ## 3. Kích hoạt chủ sở hữu (một lần)
 
-Trong ứng dụng → "Thiết lập mới": nhập `BOOTSTRAP_SECRET` → hệ thống gửi thư mời tới `OWNER_EMAIL` → nhập mã trong thư và đặt mật khẩu. Sau khi `setup_state` là `BOUND`, quy trình này bị khóa.
+Trong ứng dụng → "Tạo tài khoản mới": nhập đúng `OWNER_EMAIL`, tên, mật khẩu → hệ thống gửi mã tới email đó → nhập mã để hoàn tất (quyết định D-012: không còn khóa triển khai). Sau khi `setup_state` là `BOUND`, quy trình này bị khóa.
+
+Trợ lý AI (tùy chọn): `npx wrangler secret put DEEPSEEK_API_KEY --name moma-api`. Không đặt khóa thì AI tắt. Trần chi phí mặc định 1 USD/tháng (bảng `pf_ai_usage`, cần migration 006).
 
 ## 4. Xử lý sự cố thường gặp
 

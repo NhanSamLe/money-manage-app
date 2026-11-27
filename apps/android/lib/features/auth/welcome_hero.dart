@@ -11,6 +11,7 @@ class WelcomeHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
+      width: double.infinity,
       height: height,
       child: LayoutBuilder(
         builder: (context, c) {

@@ -7,12 +7,12 @@ Cập nhật: 2026-11-27. Chỉ ghi kết quả của lệnh **đã thực sự 
 | Tầng | Lệnh | Kết quả | Kiểm tra cái gì |
 |---|---|---|---|
 | Đặc tả | `python spec/tests/verify_specs.py` | PASS | Schema, OpenAPI, 39 lệnh, ví dụ sổ cái |
-| Cơ sở dữ liệu | `bash scripts/db-test.sh` (Postgres 17) | 3 bộ OK | Migration 001–004; chủ duy nhất; idempotency; chuyển khoản + phí; đảo/sửa/đổi danh mục; công nợ; tiết kiệm; ngân sách; định kỳ; phân quyền (anon bị chặn); bút toán bất biến; tổng sổ cái = 0 |
-| API đơn vị | `cd apps/api && npm test` | 29/29 | Tiền bigint, hash chuẩn hóa, múi giờ VN, schema lệnh, JWT (kể cả HS256), mã lỗi, che nhật ký |
-| API toàn trình | `cd apps/api && npm run test:e2e` (Docker) | 12/12 | Mã API thật + JWT thật + **PostgREST thật** + Postgres thật: thiết lập chủ, khóa thiết lập, từ chối người lạ (403), tạo tài khoản, phát lại lệnh, xung đột 409, chuyển khoản, đảo, sửa, công nợ, tiết kiệm, ngân sách, định kỳ |
+| Cơ sở dữ liệu | `bash scripts/db-test.sh` (Postgres 17) | 4 bộ OK (thêm: mời lại chủ sở hữu, trần chi phí AI) | Migration 001–004; chủ duy nhất; idempotency; chuyển khoản + phí; đảo/sửa/đổi danh mục; công nợ; tiết kiệm; ngân sách; định kỳ; phân quyền (anon bị chặn); bút toán bất biến; tổng sổ cái = 0 |
+| API đơn vị | `cd apps/api && npm test` | 36/36 (+4 kiểm tra trực tiếp DeepSeek, bỏ qua nếu không có khóa) | Tiền bigint, hash chuẩn hóa, múi giờ VN, schema lệnh, JWT (kể cả HS256), mã lỗi, che nhật ký |
+| API toàn trình | `cd apps/api && npm run test:e2e` (Docker) | 18/18 (gồm trợ lý AI với nhà cung cấp giả) | Mã API thật + JWT thật + **PostgREST thật** + Postgres thật: thiết lập chủ, khóa thiết lập, từ chối người lạ (403), tạo tài khoản, phát lại lệnh, xung đột 409, chuyển khoản, đảo, sửa, công nợ, tiết kiệm, ngân sách, định kỳ |
 | Kiểu API | `npx tsc --noEmit` | sạch | TypeScript strict |
 | Ứng dụng | `flutter analyze --fatal-infos` | sạch | Phân tích tĩnh nghiêm ngặt |
-| Ứng dụng | `flutter test` | 33/33 | Định dạng tiền, đọc số tiền tiếng Việt, đọc CSV, luồng giao diện (Tổng quan, Giao dịch, Nhập nhanh, Kế hoạch, hàng đợi offline) với API giả |
+| Ứng dụng | `flutter test` | 34/34 | Định dạng tiền, đọc số tiền tiếng Việt, đọc CSV, luồng giao diện (Tổng quan, Giao dịch, Nhập nhanh, Kế hoạch, hàng đợi offline) với API giả |
 | Build | `flutter build apk --debug` | OK | `apps/android/build/app/outputs/flutter-apk/app-debug.apk` |
 | Máy ảo Android | Pixel 6, Android 15 (x86_64, WHPX) | OK | APK cài và chạy; màn chào, đăng nhập (sai mật khẩu → Supabase thật trả lỗi → app hiện "Email hoặc mật khẩu không đúng"), thiết lập (sai mã bí mật → Worker thật trả 401 → app hiện "Mã bí mật triển khai không đúng"). Ảnh: `docs/screens/` |
 | Triển khai | `GET /v1/health`, `GET /v1/auth/config` | 200 | Worker `moma-api` hoạt động, nối được Supabase thật (`setup_state` đọc từ DB thật) |

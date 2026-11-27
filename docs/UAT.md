@@ -4,7 +4,7 @@ Làm theo thứ tự. Mỗi bước ghi **kết quả mong đợi**; nếu khác
 
 ## 0. Chuẩn bị (một lần)
 
-1. Supabase → SQL Editor: dán toàn bộ `supabase/pending/apply-003-004.sql` → **Run and enable RLS** → thành công, không lỗi đỏ.
+1. Supabase → SQL Editor: dán toàn bộ `supabase/pending/apply-003-004.sql` rồi `supabase/pending/apply-005-006.sql` (từng file một) → **Run and enable RLS** → thành công, không lỗi đỏ.
 2. Supabase → Authentication → Email Templates: dán `supabase/templates/invite.html` (Invite user) và `recovery.html` (Reset password). Phải có `{{ .Token }}`.
 3. Supabase → Authentication → tắt "Allow new users to sign up" (nếu chưa).
 4. Kiểm tra Worker: mở `https://moma-api.superaicore.indevs.in/v1/auth/config` → thấy `"setup_state":"UNINITIALIZED"`.
@@ -19,12 +19,12 @@ Chép `apps/android/build/app/outputs/flutter-apk/app-debug.apk` sang điện th
 
 | Bước | Thao tác | Mong đợi |
 |---|---|---|
-| 2.1 | Mở MoMa → **Thiết lập mới** → nhập `BOOTSTRAP_SECRET` → **Gửi thư mời** | Chuyển sang bước 2/2 |
+| 2.1 | Mở MoMa → **Tạo tài khoản mới** → nhập `ledaonhansam@gmail.com`, tên, mật khẩu ≥ 8 ký tự (2 lần) → **Tiếp tục** | Chuyển sang màn nhập mã |
 | 2.2 | Mở thư tới `ledaonhansam@gmail.com` | Có thư "MoMa" kèm **mã số** |
-| 2.3 | Nhập email, mã, tên hiển thị, mật khẩu ≥ 8 ký tự → **Hoàn tất** | Vào màn Tổng quan |
-| 2.4 | Thử thiết lập lại lần nữa | Bị từ chối (đã có chủ) |
+| 2.3 | Nhập mã → **Xác nhận và tạo tài khoản** | Vào màn Thiết lập ban đầu, thêm tài khoản đầu tiên |
+| 2.4 | Thử tạo tài khoản lần nữa / dùng email khác | Bị từ chối (đã có chủ / email không được phép) |
 
-Nếu 2.1 báo lỗi: kiểm tra `BOOTSTRAP_SECRET` đúng chuỗi đã đặt trên Cloudflare. Nếu không nhận thư: thư mặc định của Supabase giới hạn vài thư/giờ và chỉ gửi tới email thuộc tổ chức Supabase.
+Nếu không nhận thư (kiểm tra cả mục Spam): thư mặc định của Supabase giới hạn vài thư/giờ và chỉ gửi tới email thuộc tổ chức Supabase.
 
 ## 3. Việc hằng ngày
 

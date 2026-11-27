@@ -16,3 +16,9 @@
 
 ## D-011 — Hiển thị lỗi: hộp thoại cho lỗi hệ thống, inline cho validate
 Chủ sở hữu yêu cầu: lỗi từ máy chủ/mạng/không mong đợi hiện bằng hộp thoại modal (`showErrorDialog`); chỉ lỗi kiểm tra dữ liệu nhập (thiếu số tiền, mật khẩu < 8 ký tự…) hiện inline cạnh form. Thông báo thành công/thông tin dùng SnackBar.
+
+## D-012 — Đăng ký bằng email chủ sở hữu + mã qua thư, bỏ khóa triển khai
+Chủ sở hữu yêu cầu luồng đăng ký/đăng nhập thông thường. `POST /v1/setup/start` chỉ nhận `OWNER_EMAIL`; quyền kiểm soát hộp thư (mã dùng một lần) chứng minh danh tính. `BOOTSTRAP_SECRET` không còn dùng. Lệch có chủ đích so với spec 02 (bootstrap bằng khóa triển khai); đổi lại dễ dùng hơn.
+
+## D-013 — Trợ lý AI chỉ đề xuất
+DeepSeek `deepseek-flash` qua Worker (khóa chỉ ở Worker). AI trả đề xuất đã kiểm tra id/số tiền/ngày; chủ sở hữu bấm Xác nhận thì lệnh `TX_CREATE` idempotent mới ghi. Chặn chi phí theo spec 05 mục 5 (đặt trước chi phí xấu nhất, trần 1 USD/tháng).
