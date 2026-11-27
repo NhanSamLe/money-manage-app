@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/theme/moma_theme.dart';
 import '../validators.dart';
+import '../../app/theme/palette.dart';
 
 /// Form field with the label above and a short "Nhập ..." placeholder inside (design reference).
 /// It validates itself while the user types / leaves it ([validator]); rules are never written into the placeholder.
@@ -66,10 +67,10 @@ class LabeledField extends StatelessWidget {
         Text.rich(
           TextSpan(
             text: label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: MomaColors.ink,
+              color: context.pal.ink,
             ),
             children: [
               if (required)

@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
 import '../../core/ui/brand.dart';
@@ -10,6 +9,7 @@ import '../../core/ui/labeled_field.dart';
 import '../../core/validators.dart';
 import '../../core/widgets.dart';
 import 'auth_service.dart';
+import '../../app/theme/palette.dart';
 
 /// True while sign-up is finishing: the session exists after the code is verified, but the owner binding and
 /// device registration are still running, so the router must not jump to the main app yet.
@@ -88,7 +88,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.pal.surface,
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
@@ -141,7 +141,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 _step == 0 ? 'Tạo tài khoản' : 'Xác nhận email',
                 style: text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: MomaColors.ink,
+                  color: context.pal.ink,
                 ),
               ),
               const SizedBox(height: 4),
@@ -149,7 +149,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 _step == 0
                     ? 'Dùng email chủ sở hữu để tạo tài khoản MoMa của bạn.'
                     : 'Chúng tôi đã gửi một mã xác nhận đến ${_email.text.trim()}. Mở hộp thư và nhập mã vào bên dưới.',
-                style: text.bodyMedium?.copyWith(color: MomaColors.muted),
+                style: text.bodyMedium?.copyWith(color: context.pal.muted),
               ),
               const SizedBox(height: 20),
               if (_step == 0) ...[
@@ -225,7 +225,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 Text(
                   'Không thấy thư? Kiểm tra mục Spam hoặc Quảng cáo.',
                   textAlign: TextAlign.center,
-                  style: text.bodySmall?.copyWith(color: MomaColors.muted),
+                  style: text.bodySmall?.copyWith(color: context.pal.muted),
                 ),
               ],
             ],

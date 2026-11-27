@@ -11,6 +11,7 @@ import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import '../../core/widgets.dart';
+import '../../app/theme/palette.dart';
 
 class RecurringView extends ConsumerWidget {
   const RecurringView({super.key});
@@ -101,7 +102,7 @@ class _RecurringCard extends ConsumerWidget {
             ),
             Text(
               item.intervalLabel,
-              style: const TextStyle(color: MomaColors.muted),
+              style: TextStyle(color: context.pal.muted),
             ),
             for (final o in item.expected)
               ListTile(

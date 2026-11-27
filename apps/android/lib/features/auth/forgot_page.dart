@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
@@ -12,6 +11,7 @@ import '../../core/ui/labeled_field.dart';
 import '../../core/validators.dart';
 import '../../core/widgets.dart';
 import 'auth_service.dart';
+import '../../app/theme/palette.dart';
 
 /// Password recovery with the emailed code (no deep links). Supabase Auth owns the credential reset.
 class ForgotPage extends ConsumerStatefulWidget {
@@ -86,7 +86,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.pal.surface,
       body: SafeArea(
         child: Form(
           key: _form,
@@ -107,7 +107,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 'Quên mật khẩu',
                 style: text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: MomaColors.ink,
+                  color: context.pal.ink,
                 ),
               ),
               const SizedBox(height: 4),
@@ -115,7 +115,7 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 _sent
                     ? 'Nhập mã trong thư và đặt mật khẩu mới.'
                     : 'Chúng tôi sẽ gửi mã xác nhận tới email của bạn.',
-                style: text.bodyMedium?.copyWith(color: MomaColors.muted),
+                style: text.bodyMedium?.copyWith(color: context.pal.muted),
               ),
               const SizedBox(height: 24),
               LabeledField(

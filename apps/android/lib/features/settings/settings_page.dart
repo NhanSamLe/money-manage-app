@@ -5,10 +5,13 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../app/theme/theme_mode.dart';
 import '../../core/providers.dart';
+import '../../core/sheets.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../auth/auth_service.dart';
+import '../../app/theme/palette.dart';
 
 /// AI status for the settings row (enabled flag and this month's spend). Failure just hides the numbers.
 final aiStatusProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((
@@ -41,7 +44,7 @@ class SettingsPage extends ConsumerWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: _deco,
+            decoration: _deco(context),
             child: Row(
               children: [
                 CircleAvatar(
@@ -75,7 +78,7 @@ class SettingsPage extends ConsumerWidget {
                       ),
                       Text(
                         user?.email ?? '',
-                        style: const TextStyle(color: MomaColors.muted),
+                        style: TextStyle(color: context.pal.muted),
                       ),
                     ],
                   ),
@@ -129,6 +132,17 @@ class SettingsPage extends ConsumerWidget {
           _Group(
             children: [
               _Item(
+                icon: Icons.brightness_6_outlined,
+                color: const Color(0xFF8B5CF6),
+                title: 'Giao diện',
+                subtitle: switch (ref.watch(themeModeProvider)) {
+                  ThemeMode.light => 'Sáng',
+                  ThemeMode.dark => 'Tối',
+                  ThemeMode.system => 'Theo hệ thống',
+                },
+                onTap: () => _pickTheme(context, ref),
+              ),
+              _Item(
                 icon: Icons.dns_outlined,
                 color: const Color(0xFF64748B),
                 title: 'Địa chỉ máy chủ',
@@ -171,6 +185,33 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  Future<void> _pickTheme(BuildContext context, WidgetRef ref) async {
+    final v = await showChoiceSheet<ThemeMode>(
+      context,
+      title: 'Giao diện',
+      selected: ref.read(themeModeProvider),
+      options: const [
+        ChoiceOption(
+          value: ThemeMode.light,
+          label: 'Sáng',
+          icon: Icons.light_mode_outlined,
+        ),
+        ChoiceOption(
+          value: ThemeMode.dark,
+          label: 'Tối',
+          icon: Icons.dark_mode_outlined,
+        ),
+        ChoiceOption(
+          value: ThemeMode.system,
+          label: 'Hệ thống',
+          icon: Icons.brightness_6_outlined,
+        ),
+      ],
+      footnote: 'Chế độ Sáng dễ nhìn ngoài trời, chế độ Tối dịu mắt khi ở nơi ít ánh sáng.',
+    );
+    if (v != null) await ref.read(themeModeProvider.notifier).set(v);
+  }
+
   Future<void> _editApiBase(BuildContext context, WidgetRef ref) async {
     final store = ref.read(storeProvider);
     final c = TextEditingController(text: await store.apiBase());
@@ -197,8 +238,8 @@ class SettingsPage extends ConsumerWidget {
   }
 }
 
-final _deco = BoxDecoration(
-  color: Colors.white,
+BoxDecoration _deco(BuildContext context) => BoxDecoration(
+  color: context.pal.surface,
   borderRadius: BorderRadius.circular(22),
 );
 
@@ -210,10 +251,10 @@ class _Label extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(4, 8, 0, 8),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontWeight: FontWeight.w800,
         fontSize: 15,
-        color: MomaColors.muted,
+        color: context.pal.muted,
       ),
     ),
   );
@@ -225,13 +266,13 @@ class _Group extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 8),
-    decoration: _deco,
+    decoration: _deco(context),
     child: Column(
       children: [
         for (final (i, c) in children.indexed) ...[
           c,
           if (i < children.length - 1)
-            const Divider(height: 1, indent: 70, color: Color(0xFFEEF2F0)),
+            Divider(height: 1, indent: 70, color: context.pal.lineSoft),
         ],
       ],
     ),
@@ -260,6 +301,6 @@ class _Item extends StatelessWidget {
     subtitle: Text(subtitle),
     trailing: onTap == null
         ? null
-        : const Icon(Icons.chevron_right_rounded, color: MomaColors.muted),
+        : Icon(Icons.chevron_right_rounded, color: context.pal.muted),
   );
 }

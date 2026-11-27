@@ -11,6 +11,7 @@ import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import 'transactions_page.dart' show txKindLabel;
+import '../../app/theme/palette.dart';
 
 String _accountName(List<Account> accounts, String? id) {
   for (final a in accounts) {
@@ -96,22 +97,19 @@ class _TxDetailSheetState extends ConsumerState<TxDetailSheet> {
               children: [
                 SizedBox(
                   width: 110,
-                  child: Text(
-                    r.$1,
-                    style: const TextStyle(color: MomaColors.muted),
-                  ),
+                  child: Text(r.$1, style: TextStyle(color: context.pal.muted)),
                 ),
                 Expanded(child: Text(r.$2)),
               ],
             ),
           ),
         if (tx.debtLinked)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 8),
             child: Text(
               'Giao dịch này thuộc một khoản công nợ nên chỉ sửa được ghi chú. '
               'Muốn sửa số tiền, hãy thao tác trong mục Công nợ.',
-              style: TextStyle(color: MomaColors.muted),
+              style: TextStyle(color: context.pal.muted),
             ),
           ),
         if (_cancelling) ...[
@@ -282,7 +280,7 @@ class _TxEditSheetState extends ConsumerState<TxEditSheet> {
           _moneyEditable
               ? 'Đổi số tiền, tài khoản hoặc ngày sẽ hủy giao dịch cũ (còn lưu lịch sử) và tạo giao dịch mới.'
               : 'Loại giao dịch này chỉ sửa được ghi chú.',
-          style: const TextStyle(color: MomaColors.muted),
+          style: TextStyle(color: context.pal.muted),
         ),
         const SizedBox(height: 12),
         if (_moneyEditable) ...[

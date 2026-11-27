@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../app/theme/moma_theme.dart';
 import '../validators.dart';
 import 'money.dart';
+import '../../app/theme/palette.dart';
 
 /// Formats digits as VND with dot separators while typing; the value itself stays an integer.
 class ThousandsFormatter extends TextInputFormatter {
@@ -47,10 +48,10 @@ class MoneyField extends StatelessWidget {
         Text.rich(
           TextSpan(
             text: hint,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: MomaColors.ink,
+              color: context.pal.ink,
             ),
             children: [
               if (!optional)

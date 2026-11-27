@@ -10,6 +10,7 @@ import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import '../../core/widgets.dart';
+import '../../app/theme/palette.dart';
 
 class GoalsView extends ConsumerWidget {
   const GoalsView({super.key});
@@ -116,14 +117,14 @@ class _GoalCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: goal.progress,
                   minHeight: 8,
-                  backgroundColor: MomaColors.cloud,
+                  backgroundColor: context.pal.bg,
                   color: MomaColors.emerald,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '${formatVnd(goal.allocated)} / ${formatVnd(goal.target)}  (${(goal.progress * 100).round()}%)',
-                style: const TextStyle(color: MomaColors.muted),
+                style: TextStyle(color: context.pal.muted),
               ),
             ],
           ),
@@ -261,7 +262,7 @@ class _GoalMoveSheetState extends ConsumerState<_GoalMoveSheet> {
         ),
         Text(
           '${formatVnd(g.allocated)} / ${formatVnd(g.target)}',
-          style: const TextStyle(color: MomaColors.muted),
+          style: TextStyle(color: context.pal.muted),
         ),
         const SizedBox(height: 12),
         SegmentedButton<bool>(

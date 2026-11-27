@@ -10,8 +10,10 @@ import '../../core/money/money.dart';
 import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
+import '../../core/ui/motion.dart';
 import '../../core/widgets.dart';
 import '../transactions/transactions_page.dart';
+import '../../app/theme/palette.dart';
 
 /// "Trang chủ": net worth, shortcuts to planning, accounts and the latest transactions.
 class DashboardPage extends ConsumerStatefulWidget {
@@ -99,13 +101,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: _cardDeco,
+                  decoration: _cardDeco(context),
                   child: Column(
                     children: [
                       for (final (i, a) in accounts.take(4).indexed) ...[
                         _AccountRow(account: a),
                         if (i < accounts.take(4).length - 1)
-                          const Divider(height: 1, color: Color(0xFFEEF2F0)),
+                          Divider(height: 1, color: context.pal.lineSoft),
                       ],
                     ],
                   ),
@@ -122,7 +124,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: _cardDeco,
+                  decoration: _cardDeco(context),
                   child: Column(
                     children: [
                       for (final (i, t) in txs.take(5).indexed) ...[
@@ -132,7 +134,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           account: accountById[t.accountId],
                         ),
                         if (i < txs.take(5).length - 1)
-                          const Divider(height: 1, color: Color(0xFFEEF2F0)),
+                          Divider(height: 1, color: context.pal.lineSoft),
                       ],
                     ],
                   ),
@@ -145,8 +147,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-final _cardDeco = BoxDecoration(
-  color: Colors.white,
+BoxDecoration _cardDeco(BuildContext context) => BoxDecoration(
+  color: context.pal.surface,
   borderRadius: BorderRadius.circular(22),
 );
 
@@ -233,13 +235,15 @@ class _BalanceCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              hidden ? '••••••••' : formatVnd(summary.netWorth),
+            child: DefaultTextStyle.merge(
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
               ),
+              child: hidden
+                  ? const Text('••••••••')
+                  : CountUp(value: summary.netWorth, builder: formatVnd),
             ),
           ),
           if (summary.unknownBaselines > 0)
@@ -391,8 +395,8 @@ class _Hint extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(18),
-    decoration: _cardDeco,
-    child: Text(text, style: const TextStyle(color: MomaColors.muted)),
+    decoration: _cardDeco(context),
+    child: Text(text, style: TextStyle(color: context.pal.muted)),
   );
 }
 
@@ -422,7 +426,7 @@ class _AccountRow extends StatelessWidget {
               ),
               Text(
                 account.institution,
-                style: const TextStyle(color: MomaColors.muted, fontSize: 13),
+                style: TextStyle(color: context.pal.muted, fontSize: 13),
               ),
             ],
           ),

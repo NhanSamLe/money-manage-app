@@ -10,6 +10,7 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/widgets.dart';
+import '../../app/theme/palette.dart';
 
 class AccountsPage extends ConsumerWidget {
   const AccountsPage({super.key});
@@ -97,7 +98,7 @@ class AccountsPage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.pal.surface,
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: Column(
@@ -133,8 +134,8 @@ class AccountsPage extends ConsumerWidget {
                                         const SizedBox(height: 2),
                                         Text(
                                           '${accountKindLabel(a.kind)} · ${a.institution}${a.last4 == null ? '' : ' · •• ${a.last4}'}',
-                                          style: const TextStyle(
-                                            color: MomaColors.muted,
+                                          style: TextStyle(
+                                            color: context.pal.muted,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -158,10 +159,10 @@ class AccountsPage extends ConsumerWidget {
                                         ),
                                       ),
                                       if (a.isCard)
-                                        const Text(
+                                        Text(
                                           'Dư nợ',
                                           style: TextStyle(
-                                            color: MomaColors.muted,
+                                            color: context.pal.muted,
                                             fontSize: 12,
                                           ),
                                         ),
@@ -172,7 +173,7 @@ class AccountsPage extends ConsumerWidget {
                             ),
                           ),
                           if (i < list.length - 1)
-                            const Divider(height: 1, color: Color(0xFFEEF2F0)),
+                            Divider(height: 1, color: context.pal.lineSoft),
                         ],
                       ],
                     ),
@@ -396,11 +397,11 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
             hintText: 'Tên tài khoản',
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 8),
           child: Text(
             'Lưu trữ tài khoản giữ nguyên lịch sử nhưng không cho ghi giao dịch mới.',
-            style: TextStyle(color: MomaColors.muted),
+            style: TextStyle(color: context.pal.muted),
           ),
         ),
         FormError(_run.error),

@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../app/theme/palette.dart';
 
 class NavItem {
   const NavItem(this.icon, this.label);
@@ -23,8 +24,8 @@ class MomaNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: context.pal.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
@@ -54,7 +55,7 @@ class MomaNavBar extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: i == index
-                              ? const Color(0xFFDDF3E6)
+                              ? context.pal.tint
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(18),
                         ),
@@ -66,7 +67,7 @@ class MomaNavBar extends StatelessWidget {
                               size: 26,
                               color: i == index
                                   ? MomaColors.emerald
-                                  : MomaColors.muted,
+                                  : context.pal.muted,
                             ),
                             const SizedBox(height: 2),
                             FittedBox(
@@ -80,7 +81,7 @@ class MomaNavBar extends StatelessWidget {
                                       : FontWeight.w500,
                                   color: i == index
                                       ? MomaColors.emerald
-                                      : MomaColors.muted,
+                                      : context.pal.muted,
                                 ),
                               ),
                             ),

@@ -7,6 +7,7 @@ import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/ui/brand.dart';
 import '../accounts/accounts_page.dart';
+import '../../app/theme/palette.dart';
 
 /// First-run "Thiết lập ban đầu" (design 03): account created -> add a money account -> transaction sources.
 class OnboardingPage extends ConsumerWidget {
@@ -18,7 +19,7 @@ class OnboardingPage extends ConsumerWidget {
     final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
     final hasAccount = accounts.isNotEmpty;
     return Scaffold(
-      backgroundColor: MomaColors.cloud,
+      backgroundColor: context.pal.bg,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
@@ -29,12 +30,12 @@ class OnboardingPage extends ConsumerWidget {
               'Thiết lập ban đầu',
               style: text.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: MomaColors.ink,
+                color: context.pal.ink,
               ),
             ),
             Text(
               'Hoàn tất vài bước để bắt đầu',
-              style: text.bodyMedium?.copyWith(color: MomaColors.muted),
+              style: text.bodyMedium?.copyWith(color: context.pal.muted),
             ),
             const SizedBox(height: 20),
             const _Step(
@@ -96,7 +97,7 @@ class _Step extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.pal.surface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -111,8 +112,8 @@ class _Step extends StatelessWidget {
                 ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
                 : Text(
                     '$index',
-                    style: const TextStyle(
-                      color: MomaColors.muted,
+                    style: TextStyle(
+                      color: context.pal.muted,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -130,7 +131,7 @@ class _Step extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(hint, style: const TextStyle(color: MomaColors.muted)),
+                Text(hint, style: TextStyle(color: context.pal.muted)),
                 if (actionLabel != null) ...[
                   const SizedBox(height: 10),
                   OutlinedButton(

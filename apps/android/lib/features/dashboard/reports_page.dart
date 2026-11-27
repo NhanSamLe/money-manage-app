@@ -11,6 +11,7 @@ import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../../core/sheets.dart';
 import '../../core/widgets.dart';
+import '../../app/theme/palette.dart';
 
 /// "Báo cáo": month selector, income/expense and where the money went (deterministic server totals).
 class ReportsPage extends ConsumerWidget {
@@ -35,7 +36,7 @@ class ReportsPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.pal.surface,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
@@ -164,7 +165,7 @@ class _Body extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.pal.surface,
             borderRadius: BorderRadius.circular(22),
           ),
           child: Column(
@@ -176,12 +177,12 @@ class _Body extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               if (spends.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(
                     child: Text(
                       'Chưa có chi tiêu trong tháng này.',
-                      style: TextStyle(color: MomaColors.muted),
+                      style: TextStyle(color: context.pal.muted),
                     ),
                   ),
                 )
@@ -206,10 +207,10 @@ class _Body extends StatelessWidget {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
+                            Text(
                               'Tổng chi',
                               style: TextStyle(
-                                color: MomaColors.muted,
+                                color: context.pal.muted,
                                 fontSize: 12,
                               ),
                             ),
@@ -268,7 +269,7 @@ class _Flow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: MomaColors.muted, fontSize: 12),
+                style: TextStyle(color: context.pal.muted, fontSize: 12),
               ),
               FittedBox(
                 fit: BoxFit.scaleDown,
@@ -320,7 +321,7 @@ class _Row extends StatelessWidget {
                 child: Text(
                   '${(share * 100).round()}%',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(color: MomaColors.muted),
+                  style: TextStyle(color: context.pal.muted),
                 ),
               ),
             ],
@@ -331,7 +332,7 @@ class _Row extends StatelessWidget {
             child: LinearProgressIndicator(
               value: share,
               minHeight: 6,
-              backgroundColor: const Color(0xFFEEF2F0),
+              backgroundColor: context.pal.lineSoft,
               color: style.color,
             ),
           ),

@@ -14,6 +14,15 @@ class LocalStore {
   Future<void> setApiBase(String v) =>
       _s.write(key: 'api_base', value: v.replaceAll(RegExp(r'/+$'), ''));
 
+  /// Appearance: 'system' (default), 'light' or 'dark'.
+  Future<String> themeMode() async =>
+      await _s.read(key: 'theme_mode') ?? 'system';
+  Future<void> setThemeMode(String v) => _s.write(key: 'theme_mode', value: v);
+
+  /// Whether the first-run introduction slides were already shown on this device.
+  Future<bool> introSeen() async => await _s.read(key: 'intro_seen') == '1';
+  Future<void> setIntroSeen() => _s.write(key: 'intro_seen', value: '1');
+
   Future<String> deviceId() async {
     final existing = await _s.read(key: 'device_id');
     if (existing != null) return existing;

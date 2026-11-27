@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme/moma_theme.dart';
 import '../../core/ui/brand.dart';
+import '../../core/ui/motion.dart';
 import 'welcome_hero.dart';
+import '../../app/theme/palette.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -14,37 +16,45 @@ class WelcomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.pal.surface,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   MomaColors.forest,
                   MomaColors.emerald,
-                  Color(0xFFEAF7F0),
+                  context.pal.tintSoft,
                 ],
                 stops: [0, 0.55, 1],
               ),
             ),
             child: CustomPaint(
               painter: _Waves(),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                  child: Column(
-                    children: [
-                      const MomaWordmark(size: 50),
-                      const SizedBox(height: 14),
-                      const WelcomeHero(),
-                    ],
+              child: Stack(
+                children: [
+                  const Positioned.fill(child: Floaters(count: 14, seed: 11)),
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                      child: Column(
+                        children: [
+                          const FadeSlideIn(
+                            dy: -16,
+                            child: MomaWordmark(size: 50),
+                          ),
+                          const SizedBox(height: 14),
+                          const WelcomeHero(),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -53,82 +63,97 @@ class WelcomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Chào mừng đến với MoMa 👋',
-                  textAlign: TextAlign.center,
-                  style: text.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: MomaColors.ink,
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 350),
+                  child: Text(
+                    'Chào mừng đến với MoMa 👋',
+                    textAlign: TextAlign.center,
+                    style: text.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: context.pal.ink,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Ứng dụng quản lý tài chính cá nhân thông minh, giúp bạn theo dõi chi tiêu, tiết kiệm và đạt mục tiêu tài chính dễ dàng hơn.',
-                  textAlign: TextAlign.center,
-                  style: text.bodyMedium?.copyWith(
-                    color: MomaColors.muted,
-                    height: 1.5,
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 450),
+                  child: Text(
+                    'Ứng dụng quản lý tài chính cá nhân thông minh, giúp bạn theo dõi chi tiêu, tiết kiệm và đạt mục tiêu tài chính dễ dàng hơn.',
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(
+                      color: context.pal.muted,
+                      height: 1.5,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF7F0),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: MomaColors.mint.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(14),
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 550),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: context.pal.tintSoft,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: MomaColors.mint.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline_rounded,
+                            color: MomaColors.emerald,
+                            size: 28,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.person_outline_rounded,
-                          color: MomaColors.emerald,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Ứng dụng dành cho cá nhân',
-                              style: text.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ứng dụng dành cho cá nhân',
+                                style: text.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'MoMa được thiết kế cho 1 chủ sở hữu duy nhất, giúp bạn quản lý toàn bộ tài chính an toàn và riêng tư.',
-                              style: text.bodySmall?.copyWith(
-                                color: MomaColors.muted,
+                              const SizedBox(height: 2),
+                              Text(
+                                'MoMa được thiết kế cho 1 chủ sở hữu duy nhất, giúp bạn quản lý toàn bộ tài chính an toàn và riêng tư.',
+                                style: text.bodySmall?.copyWith(
+                                  color: context.pal.muted,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                _ActionButton(
-                  filled: true,
-                  icon: Icons.person_outline_rounded,
-                  label: 'Tôi đã có tài khoản',
-                  onTap: () => context.go('/login'),
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 700),
+                  child: _ActionButton(
+                    filled: true,
+                    icon: Icons.person_outline_rounded,
+                    label: 'Tôi đã có tài khoản',
+                    onTap: () => context.go('/login'),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _ActionButton(
-                  filled: false,
-                  icon: Icons.add_circle_outline_rounded,
-                  label: 'Tạo tài khoản mới',
-                  onTap: () => context.go('/register'),
+                FadeSlideIn(
+                  delay: const Duration(milliseconds: 800),
+                  child: _ActionButton(
+                    filled: false,
+                    icon: Icons.add_circle_outline_rounded,
+                    label: 'Tạo tài khoản mới',
+                    onTap: () => context.go('/register'),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -144,7 +169,7 @@ class WelcomePage extends StatelessWidget {
                       child: Text(
                         'Dữ liệu của bạn được mã hóa, bảo mật và chỉ phục vụ cho tài khoản của bạn.',
                         style: text.bodySmall?.copyWith(
-                          color: MomaColors.muted,
+                          color: context.pal.muted,
                         ),
                       ),
                     ),
@@ -175,7 +200,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = filled ? Colors.white : MomaColors.forest;
     return Material(
-      color: filled ? MomaColors.emerald : const Color(0xFFF1FAF5),
+      color: filled ? MomaColors.emerald : context.pal.tintSoft,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),

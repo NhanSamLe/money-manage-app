@@ -5,6 +5,7 @@ import 'budgets_view.dart';
 import 'debts_view.dart';
 import 'goals_view.dart';
 import 'recurring_view.dart';
+import '../../app/theme/palette.dart';
 
 /// "Kế hoạch": debts, savings goals, monthly budgets and recurring items.
 class PlanningPage extends StatelessWidget {
@@ -25,14 +26,14 @@ class PlanningPage extends StatelessWidget {
               tabAlignment: TabAlignment.start,
               dividerColor: Colors.transparent,
               labelColor: MomaColors.forest,
-              unselectedLabelColor: MomaColors.muted,
+              unselectedLabelColor: context.pal.muted,
               labelStyle: const TextStyle(fontWeight: FontWeight.w800),
               unselectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
-                color: const Color(0xFFD7F0E1),
+                color: context.pal.tint,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: MomaColors.mint),
               ),

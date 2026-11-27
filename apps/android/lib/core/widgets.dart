@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app/theme/moma_theme.dart';
 import 'network/api_client.dart';
+import '../app/theme/palette.dart';
 
 /// Shared Loading / Failure / Empty presentation for async read models (preserves a retry path).
 class ErrorView extends StatelessWidget {
@@ -20,11 +21,7 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 56,
-              color: MomaColors.muted,
-            ),
+            Icon(Icons.cloud_off_rounded, size: 56, color: context.pal.muted),
             const SizedBox(height: 12),
             Text(msg, textAlign: TextAlign.center),
             const SizedBox(height: 12),
@@ -70,7 +67,7 @@ class EmptyState extends StatelessWidget {
             Text(
               hint,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: MomaColors.muted),
+              style: TextStyle(color: context.pal.muted),
             ),
           ],
         ),
@@ -95,7 +92,7 @@ Future<void> showErrorDialog(
   return showDialog<void>(
     context: context,
     builder: (ctx) => Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.pal.surface,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -130,24 +127,24 @@ Future<void> showErrorDialog(
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 21,
                 fontWeight: FontWeight.w800,
-                color: MomaColors.ink,
+                color: context.pal.ink,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 height: 1.45,
-                color: MomaColors.ink,
+                color: context.pal.ink,
               ),
             ),
             const SizedBox(height: 22),
-            const Divider(height: 1, color: Color(0xFFEEF2F0)),
+            Divider(height: 1, color: context.pal.lineSoft),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(),

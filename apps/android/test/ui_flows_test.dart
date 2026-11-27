@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moma/core/outbox.dart';
 import 'package:moma/core/network/api_client.dart';
 import 'package:moma/core/providers.dart';
+import 'package:moma/core/ui/motion.dart';
 import 'package:moma/features/dashboard/dashboard_page.dart';
 import 'package:moma/features/dashboard/reports_page.dart';
 import 'package:moma/features/planning/planning_page.dart';
@@ -58,6 +59,7 @@ class MemoryOutbox extends OutboxStore {
 }
 
 void main() {
+  setUpAll(() => Motion.continuous = false);
   group('dashboard', () {
     testWidgets('shows net worth, totals and the unknown-baseline warning', (
       tester,

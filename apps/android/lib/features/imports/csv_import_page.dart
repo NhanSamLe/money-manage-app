@@ -13,6 +13,7 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/quick_parse.dart';
 import '../../core/sheets.dart';
+import '../../app/theme/palette.dart';
 
 class _Line {
   _Line(this.row, this.kind, this.categoryId, this.categoryName);
@@ -278,11 +279,11 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
               ),
             ),
             if (_accountId == null)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text(
                   'Chọn tài khoản trước khi ghi.',
-                  style: TextStyle(color: MomaColors.muted),
+                  style: TextStyle(color: context.pal.muted),
                 ),
               ),
           ],

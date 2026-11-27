@@ -78,7 +78,9 @@ class V {
     int max = 999999999999,
   }) => (v) {
     final t = (v ?? '').trim();
-    if (t.isEmpty) return allowEmpty ? null : 'Vui lòng nhập ${label.toLowerCase()}.';
+    if (t.isEmpty) {
+      return allowEmpty ? null : 'Vui lòng nhập ${label.toLowerCase()}.';
+    }
     final n = parseVndInput(t);
     if (n == null) {
       return '$label chưa hợp lệ. Chỉ nhập số, ví dụ 65.000 hoặc 65k.';

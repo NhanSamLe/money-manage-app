@@ -12,6 +12,7 @@ import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
 import 'tx_sheets.dart';
+import '../../app/theme/palette.dart';
 
 /// Case- and diacritic-insensitive match over merchant, note and category name.
 bool matchesQuery(MomaTx t, String? categoryName, String query) {
@@ -216,7 +217,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.pal.surface,
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: const [
                       BoxShadow(
@@ -373,11 +374,9 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(right: 6),
     child: Material(
-      color: active ? const Color(0xFFD7F0E1) : Colors.white,
+      color: active ? context.pal.tint : Colors.white,
       shape: StadiumBorder(
-        side: BorderSide(
-          color: active ? MomaColors.emerald : const Color(0xFFDDE6E2),
-        ),
+        side: BorderSide(color: active ? MomaColors.emerald : context.pal.line),
       ),
       child: InkWell(
         customBorder: const StadiumBorder(),
@@ -392,14 +391,14 @@ class _FilterChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: active ? MomaColors.emerald : MomaColors.muted,
+                color: active ? MomaColors.emerald : context.pal.muted,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: active ? MomaColors.forest : MomaColors.ink,
+                  color: active ? MomaColors.forest : context.pal.ink,
                 ),
               ),
               if (dropdown) ...[
@@ -407,7 +406,7 @@ class _FilterChip extends StatelessWidget {
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 20,
-                  color: active ? MomaColors.emerald : MomaColors.muted,
+                  color: active ? MomaColors.emerald : context.pal.muted,
                 ),
               ],
             ],
@@ -482,14 +481,14 @@ class _SumTile extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: MomaColors.muted, fontSize: 12),
+                style: TextStyle(color: context.pal.muted, fontSize: 12),
               ),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   value,
-                  style: const TextStyle(
-                    color: MomaColors.ink,
+                  style: TextStyle(
+                    color: context.pal.ink,
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
                     height: 1.2,
@@ -519,7 +518,7 @@ class _DayCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.pal.surface,
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -539,10 +538,7 @@ class _DayCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text.rich(
                     TextSpan(
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: MomaColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 12, color: context.pal.muted),
                       children: [
                         const TextSpan(text: 'Thu: '),
                         TextSpan(
@@ -575,7 +571,7 @@ class _DayCard extends StatelessWidget {
               account: accounts[group.items[i].accountId],
             ),
             if (i < group.items.length - 1)
-              const Divider(height: 1, color: Color(0xFFEEF2F0)),
+              Divider(height: 1, color: context.pal.lineSoft),
           ],
         ],
       ),
@@ -644,10 +640,7 @@ class TxTile extends StatelessWidget {
                   ),
                   Text(
                     parts.join(' • '),
-                    style: const TextStyle(
-                      color: MomaColors.muted,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: context.pal.muted, fontSize: 13),
                   ),
                 ],
               ),
@@ -658,7 +651,7 @@ class TxTile extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
-                color: tx.isVoid ? MomaColors.muted : color,
+                color: tx.isVoid ? context.pal.muted : color,
               ),
             ),
           ],

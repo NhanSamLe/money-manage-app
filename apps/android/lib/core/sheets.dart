@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app/theme/moma_theme.dart';
 import 'network/api_client.dart';
+import '../app/theme/palette.dart';
 
 /// Opens a keyboard-aware bottom sheet for a short form.
 Future<T?> showFormSheet<T>(BuildContext context, WidgetBuilder builder) {
@@ -91,7 +92,7 @@ Future<T?> showChoiceSheet<T>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    backgroundColor: Colors.white,
+    backgroundColor: context.pal.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -107,17 +108,17 @@ Future<T?> showChoiceSheet<T>(
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
-                  color: MomaColors.ink,
+                  color: context.pal.ink,
                 ),
               ),
               const SizedBox(height: 14),
               Flexible(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F7F5),
+                    color: context.pal.surfaceAlt,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -125,11 +126,11 @@ Future<T?> showChoiceSheet<T>(
                     shrinkWrap: true,
                     padding: EdgeInsets.zero,
                     itemCount: options.length,
-                    separatorBuilder: (_, _) => const Divider(
+                    separatorBuilder: (_, _) => Divider(
                       height: 1,
                       indent: 16,
                       endIndent: 16,
-                      color: Color(0xFFD9E3DE),
+                      color: context.pal.line,
                     ),
                     itemBuilder: (_, i) {
                       final o = options[i];
@@ -146,7 +147,11 @@ Future<T?> showChoiceSheet<T>(
                               if (o.leading != null)
                                 o.leading!
                               else if (o.icon != null)
-                                Icon(o.icon, color: MomaColors.muted, size: 24),
+                                Icon(
+                                  o.icon,
+                                  color: context.pal.muted,
+                                  size: 24,
+                                ),
                               if (o.leading != null || o.icon != null)
                                 const SizedBox(width: 14),
                               Expanded(
@@ -157,7 +162,7 @@ Future<T?> showChoiceSheet<T>(
                                     fontWeight: on
                                         ? FontWeight.w700
                                         : FontWeight.w500,
-                                    color: MomaColors.ink,
+                                    color: context.pal.ink,
                                   ),
                                 ),
                               ),
@@ -180,10 +185,7 @@ Future<T?> showChoiceSheet<T>(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     footnote,
-                    style: const TextStyle(
-                      color: MomaColors.muted,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: context.pal.muted, fontSize: 13),
                   ),
                 ),
               ],

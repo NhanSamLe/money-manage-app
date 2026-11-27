@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/theme/moma_theme.dart';
 import 'brand.dart';
+import '../../app/theme/palette.dart';
 
 /// Green gradient header with soft wave decoration, logo lockup, bell and avatar (design: every main screen).
 /// The body is drawn on a rounded cloud sheet that overlaps the header, as in the mock-ups.
@@ -127,7 +128,7 @@ class MomaPage extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(28),
               ),
-              child: ColoredBox(color: MomaColors.cloud, child: child),
+              child: ColoredBox(color: context.pal.bg, child: child),
             ),
           ),
         ],

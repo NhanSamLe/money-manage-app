@@ -12,6 +12,7 @@ import '../../core/planning_providers.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import '../../core/widgets.dart';
+import '../../app/theme/palette.dart';
 
 String _currentMonth() {
   final n = DateTime.now();
@@ -110,7 +111,7 @@ class _BudgetCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: b.usage,
                   minHeight: 8,
-                  backgroundColor: MomaColors.cloud,
+                  backgroundColor: context.pal.bg,
                   color: color,
                 ),
               ),
@@ -118,7 +119,7 @@ class _BudgetCard extends StatelessWidget {
               Text(
                 'Đã chi ${formatVnd(b.spent)} / ${formatVnd(b.effectiveLimit)}'
                 '${b.carried > 0 ? ' (gồm ${formatVnd(b.carried)} chuyển từ tháng trước)' : ''}',
-                style: const TextStyle(color: MomaColors.muted, fontSize: 12),
+                style: TextStyle(color: context.pal.muted, fontSize: 12),
               ),
             ],
           ),

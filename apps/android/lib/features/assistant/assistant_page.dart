@@ -11,6 +11,7 @@ import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
+import '../../app/theme/palette.dart';
 
 enum _Role { user, bot }
 
@@ -281,13 +282,28 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              _kv('Thu nhập', '+${formatVnd(s.income)}', MomaColors.income),
-              _kv('Chi tiêu', '-${formatVnd(s.expense)}', MomaColors.expense),
-              _kv('Tài sản ròng', formatVnd(s.netWorth), MomaColors.ink),
+              _kv(
+                context,
+                'Thu nhập',
+                '+${formatVnd(s.income)}',
+                MomaColors.income,
+              ),
+              _kv(
+                context,
+                'Chi tiêu',
+                '-${formatVnd(s.expense)}',
+                MomaColors.expense,
+              ),
+              _kv(
+                context,
+                'Tài sản ròng',
+                formatVnd(s.netWorth),
+                context.pal.ink,
+              ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Số liệu do hệ thống tính từ sổ cái.',
-                style: TextStyle(color: MomaColors.muted, fontSize: 12),
+                style: TextStyle(color: context.pal.muted, fontSize: 12),
               ),
             ],
           ),
@@ -306,19 +322,20 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
     }
   }
 
-  static Widget _kv(String k, String v, Color c) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      children: [
-        Text(k, style: const TextStyle(color: MomaColors.muted)),
-        const Spacer(),
-        Text(
-          v,
-          style: TextStyle(fontWeight: FontWeight.w800, color: c),
+  static Widget _kv(BuildContext context, String k, String v, Color c) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Text(k, style: TextStyle(color: context.pal.muted)),
+            const Spacer(),
+            Text(
+              v,
+              style: TextStyle(fontWeight: FontWeight.w800, color: c),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   static String _firstName() {
     try {
@@ -341,9 +358,9 @@ class _BotBubble extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 20,
-          backgroundColor: Color(0xFFD7F0E1),
+          backgroundColor: context.pal.tint,
           child: Icon(
             Icons.auto_awesome_rounded,
             color: MomaColors.emerald,
@@ -355,12 +372,12 @@ class _BotBubble extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFE3F5EC),
+              color: context.pal.bubble,
               borderRadius: BorderRadius.circular(20),
             ),
             child: DefaultTextStyle.merge(
-              style: const TextStyle(
-                color: MomaColors.ink,
+              style: TextStyle(
+                color: context.pal.ink,
                 height: 1.4,
                 fontSize: 15,
               ),
@@ -446,7 +463,7 @@ class _Chip extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.pal.surface,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
@@ -506,7 +523,7 @@ class _ProposalCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.pal.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -528,7 +545,7 @@ class _ProposalCard extends StatelessWidget {
                           ),
                           Text(
                             category?.name ?? '',
-                            style: const TextStyle(color: MomaColors.muted),
+                            style: TextStyle(color: context.pal.muted),
                           ),
                         ],
                       ),
@@ -544,14 +561,20 @@ class _ProposalCard extends StatelessWidget {
                   ],
                 ),
                 const Divider(height: 20),
-                _row(Icons.event_outlined, 'Thời gian', whenText),
+                _row(context, Icons.event_outlined, 'Thời gian', whenText),
                 _row(
+                  context,
                   Icons.account_balance_wallet_outlined,
                   'Tài khoản',
                   account?.name ?? '',
                 ),
                 if ('${p['note']}'.isNotEmpty)
-                  _row(Icons.notes_rounded, 'Nội dung', '${p['note']}'),
+                  _row(
+                    context,
+                    Icons.notes_rounded,
+                    'Nội dung',
+                    '${p['note']}',
+                  ),
               ],
             ),
           ),
@@ -586,11 +609,11 @@ class _ProposalCard extends StatelessWidget {
     );
   }
 
-  Widget _row(IconData i, String k, String v) => Padding(
+  Widget _row(BuildContext context, IconData i, String k, String v) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       children: [
-        Icon(i, size: 20, color: MomaColors.muted),
+        Icon(i, size: 20, color: context.pal.muted),
         const SizedBox(width: 8),
         Text(k),
         const Spacer(),
@@ -598,7 +621,7 @@ class _ProposalCard extends StatelessWidget {
           child: Text(
             v,
             textAlign: TextAlign.right,
-            style: const TextStyle(color: MomaColors.muted),
+            style: TextStyle(color: context.pal.muted),
           ),
         ),
       ],
@@ -633,7 +656,7 @@ class _Composer extends StatelessWidget {
               counterText: '',
               hintText: 'Nhập tin nhắn cho Trợ lý AI...',
               filled: true,
-              fillColor: const Color(0xFFF1F4F3),
+              fillColor: context.pal.surfaceAlt,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 12,

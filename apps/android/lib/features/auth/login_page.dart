@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
 import '../../core/ui/brand.dart';
@@ -10,6 +9,7 @@ import '../../core/ui/labeled_field.dart';
 import '../../core/validators.dart';
 import '../../core/widgets.dart';
 import 'auth_service.dart';
+import '../../app/theme/palette.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -50,7 +50,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.pal.surface,
       body: SafeArea(
         child: Form(
           key: _form,
@@ -72,13 +72,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 'Đăng nhập tài khoản',
                 style: text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: MomaColors.ink,
+                  color: context.pal.ink,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Tiếp tục quản lý tài chính của bạn',
-                style: text.bodyMedium?.copyWith(color: MomaColors.muted),
+                style: text.bodyMedium?.copyWith(color: context.pal.muted),
               ),
               const SizedBox(height: 24),
               LabeledField(
@@ -134,7 +134,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
                       'Hoặc',
-                      style: text.bodySmall?.copyWith(color: MomaColors.muted),
+                      style: text.bodySmall?.copyWith(color: context.pal.muted),
                     ),
                   ),
                   const Expanded(child: Divider()),
