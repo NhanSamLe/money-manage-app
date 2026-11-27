@@ -105,7 +105,8 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline_rounded),
-                hintText: 'Email',
+                labelText: 'Email',
+                hintText: 'Nhập email',
               ),
             ),
             if (_sent) ...[
@@ -115,7 +116,8 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.pin_outlined),
-                  hintText: 'Mã xác nhận',
+                  labelText: 'Mã xác nhận',
+                  hintText: 'Nhập mã trong thư',
                 ),
               ),
               const SizedBox(height: 12),
@@ -124,7 +126,8 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.lock_outline_rounded),
-                  hintText: 'Mật khẩu mới (tối thiểu 8 ký tự)',
+                  labelText: 'Mật khẩu mới',
+                  hintText: 'Nhập tối thiểu 8 ký tự',
                 ),
               ),
             ],

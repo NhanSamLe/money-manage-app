@@ -27,10 +27,11 @@ class WelcomePage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.show_chart_rounded,
-                    size: 72,
-                    color: MomaColors.mint,
+                  Image.asset(
+                    'assets/brand/moma_logo.png',
+                    width: 88,
+                    height: 88,
+                    semanticLabel: 'Logo MoMa',
                   ),
                   const SizedBox(height: 12),
                   Text(

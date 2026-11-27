@@ -80,7 +80,8 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.key_rounded),
-                  hintText: 'Mã bí mật triển khai (BOOTSTRAP_SECRET)',
+                  labelText: 'Mã bí mật triển khai',
+                  hintText: 'Nhập mã bí mật',
                 ),
               ),
               const SizedBox(height: 20),
@@ -103,7 +104,8 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.mail_outline_rounded),
-                  hintText: 'Email chủ sở hữu',
+                  labelText: 'Email chủ sở hữu',
+                  hintText: 'Nhập email',
                 ),
               ),
               const SizedBox(height: 12),
@@ -112,7 +114,8 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.pin_outlined),
-                  hintText: 'Mã xác nhận trong thư',
+                  labelText: 'Mã xác nhận',
+                  hintText: 'Nhập mã trong thư',
                 ),
               ),
               const SizedBox(height: 12),
@@ -120,7 +123,8 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 controller: _name,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.person_outline_rounded),
-                  hintText: 'Tên hiển thị',
+                  labelText: 'Tên hiển thị',
+                  hintText: 'Nhập tên của bạn',
                 ),
               ),
               const SizedBox(height: 12),
@@ -129,7 +133,8 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.lock_outline_rounded),
-                  hintText: 'Mật khẩu mới (tối thiểu 8 ký tự)',
+                  labelText: 'Mật khẩu mới',
+                  hintText: 'Nhập tối thiểu 8 ký tự',
                 ),
               ),
               const SizedBox(height: 20),

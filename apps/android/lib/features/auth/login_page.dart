@@ -72,7 +72,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               autofillHints: const [AutofillHints.email],
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline_rounded),
-                hintText: 'Email',
+                labelText: 'Email',
+                hintText: 'Nhập email',
               ),
             ),
             const SizedBox(height: 12),
@@ -83,7 +84,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
-                hintText: 'Mật khẩu',
+                labelText: 'Mật khẩu',
+                hintText: 'Nhập mật khẩu',
                 suffixIcon: IconButton(
                   icon: Icon(
                     _hide
