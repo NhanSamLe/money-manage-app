@@ -252,8 +252,6 @@ class _CsvImportPageState extends ConsumerState<CsvImportPage> {
                   l.row.description.isEmpty
                       ? '(không có diễn giải)'
                       : l.row.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
                   '${dateLabel(l.row.date)} · ${l.categoryName ?? 'Chưa phân loại'}',

@@ -108,9 +108,13 @@ void main() {
       expect(find.text('Cơm trưa'), findsOneWidget);
       expect(find.text('Lương'), findsNothing);
       await tester.enterText(find.byType(TextField), '');
-      await tester.tap(find.text('Thu'));
+      // Filters open as a bottom sheet: pick "Thu nhập" from the "Loại" chip.
+      await tester.tap(find.text('Loại'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thu nhập').last);
       await tester.pumpAndSettle();
       expect(find.text('Cơm trưa'), findsNothing);
+      expect(find.text('Lương'), findsWidgets);
     });
 
     testWidgets(

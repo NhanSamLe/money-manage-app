@@ -34,6 +34,8 @@ class SelectedMonth extends Notifier<String> {
     return '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}';
   }
 
+  void set(String month) => state = month;
+
   void shift(int months) {
     final y = int.parse(state.substring(0, 4));
     final m = int.parse(state.substring(5, 7));

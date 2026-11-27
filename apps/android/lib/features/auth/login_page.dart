@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme/moma_theme.dart';
 import '../../core/providers.dart';
+import '../../core/ui/actions.dart';
 import '../../core/ui/brand.dart';
+import '../../core/ui/labeled_field.dart';
+import '../../core/validators.dart';
 import '../../core/widgets.dart';
 import 'auth_service.dart';
 
@@ -15,12 +18,11 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
+  final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
   bool _hide = true;
-  String? _emailError;
-  String? _passwordError;
 
   @override
   void dispose() {
@@ -31,14 +33,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _submit() async {
     if (_busy) return;
-    // Field validation is shown inline; server/network failures use a dialog.
-    setState(() {
-      _emailError = _email.text.trim().contains('@')
-          ? null
-          : 'Nhập email hợp lệ.';
-      _passwordError = _password.text.isEmpty ? 'Nhập mật khẩu.' : null;
-    });
-    if (_emailError != null || _passwordError != null) return;
+    // Every field validates inline; server/network failures use a dialog.
+    if (!(_form.currentState?.validate() ?? false)) return;
     setState(() => _busy = true);
     try {
       await AuthService(ref.read(apiProvider))
@@ -56,55 +52,58 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                tooltip: 'Quay lại',
-                onPressed: () => context.go('/welcome'),
-                icon: const Icon(Icons.arrow_back_rounded),
+        child: Form(
+          key: _form,
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  tooltip: 'Quay lại',
+                  onPressed: () => context.go('/welcome'),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Center(child: MomaWordmark(size: 56, dark: true)),
-            const SizedBox(height: 32),
-            Text(
-              'Đăng nhập tài khoản',
-              style: text.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: MomaColors.ink,
+              const SizedBox(height: 8),
+              const Center(child: MomaWordmark(size: 56, dark: true)),
+              const SizedBox(height: 32),
+              Text(
+                'Đăng nhập tài khoản',
+                style: text.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: MomaColors.ink,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Tiếp tục quản lý tài chính của bạn',
-              style: text.bodyMedium?.copyWith(color: MomaColors.muted),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.mail_outline_rounded),
-                hintText: 'Email',
-                errorText: _emailError,
+              const SizedBox(height: 4),
+              Text(
+                'Tiếp tục quản lý tài chính của bạn',
+                style: text.bodyMedium?.copyWith(color: MomaColors.muted),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _password,
-              obscureText: _hide,
-              autofillHints: const [AutofillHints.password],
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                hintText: 'Mật khẩu',
-                errorText: _passwordError,
-                suffixIcon: IconButton(
+              const SizedBox(height: 24),
+              LabeledField(
+                label: 'Email',
+                hint: 'Nhập email',
+                controller: _email,
+                icon: Icons.mail_outline_rounded,
+                required: true,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+                validator: V.email,
+              ),
+              const SizedBox(height: 16),
+              LabeledField(
+                label: 'Mật khẩu',
+                hint: 'Nhập mật khẩu',
+                controller: _password,
+                icon: Icons.lock_outline_rounded,
+                required: true,
+                obscure: _hide,
+                autofillHints: const [AutofillHints.password],
+                onSubmitted: (_) => _submit(),
+                validator: V.currentPassword,
+                suffix: IconButton(
                   tooltip: _hide ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                   icon: Icon(
                     _hide
@@ -114,48 +113,40 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   onPressed: () => setState(() => _hide = !_hide),
                 ),
               ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => context.go('/forgot'),
-                child: const Text('Quên mật khẩu?'),
-              ),
-            ),
-            const SizedBox(height: 4),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: _busy
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Đăng nhập'),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'Hoặc',
-                    style: text.bodySmall?.copyWith(color: MomaColors.muted),
-                  ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => context.go('/forgot'),
+                  child: const Text('Quên mật khẩu?'),
                 ),
-                const Expanded(child: Divider()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => context.go('/register'),
-              child: const Text('Tạo tài khoản mới'),
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              ActionButtons(
+                primaryLabel: 'Đăng nhập',
+                onPrimary: _submit,
+                busy: _busy,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'Hoặc',
+                      style: text.bodySmall?.copyWith(color: MomaColors.muted),
+                    ),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton(
+                onPressed: _busy ? null : () => context.go('/register'),
+                child: const Text('Tạo tài khoản mới'),
+              ),
+            ],
+          ),
         ),
       ),
     );

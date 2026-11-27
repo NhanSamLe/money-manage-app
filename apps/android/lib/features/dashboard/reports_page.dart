@@ -9,6 +9,7 @@ import '../../core/money/money.dart';
 import '../../core/providers.dart';
 import '../../core/ui/category_style.dart';
 import '../../core/ui/header.dart';
+import '../../core/sheets.dart';
 import '../../core/widgets.dart';
 
 /// "Báo cáo": month selector, income/expense and where the money went (deterministic server totals).
@@ -45,11 +46,56 @@ class ReportsPage extends ConsumerWidget {
                     icon: const Icon(Icons.chevron_left_rounded),
                     onPressed: () => notifier.shift(-1),
                   ),
-                  Text(
-                    'Tháng ${month.substring(5)}/${month.substring(0, 4)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                  Flexible(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final months = [
+                          for (var i = 0; i < 12; i++)
+                            DateTime(now.year, now.month - i),
+                        ];
+                        String key(DateTime d) =>
+                            '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
+                        final v = await showChoiceSheet<String>(
+                          context,
+                          title: 'Chọn tháng',
+                          selected: month,
+                          options: [
+                            for (final d in months)
+                              ChoiceOption(
+                                value: key(d),
+                                label: 'Tháng ${d.month}/${d.year}',
+                                icon: Icons.calendar_month_outlined,
+                              ),
+                          ],
+                        );
+                        if (v != null) notifier.set(v);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Tháng ${month.substring(5)}/${month.substring(0, 4)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.keyboard_arrow_down_rounded),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(

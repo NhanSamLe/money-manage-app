@@ -32,6 +32,8 @@ class TransactionsPage extends ConsumerStatefulWidget {
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final _search = TextEditingController();
   String _kind = 'ALL';
+  String _period = 'ALL';
+  String _categoryId = '';
   bool _loadingMore = false;
 
   @override
@@ -39,6 +41,116 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     _search.dispose();
     super.dispose();
   }
+
+  bool _periodMatches(MomaTx t) {
+    final d = t.effectiveAt.toLocal();
+    final now = DateTime.now();
+    return switch (_period) {
+      'MONTH' => d.year == now.year && d.month == now.month,
+      'LAST_MONTH' =>
+        d.year == DateTime(now.year, now.month - 1).year &&
+            d.month == DateTime(now.year, now.month - 1).month,
+      '7D' => now.difference(d).inDays < 7 && !d.isAfter(now),
+      _ => true,
+    };
+  }
+
+  static const _kindLabels = {
+    'ALL': 'Tất cả',
+    'EXPENSE': 'Chi tiêu',
+    'INCOME': 'Thu nhập',
+    'TRANSFER': 'Chuyển khoản',
+  };
+  static const _periodLabels = {
+    'ALL': 'Mọi thời gian',
+    'MONTH': 'Tháng này',
+    'LAST_MONTH': 'Tháng trước',
+    '7D': '7 ngày qua',
+  };
+
+  Future<void> _pickKind() async {
+    final v = await showChoiceSheet<String>(
+      context,
+      title: 'Loại giao dịch',
+      selected: _kind,
+      options: const [
+        ChoiceOption(value: 'ALL', label: 'Tất cả', icon: Icons.apps_rounded),
+        ChoiceOption(
+          value: 'EXPENSE',
+          label: 'Chi tiêu',
+          icon: Icons.north_east_rounded,
+        ),
+        ChoiceOption(
+          value: 'INCOME',
+          label: 'Thu nhập',
+          icon: Icons.south_west_rounded,
+        ),
+        ChoiceOption(
+          value: 'TRANSFER',
+          label: 'Chuyển khoản',
+          icon: Icons.swap_horiz_rounded,
+        ),
+      ],
+    );
+    if (v != null) setState(() => _kind = v);
+  }
+
+  Future<void> _pickPeriod() async {
+    final v = await showChoiceSheet<String>(
+      context,
+      title: 'Thời gian',
+      selected: _period,
+      options: const [
+        ChoiceOption(
+          value: 'ALL',
+          label: 'Mọi thời gian',
+          icon: Icons.all_inclusive_rounded,
+        ),
+        ChoiceOption(
+          value: 'MONTH',
+          label: 'Tháng này',
+          icon: Icons.calendar_month_outlined,
+        ),
+        ChoiceOption(
+          value: 'LAST_MONTH',
+          label: 'Tháng trước',
+          icon: Icons.history_rounded,
+        ),
+        ChoiceOption(
+          value: '7D',
+          label: '7 ngày qua',
+          icon: Icons.date_range_outlined,
+        ),
+      ],
+      footnote: 'Lọc trong các giao dịch đã tải. Kéo xuống để tải thêm.',
+    );
+    if (v != null) setState(() => _period = v);
+  }
+
+  Future<void> _pickCategory(List<Category> cats) async {
+    final v = await showChoiceSheet<String>(
+      context,
+      title: 'Danh mục',
+      selected: _categoryId,
+      options: [
+        const ChoiceOption(
+          value: '',
+          label: 'Tất cả danh mục',
+          icon: Icons.apps_rounded,
+        ),
+        for (final c in cats)
+          ChoiceOption(
+            value: c.id,
+            label: c.name,
+            leading: CategoryAvatar(iconKey: c.icon, size: 32),
+          ),
+      ],
+    );
+    if (v != null) setState(() => _categoryId = v);
+  }
+
+  bool get _filtering =>
+      _kind != 'ALL' || _period != 'ALL' || _categoryId.isNotEmpty;
 
   bool _kindMatches(MomaTx t) => switch (_kind) {
     'EXPENSE' => t.isExpense,
@@ -88,6 +200,8 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                 .where(
                   (t) =>
                       _kindMatches(t) &&
+                      _periodMatches(t) &&
+                      (_categoryId.isEmpty || t.categoryId == _categoryId) &&
                       matchesQuery(
                         t,
                         categories[t.categoryId]?.name,
@@ -128,33 +242,48 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            for (final e in const {
-                              'ALL': 'Tất cả',
-                              'EXPENSE': 'Chi',
-                              'INCOME': 'Thu',
-                              'TRANSFER': 'Chuyển',
-                            }.entries)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ChoiceChip(
-                                  avatar: _kind == e.key
-                                      ? const Icon(
-                                          Icons.check_rounded,
-                                          size: 18,
-                                        )
-                                      : null,
-                                  showCheckmark: false,
-                                  label: Text(e.value),
-                                  selected: _kind == e.key,
-                                  selectedColor: const Color(0xFFD7F0E1),
-                                  side: const BorderSide(
-                                    color: Color(0xFFDDE6E2),
-                                  ),
-                                  shape: const StadiumBorder(),
-                                  onSelected: (_) =>
-                                      setState(() => _kind = e.key),
-                                ),
+                            _FilterChip(
+                              icon: Icons.check_rounded,
+                              label: 'Tất cả',
+                              active: !_filtering,
+                              onTap: () => setState(() {
+                                _kind = 'ALL';
+                                _period = 'ALL';
+                                _categoryId = '';
+                              }),
+                            ),
+                            _FilterChip(
+                              icon: Icons.swap_vert_rounded,
+                              label: _kind == 'ALL'
+                                  ? 'Loại'
+                                  : _kindLabels[_kind]!,
+                              active: _kind != 'ALL',
+                              dropdown: true,
+                              onTap: _pickKind,
+                            ),
+                            _FilterChip(
+                              icon: Icons.calendar_month_outlined,
+                              label: _period == 'ALL'
+                                  ? 'Thời gian'
+                                  : _periodLabels[_period]!,
+                              active: _period != 'ALL',
+                              dropdown: true,
+                              onTap: _pickPeriod,
+                            ),
+                            _FilterChip(
+                              icon: Icons.sell_outlined,
+                              label: _categoryId.isEmpty
+                                  ? 'Danh mục'
+                                  : (categories[_categoryId]?.name ??
+                                        'Danh mục'),
+                              active: _categoryId.isNotEmpty,
+                              dropdown: true,
+                              onTap: () => _pickCategory(
+                                categories.values
+                                    .where((c) => c.parentId == null)
+                                    .toList(),
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -224,6 +353,69 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       ),
     );
   }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.dropdown = false,
+  });
+  final IconData icon;
+  final String label;
+  final bool active;
+  final bool dropdown;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 6),
+    child: Material(
+      color: active ? const Color(0xFFD7F0E1) : Colors.white,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: active ? MomaColors.emerald : const Color(0xFFDDE6E2),
+        ),
+      ),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          constraints: const BoxConstraints(minHeight: 44),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: active ? MomaColors.emerald : MomaColors.muted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: active ? MomaColors.forest : MomaColors.ink,
+                ),
+              ),
+              if (dropdown) ...[
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                  color: active ? MomaColors.emerald : MomaColors.muted,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _DayGroup {
@@ -444,8 +636,6 @@ class TxTile extends StatelessWidget {
                 children: [
                   Text(
                     _title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
@@ -454,8 +644,6 @@ class TxTile extends StatelessWidget {
                   ),
                   Text(
                     parts.join(' • '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: MomaColors.muted,
                       fontSize: 13,

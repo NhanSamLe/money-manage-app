@@ -8,6 +8,7 @@ import '../../core/sheets.dart';
 import '../../core/money/money.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
+import '../../core/ui/category_style.dart';
 import '../../core/widgets.dart';
 
 class AccountsPage extends ConsumerWidget {
@@ -29,52 +30,162 @@ class AccountsPage extends ConsumerWidget {
             error: e,
             onRetry: () => ref.invalidate(accountsProvider),
           ),
-          data: (list) => ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            children: [
-              if (list.isEmpty)
-                const EmptyState(
-                  icon: Icons.account_balance_wallet_rounded,
-                  title: 'Chưa có tài khoản',
-                  hint: 'Thêm ngân hàng, ví hoặc tiền mặt để bắt đầu.',
-                ),
-              for (final a in list)
-                Card(
-                  child: ListTile(
-                    onTap: () => showFormSheet<void>(
-                      context,
-                      (_) => _EditAccountSheet(account: a),
+          data: (list) {
+            final known = list.where((a) => !a.isCard && a.balance != null);
+            final total = known.fold<int>(0, (s, a) => s + a.balance!);
+            final unknown = list.where((a) => a.balance == null).length;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [MomaColors.forest, MomaColors.emerald],
                     ),
-                    leading: CircleAvatar(
-                      backgroundColor: MomaColors.mint.withValues(alpha: 0.4),
-                      child: Icon(
-                        accountIcon(a.kind),
-                        color: MomaColors.forest,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Tổng số dư',
+                        style: TextStyle(
+                          color: MomaColors.mint,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    title: Text(
-                      a.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      '${a.institution}${a.last4 == null ? '' : ' · •• ${a.last4}'}',
-                    ),
-                    trailing: Text(
-                      a.balance == null
-                          ? 'Chưa biết'
-                          : formatVnd(a.isCard ? -a.balance! : a.balance!),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatVnd(total),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      if (unknown > 0) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Chưa gồm $unknown tài khoản chưa biết số dư đầu kỳ.',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => _addAccount(context, ref),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Thêm tài khoản'),
-              ),
-            ],
-          ),
+                const SizedBox(height: 16),
+                if (list.isEmpty)
+                  const SizedBox(
+                    height: 220,
+                    child: EmptyState(
+                      icon: Icons.account_balance_wallet_rounded,
+                      title: 'Chưa có tài khoản',
+                      hint: 'Thêm ngân hàng, ví hoặc tiền mặt để bắt đầu.',
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      children: [
+                        for (final (i, a) in list.indexed) ...[
+                          InkWell(
+                            onTap: () => showFormSheet<void>(
+                              context,
+                              (_) => _EditAccountSheet(account: a),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CategoryAvatar(
+                                    iconData: accountIcon(a.kind),
+                                    color: MomaColors.emerald,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          a.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${accountKindLabel(a.kind)} · ${a.institution}${a.last4 == null ? '' : ' · •• ${a.last4}'}',
+                                          style: const TextStyle(
+                                            color: MomaColors.muted,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        a.balance == null
+                                            ? 'Chưa biết'
+                                            : formatVnd(
+                                                a.isCard
+                                                    ? -a.balance!
+                                                    : a.balance!,
+                                              ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      if (a.isCard)
+                                        const Text(
+                                          'Dư nợ',
+                                          style: TextStyle(
+                                            color: MomaColors.muted,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (i < list.length - 1)
+                            const Divider(height: 1, color: Color(0xFFEEF2F0)),
+                        ],
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => _addAccount(context, ref),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Thêm tài khoản'),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

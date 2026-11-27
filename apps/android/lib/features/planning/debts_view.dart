@@ -270,7 +270,7 @@ class _DebtActionSheetState extends ConsumerState<_DebtActionSheet> {
             onChanged: (v) => setState(() => _accountId = v),
           ),
           const SizedBox(height: 12),
-          MoneyField(controller: _interest, hint: 'Lãi (nếu có)'),
+          MoneyField(controller: _interest, hint: 'Lãi', optional: true),
         ],
         FormError(_run.error),
         const SizedBox(height: 16),

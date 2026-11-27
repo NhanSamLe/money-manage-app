@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../app/theme/moma_theme.dart';
 import 'budgets_view.dart';
 import 'debts_view.dart';
 import 'goals_view.dart';
@@ -17,15 +18,33 @@ class PlanningPage extends StatelessWidget {
       initialIndex: initialTab,
       child: Column(
         children: [
-          const TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              Tab(text: 'Công nợ'),
-              Tab(text: 'Tiết kiệm'),
-              Tab(text: 'Ngân sách'),
-              Tab(text: 'Định kỳ'),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              dividerColor: Colors.transparent,
+              labelColor: MomaColors.forest,
+              unselectedLabelColor: MomaColors.muted,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w800),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: const Color(0xFFD7F0E1),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: MomaColors.mint),
+              ),
+              splashBorderRadius: BorderRadius.circular(22),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 18),
+              tabs: const [
+                Tab(height: 44, text: 'Công nợ'),
+                Tab(height: 44, text: 'Tiết kiệm'),
+                Tab(height: 44, text: 'Ngân sách'),
+                Tab(height: 44, text: 'Định kỳ'),
+              ],
+            ),
           ),
           const Expanded(
             child: TabBarView(

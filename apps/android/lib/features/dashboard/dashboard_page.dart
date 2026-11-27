@@ -377,8 +377,6 @@ class _SectionTitle extends StatelessWidget {
       Expanded(
         child: Text(
           title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
       ),
@@ -417,8 +415,6 @@ class _AccountRow extends StatelessWidget {
             children: [
               Text(
                 account.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
@@ -426,8 +422,6 @@ class _AccountRow extends StatelessWidget {
               ),
               Text(
                 account.institution,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: MomaColors.muted, fontSize: 13),
               ),
             ],

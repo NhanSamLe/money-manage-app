@@ -86,24 +86,76 @@ void showSnack(BuildContext context, String message) {
 }
 
 /// Server / network / unexpected failures are shown as a modal dialog the user must acknowledge.
-/// Inline text is reserved for field validation (see AGENTS.md UX rule).
+/// Inline text is reserved for field validation (see docs/decision-log.md D-011).
 Future<void> showErrorDialog(
   BuildContext context,
   String message, {
-  String title = 'Không thực hiện được',
+  String title = 'Thông báo',
 }) {
   return showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      icon: const Icon(Icons.error_outline_rounded, color: MomaColors.expense),
-      title: Text(title),
-      content: Text(message),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('Đóng'),
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 92,
+              height: 92,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: MomaColors.expense.withValues(alpha: 0.08),
+              ),
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: MomaColors.expense,
+                ),
+                child: const Icon(
+                  Icons.priority_high_rounded,
+                  color: Colors.white,
+                  size: 34,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                color: MomaColors.ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.45,
+                color: MomaColors.ink,
+              ),
+            ),
+            const SizedBox(height: 22),
+            const Divider(height: 1, color: Color(0xFFEEF2F0)),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Đã hiểu'),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
 }
