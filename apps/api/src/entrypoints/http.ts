@@ -94,7 +94,9 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const d = getDeps(c.env);
     const secret = c.req.header("x-bootstrap-secret") ?? "";
     if (!timingSafeEqual(secret, d.cfg.bootstrapSecret)) throw new DomainError("UNAUTHENTICATED");
-    const lease = crypto.randomUUID();
+    // The caller already proved the deployment secret, so retries must not be locked out by their own earlier lease:
+    // the lease id is derived from the secret (same holder re-enters; the 15 min expiry still bounds stale state).
+    const lease = await leaseIdFor(d.cfg.bootstrapSecret);
     await rpcSetup(d, "pf_setup_reserve", { p_lease: lease, p_expires: new Date(Date.now() + 15 * 60_000).toISOString() });
     const res = await fetch(`${d.cfg.supabaseUrl}/auth/v1/invite`, {
       method: "POST",
@@ -179,6 +181,14 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   });
 
   return app;
+}
+
+async function leaseIdFor(secret: string): Promise<string> {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`moma-setup-lease:${secret}`)));
+  h[6] = (h[6]! & 0x0f) | 0x50; // version 5-style
+  h[8] = (h[8]! & 0x3f) | 0x80;
+  const x = [...h.slice(0, 16)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`;
 }
 
 async function rpcSetup(d: Deps, name: string, args: Record<string, unknown>): Promise<unknown> {
