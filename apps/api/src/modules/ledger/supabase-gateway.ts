@@ -35,6 +35,15 @@ export class SupabaseFinanceGateway implements FinanceGateway {
       p_command: command,
     });
   }
+  aiReserve(ownerId: string, estimateMicro: number, capMicro: number) {
+    return this.rpc<{ period: string }>("pf_ai_reserve", { p_owner: ownerId, p_estimate: estimateMicro, p_cap: capMicro });
+  }
+  aiSettle(ownerId: string, period: string, estimateMicro: number, actualMicro: number) {
+    return this.rpc("pf_ai_settle", { p_owner: ownerId, p_period: period, p_estimate: estimateMicro, p_actual: actualMicro });
+  }
+  aiUsage(ownerId: string) {
+    return this.rpc<{ period: string; spent_micro: number; reserved_micro: number; calls: number }>("pf_ai_usage_read", { p_owner: ownerId });
+  }
   readAccounts(ownerId: string) {
     return this.rpc("pf_read_accounts", { p_owner: ownerId });
   }

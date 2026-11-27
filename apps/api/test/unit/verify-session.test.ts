@@ -7,7 +7,6 @@ const base: Config = {
   supabaseUrl: "https://x.supabase.co",
   publishableKey: "pk",
   serviceRoleKey: "sk",
-  bootstrapSecret: "b".repeat(32),
   ownerEmail: "o@example.test",
   dbTimeoutMs: 1000,
 };

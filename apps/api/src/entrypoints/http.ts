@@ -5,6 +5,7 @@ import { SessionVerifier, type Session } from "../modules/auth/verify-session";
 import { IMPLEMENTED_TYPES, KNOWN_TYPES, implementedCommand } from "../modules/ledger/command-schemas";
 import type { CommandContext, FinanceGateway } from "../modules/ledger/ports";
 import { SupabaseFinanceGateway } from "../modules/ledger/supabase-gateway";
+import { MAX_INPUT_CHARS, MONTHLY_CAP_MICRO, actualMicro, buildMessages, buildRequestBody, deepseekProvider, estimateMicro, parseModelJson, resolveOutput, type AccountRef, type CategoryRef, type ProviderCall } from "../modules/ai/assistant";
 import { canonicalJson, sha256Hex } from "../shared/canonical";
 import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
@@ -19,13 +20,15 @@ interface Deps {
   cfg: Config;
   gw: FinanceGateway;
   verifier: SessionVerifier;
+  /** Undefined => AI is OFF (rules + manual only). */
+  ai?: ProviderCall;
 }
 type Vars = { Variables: { rid: string; session: Session; owner: string; deviceId: string } };
 
 // Composition root: concrete adapters are wired here only.
 function compose(env: Env): Deps {
   const cfg = loadConfig(env);
-  return { cfg, gw: new SupabaseFinanceGateway(cfg), verifier: new SessionVerifier(cfg) };
+  return { cfg, gw: new SupabaseFinanceGateway(cfg), verifier: new SessionVerifier(cfg), ...(cfg.deepseekKey ? { ai: deepseekProvider(cfg.deepseekKey) } : {}) };
 }
 
 function ok(c: Context<Vars>, data: unknown, extra: Record<string, unknown> = {}) {
@@ -35,7 +38,7 @@ function ok(c: Context<Vars>, data: unknown, extra: Record<string, unknown> = {}
 function fail(c: Context<Vars>, code: string) {
   const spec = specFor(code);
   // Unknown internal errors never leak details: generic code + correlation id only.
-  const publicCode = spec.status === 503 && code !== "DB_ERROR" ? "TEMPORARY_FAILURE" : code;
+  const publicCode = spec.status === 503 && code !== "DB_ERROR" && !code.startsWith("AI_") ? "TEMPORARY_FAILURE" : code;
   return c.json(
     { error: { code: publicCode, message: spec.message, retryable: spec.retryable, request_id: c.get("rid") } },
     spec.status,
@@ -92,11 +95,11 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   // One-time deployment secret + fixed owner email -> Supabase invite. No public signup.
   app.post("/v1/setup/start", async (c) => {
     const d = getDeps(c.env);
-    const secret = c.req.header("x-bootstrap-secret") ?? "";
-    if (!timingSafeEqual(secret, d.cfg.bootstrapSecret)) throw new DomainError("UNAUTHENTICATED");
-    // The caller already proved the deployment secret, so retries must not be locked out by their own earlier lease:
-    // the lease id is derived from the secret (same holder re-enters; the 15 min expiry still bounds stale state).
-    const lease = await leaseIdFor(d.cfg.bootstrapSecret);
+    // Sign-up is open only to the configured owner email; control of that mailbox (emailed code) proves identity.
+    const { email } = z.object({ email: z.string().email().max(254) }).parse(await c.req.json().catch(() => ({})));
+    if (email.trim().toLowerCase() !== d.cfg.ownerEmail) throw new DomainError("EMAIL_NOT_ALLOWED");
+    // Retries by the owner must not be locked out by their own earlier lease: the lease id is derived from the owner email (same holder re-enters; the 15 min expiry still bounds stale state).
+    const lease = await leaseIdFor(d.cfg.ownerEmail);
     await rpcSetup(d, "pf_setup_reserve", { p_lease: lease, p_expires: new Date(Date.now() + 15 * 60_000).toISOString() });
     const invite = () =>
       fetch(`${d.cfg.supabaseUrl}/auth/v1/invite`, {
@@ -181,6 +184,38 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     ok(c as unknown as Context<Vars>, await getDeps(c.env).gw.readRecurring(c.get("owner"), currentVnDate(new Date()))),
   );
 
+  // ------------------------------------------------------------ AI assistant (proposal only; never writes)
+  app.get("/v1/ai/status", auth, async (c) => {
+    const d = getDeps(c.env);
+    const u = await d.gw.aiUsage(c.get("owner")).catch(() => null);
+    return ok(c as unknown as Context<Vars>, { enabled: Boolean(d.ai), provider: "deepseek", model: "deepseek-flash", cap_micro: MONTHLY_CAP_MICRO, usage: u });
+  });
+
+  app.post("/v1/ai/chat", auth, async (c) => {
+    const d = getDeps(c.env);
+    if (!d.ai) throw new DomainError("AI_DISABLED");
+    needDevice(c);
+    const { text } = z.object({ text: z.string().trim().min(1).max(MAX_INPUT_CHARS) }).parse(await c.req.json().catch(() => ({})));
+    const owner = c.get("owner");
+    const now = new Date();
+    const today = currentVnDate(now);
+    const accounts = ((await d.gw.readAccounts(owner)) as (AccountRef & { archived?: boolean })[]).filter((a) => !a.archived);
+    const categories = (await d.gw.readCategories(owner)) as CategoryRef[];
+    const { messages, bytes } = buildMessages(text, today, accounts, categories);
+    const est = estimateMicro(bytes);
+    // Reserve the worst case first (fails closed at the monthly cap); a provider failure keeps the reservation (spec 05 s5).
+    const { period } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO);
+    const out = await d.ai(buildRequestBody(messages));
+    await d.gw.aiSettle(owner, period, est, actualMicro(out.usage));
+    const result = resolveOutput(parseModelJson(out.content), { today, nowIso: now.toISOString(), accounts, categories });
+    if (result.type === "query_summary") {
+      const { from, to } = monthRangeUtc(result.month);
+      const summary = await d.gw.readDashboard(owner, from, to);
+      return ok(c as unknown as Context<Vars>, { ...result, summary }, { as_of: now.toISOString() });
+    }
+    return ok(c as unknown as Context<Vars>, result);
+  });
+
   app.post("/v1/commands", auth, async (c) => {
     const d = getDeps(c.env);
     const deviceId = needDevice(c);
@@ -216,8 +251,8 @@ async function findUnconfirmedOwner(d: Deps): Promise<string | undefined> {
   return u && !u.email_confirmed_at && !u.confirmed_at ? u.id : undefined;
 }
 
-async function leaseIdFor(secret: string): Promise<string> {
-  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`moma-setup-lease:${secret}`)));
+async function leaseIdFor(seed: string): Promise<string> {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`moma-setup-lease:${seed}`)));
   h[6] = (h[6]! & 0x0f) | 0x50; // version 5-style
   h[8] = (h[8]! & 0x3f) | 0x80;
   const x = [...h.slice(0, 16)].map((b) => b.toString(16).padStart(2, "0")).join("");

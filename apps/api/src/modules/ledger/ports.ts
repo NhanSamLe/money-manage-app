@@ -19,6 +19,9 @@ export interface FinanceGateway {
   /** Generates due occurrences (idempotent) and returns templates with their expected occurrences. */
   readRecurring(ownerId: string, todayLocal: string): Promise<unknown>;
   registerDevice(ownerId: string, sessionId: string, deviceId: string, label: string): Promise<unknown>;
+  aiReserve(ownerId: string, estimateMicro: number, capMicro: number): Promise<{ period: string }>;
+  aiSettle(ownerId: string, period: string, estimateMicro: number, actualMicro: number): Promise<unknown>;
+  aiUsage(ownerId: string): Promise<{ period: string; spent_micro: number; reserved_micro: number; calls: number }>;
   getOwnerId(): Promise<string | null>;
   getSetupState(): Promise<string>;
 }

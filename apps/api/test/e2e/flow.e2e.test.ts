@@ -5,7 +5,6 @@ import { SessionVerifier } from "../../src/modules/auth/verify-session";
 import { SupabaseFinanceGateway } from "../../src/modules/ledger/supabase-gateway";
 import { startHarness, type Harness } from "./harness";
 
-const BOOTSTRAP = "b".repeat(40);
 const DEVICE = "44444444-4444-4444-4444-444444444444";
 const SESSION = "33333333-3333-3333-3333-333333333333";
 
@@ -34,7 +33,6 @@ beforeAll(async () => {
     supabaseUrl: h.baseUrl,
     publishableKey: "pk",
     serviceRoleKey: "sb_secret_e2e",
-    bootstrapSecret: BOOTSTRAP,
     ownerEmail: "owner@example.test",
     dbTimeoutMs: 10_000,
   };
@@ -52,12 +50,12 @@ describe("setup and auth", () => {
     expect(r.json.data.setup_state).toBe("UNINITIALIZED");
   });
 
-  it("refuses setup/start without the deployment secret", async () => {
-    expect((await call("POST", "/v1/setup/start", { auth: false, headers: { "x-bootstrap-secret": "wrong" }, body: {} })).status).toBe(401);
+  it("refuses setup/start for an email that is not the owner email", async () => {
+    expect((await call("POST", "/v1/setup/start", { auth: false, body: { email: "stranger@example.test" } })).status).toBe(403);
   });
 
   it("runs the owner bootstrap: invite -> claim -> device", async () => {
-    const start = await call("POST", "/v1/setup/start", { auth: false, headers: { "x-bootstrap-secret": BOOTSTRAP }, body: {} });
+    const start = await call("POST", "/v1/setup/start", { auth: false, body: { email: "Owner@Example.test" } });
     expect(start.status).toBe(200);
     const row = await h.db.query("select id from auth.users where email = 'owner@example.test'");
     owner = row.rows[0].id;
@@ -75,7 +73,7 @@ describe("setup and auth", () => {
 
   it("locks setup once bound and rejects other users", async () => {
     expect((await call("GET", "/v1/auth/config", { auth: false })).json.data.setup_state).toBe("BOUND");
-    expect((await call("POST", "/v1/setup/start", { auth: false, headers: { "x-bootstrap-secret": BOOTSTRAP }, body: {} })).status).toBe(409);
+    expect((await call("POST", "/v1/setup/start", { auth: false, body: { email: "Owner@Example.test" } })).status).toBe(409);
     const intruder = await h.db.query("insert into auth.users(email, email_confirmed_at) values ('x@example.test', now()) returning id");
     const intruderJwt = await h.mintUserJwt(intruder.rows[0].id, SESSION);
     const r = await app.request("/v1/accounts", { headers: { authorization: `Bearer ${intruderJwt}`, "x-device-id": DEVICE } }, env);

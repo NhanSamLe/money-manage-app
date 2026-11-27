@@ -14,6 +14,7 @@ const TABLE: Record<string, ErrorSpec> = {
   OWNER_NOT_BOUND: { status: 403, retryable: false, message: "Ứng dụng chưa được thiết lập." },
   DEVICE_REVOKED: { status: 403, retryable: false, message: "Thiết bị đã bị thu hồi." },
   IDENTITY_CONFLICT: { status: 403, retryable: false, message: "Danh tính không khớp." },
+  EMAIL_NOT_ALLOWED: { status: 403, retryable: false, message: "Email này không được phép tạo tài khoản." },
   SETUP_ALREADY_BOUND: { status: 409, retryable: false, message: "Ứng dụng đã có chủ sở hữu." },
   SETUP_LEASE_HELD: { status: 409, retryable: true, message: "Đang có phiên thiết lập khác." },
   SETUP_LEASE_INVALID: { status: 409, retryable: false, message: "Phiên thiết lập hết hạn." },
@@ -25,6 +26,9 @@ const TABLE: Record<string, ErrorSpec> = {
   BASELINE_UNKNOWN: { status: 422, retryable: false, message: "Tài khoản chưa biết số dư đầu kỳ." },
   INVALID_STATE: { status: 422, retryable: false, message: "Trạng thái không cho phép thao tác." },
   NOT_IMPLEMENTED: { status: 422, retryable: false, message: "Tính năng chưa được bật." },
+  AI_DISABLED: { status: 422, retryable: false, message: "Trợ lý AI chưa được bật." },
+  AI_BUDGET_EXCEEDED: { status: 429, retryable: false, message: "Đã dùng hết hạn mức AI của tháng này." },
+  AI_UNAVAILABLE: { status: 503, retryable: true, message: "Trợ lý AI tạm thời không phản hồi." },
   UNBALANCED_JOURNAL: { status: 422, retryable: false, message: "Bút toán không cân." },
 };
 const GENERIC: ErrorSpec = { status: 503, retryable: true, message: "Hệ thống tạm thời gián đoạn." };

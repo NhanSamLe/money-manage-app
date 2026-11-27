@@ -2,7 +2,10 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  BOOTSTRAP_SECRET: string;
+  /** Deprecated (ADR D-012): sign-up is gated by OWNER_EMAIL + emailed code; kept only so old deployments still load. */
+  BOOTSTRAP_SECRET?: string;
+  /** Optional: DeepSeek API key for the AI assistant. Absent => AI is OFF (rules + manual only). */
+  DEEPSEEK_API_KEY?: string;
   OWNER_EMAIL: string;
   /** Optional: only for legacy Supabase projects that still sign tokens with a shared HS256 secret. */
   SUPABASE_JWT_SECRET?: string;
@@ -12,7 +15,8 @@ export interface Config {
   supabaseUrl: string;
   publishableKey: string;
   serviceRoleKey: string;
-  bootstrapSecret: string;
+  bootstrapSecret?: string;
+  deepseekKey?: string;
   ownerEmail: string;
   jwtSecret?: string;
   dbTimeoutMs: number;
@@ -26,7 +30,6 @@ export function serviceHeaders(cfg: Pick<Config, "serviceRoleKey">): Record<stri
 }
 
 const DB_TIMEOUT_MS = 5_000;
-const MIN_BOOTSTRAP_SECRET_LEN = 32;
 
 // Fail closed: any missing or placeholder secret aborts the request.
 export function loadConfig(env: Env): Config {
@@ -35,14 +38,12 @@ export function loadConfig(env: Env): Config {
     if (!v || v.startsWith("REPLACE") || v.includes("PROJECT_REF")) throw new Error(`CONFIG_MISSING:${k}`);
     return v;
   };
-  const bootstrapSecret = need("BOOTSTRAP_SECRET");
-  if (bootstrapSecret.length < MIN_BOOTSTRAP_SECRET_LEN) throw new Error("CONFIG_WEAK:BOOTSTRAP_SECRET");
   return {
     supabaseUrl: need("SUPABASE_URL").replace(/\/$/, ""),
     publishableKey: need("SUPABASE_PUBLISHABLE_KEY"),
     serviceRoleKey: need("SUPABASE_SERVICE_ROLE_KEY"),
-    bootstrapSecret,
     ownerEmail: need("OWNER_EMAIL").toLowerCase(),
+    ...(env.DEEPSEEK_API_KEY ? { deepseekKey: env.DEEPSEEK_API_KEY } : {}),
     ...(env.SUPABASE_JWT_SECRET ? { jwtSecret: env.SUPABASE_JWT_SECRET } : {}),
     dbTimeoutMs: DB_TIMEOUT_MS,
   };
