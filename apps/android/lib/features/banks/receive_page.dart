@@ -1,11 +1,8 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
-import '../../app/theme/moma_theme.dart';
 import '../../app/theme/palette.dart';
 import '../../core/money/money.dart';
 import '../../core/money/money_input.dart';
@@ -17,6 +14,7 @@ import '../../core/ui/labeled_field.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import 'bank_connect_page.dart';
+import 'qr_share.dart';
 
 /// "Nhận tiền": a VietQR for one of the owner's real, linked bank accounts. Any banking app can scan it and the
 /// transfer arrives in MoMa automatically through the bank connection.
@@ -31,6 +29,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
   final _note = TextEditingController();
   String? _externalId;
   String? _payload;
+  final _qrKey = GlobalKey();
   Map<String, dynamic>? _info;
   bool _busy = false;
 
@@ -148,73 +147,46 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                 ),
                 if (_payload != null) ...[
                   const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: pal.surface,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: QrImageView(
-                            data: _payload!,
-                            size: 240,
-                            backgroundColor: Colors.white,
-                            errorCorrectionLevel: QrErrorCorrectLevel.M,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          '${_info?['bank']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          '${_info?['holder']}',
-                          style: TextStyle(color: pal.muted, fontSize: 13.5),
-                        ),
-                        Text(
-                          '${_info?['number_masked']}',
-                          style: TextStyle(color: pal.muted, fontSize: 13.5),
-                        ),
-                        if ((parseVndInput(_amount.text) ?? 0) > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              formatVnd(parseVndInput(_amount.text)!),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 20,
-                                color: MomaColors.income,
-                              ),
+                  Builder(
+                    builder: (context) {
+                      final acc =
+                          vietQrAccountNumber(_payload!) ??
+                          '${_info?['number_masked']}';
+                      final amount = parseVndInput(_amount.text);
+                      final share =
+                          '${_info?['bank']} - $acc - ${_info?['holder']}';
+                      return Column(
+                        children: [
+                          ReceiveQrCard(
+                            boundaryKey: _qrKey,
+                            payload: _payload!,
+                            bank: '${_info?['bank']}',
+                            holder: '${_info?['holder']}',
+                            accountNumber: acc,
+                            amount: amount,
+                            note: _note.text,
+                            onTapQr: () => showQrActions(
+                              context,
+                              boundaryKey: _qrKey,
+                              accountNumber: acc,
+                              payload: _payload!,
+                              shareText: share,
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        TextButton.icon(
-                          onPressed: () async {
-                            await Clipboard.setData(
-                              ClipboardData(text: _payload!),
-                            );
-                            if (context.mounted) {
-                              showSnack(context, 'Đã sao chép nội dung mã QR');
-                            }
-                          },
-                          icon: const Icon(
-                            Symbols.content_copy_rounded,
-                            size: 18,
+                          const SizedBox(height: 12),
+                          QrActionRow(
+                            onCopyAccount: () => copyText(
+                              context,
+                              acc,
+                              'Đã sao chép số tài khoản',
+                            ),
+                            onSave: () => saveQrImage(context, _qrKey),
+                            onShare: () =>
+                                shareQrImage(context, _qrKey, text: share),
                           ),
-                          label: const Text('Sao chép nội dung mã'),
-                        ),
-                      ],
-                    ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 10),
                   Text(
