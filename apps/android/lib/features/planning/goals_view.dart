@@ -54,14 +54,11 @@ class GoalsView extends ConsumerWidget {
                 ),
               ),
               if (data.goals.isEmpty)
-                const SizedBox(
-                  height: 220,
-                  child: EmptyState(
+                const EmptyState(embedded: true, 
                     icon: Symbols.savings_rounded,
                     title: 'Chưa có mục tiêu',
                     hint: 'Tạo mục tiêu tiết kiệm đầu tiên của bạn.',
                   ),
-                ),
               for (final g in data.goals) _GoalCard(goal: g, data: data),
               const SizedBox(height: 8),
               OutlinedButton.icon(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -612,9 +613,35 @@ class _AgentTurn extends StatelessWidget {
                   color: pal.bubble,
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: Text(
-                  turn.reply,
-                  style: TextStyle(fontSize: 14.5, height: 1.4, color: pal.ink),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        turn.reply,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          height: 1.4,
+                          color: pal.ink,
+                        ),
+                      ),
+                    ),
+                    InkResponse(
+                      radius: 18,
+                      onTap: () async {
+                        await Clipboard.setData(ClipboardData(text: turn.reply));
+                        if (context.mounted) showSnack(context, 'Đã sao chép');
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8, top: 2),
+                        child: Icon(
+                          Symbols.content_copy_rounded,
+                          size: 16,
+                          color: pal.muted,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router/router.dart';
 import 'app/theme/moma_theme.dart';
 import 'app/theme/theme_mode.dart';
+import 'core/push.dart';
 import 'core/storage/local_store.dart';
 import 'core/config/app_config.dart';
 import 'core/storage/secure_session_storage.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
     publishableKey: AppConfig.supabasePublishableKey,
     authOptions: FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
   );
+  Push.start();
   initialThemeMode = themeModeFromString(await LocalStore().themeMode());
   runApp(ProviderScope(retry: (_, _) => null, child: const MomaApp()));
 }
@@ -30,6 +32,9 @@ class MomaApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: buildMomaTheme(),
       routerConfig: ref.watch(routerProvider),
+      // Long-press any text anywhere in the app to select and copy it.
+      builder: (context, child) =>
+          SelectionArea(child: child ?? const SizedBox.shrink()),
     );
   }
 }

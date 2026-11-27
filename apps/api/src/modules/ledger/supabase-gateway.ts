@@ -19,6 +19,7 @@ export class SupabaseFinanceGateway implements FinanceGateway {
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as PgError;
+      if (body.code !== "P0001") console.log(JSON.stringify({ op: "rpc_failed", rpc: name, status: res.status, pg: body.code ?? null }));
       // RPCs raise stable domain codes as the exception message (errcode P0001).
       throw new DomainError(body.code === "P0001" && body.message ? body.message : "DB_ERROR");
     }

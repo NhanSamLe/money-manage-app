@@ -318,23 +318,17 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                 ),
                 const SizedBox(height: 14),
                 if (page.items.isEmpty)
-                  const SizedBox(
-                    height: 260,
-                    child: EmptyState(
+                  const EmptyState(embedded: true, 
                       icon: Symbols.receipt_long_rounded,
                       title: 'Chưa có giao dịch',
                       hint: 'Bấm nút + để thêm giao dịch đầu tiên.',
-                    ),
-                  )
+                    )
                 else if (shown.isEmpty)
-                  const SizedBox(
-                    height: 200,
-                    child: EmptyState(
+                  const EmptyState(embedded: true, 
                       icon: Symbols.search_off_rounded,
                       title: 'Không có kết quả',
                       hint: 'Thử từ khóa khác hoặc bỏ bộ lọc.',
                     ),
-                  ),
                 for (final g in groups) ...[
                   _DayCard(
                     group: g,

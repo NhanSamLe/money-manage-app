@@ -92,14 +92,11 @@ class AccountsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 if (list.isEmpty)
-                  const SizedBox(
-                    height: 220,
-                    child: EmptyState(
+                  const EmptyState(embedded: true, 
                       icon: Symbols.account_balance_wallet_rounded,
                       title: 'Chưa có tài khoản',
                       hint: 'Thêm ngân hàng, ví hoặc tiền mặt để bắt đầu.',
-                    ),
-                  )
+                    )
                 else
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14),

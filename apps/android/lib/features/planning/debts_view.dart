@@ -74,14 +74,11 @@ class _DebtsViewState extends ConsumerState<DebtsView> {
                 ),
               ),
               if (list.isEmpty)
-                const SizedBox(
-                  height: 220,
-                  child: EmptyState(
+                const EmptyState(embedded: true, 
                     icon: Symbols.handshake_rounded,
                     title: 'Chưa có công nợ',
                     hint: 'Bấm "Thêm công nợ" để ghi một khoản cho vay hoặc đi vay.',
                   ),
-                ),
               for (final d in list) _DebtCard(debt: d),
               const SizedBox(height: 8),
               OutlinedButton.icon(

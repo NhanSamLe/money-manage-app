@@ -43,7 +43,11 @@ class EmptyState extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.tone,
+    this.embedded = false,
   });
+
+  /// True when placed inside a list or scroll view: sizes to its content instead of centring in a scroller.
+  final bool embedded;
   final IconData icon;
   final String title;
   final String hint;
@@ -59,10 +63,7 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final c = tone ?? MomaColors.emerald;
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-        child: Column(
+    final body = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
@@ -156,7 +157,17 @@ class EmptyState extends StatelessWidget {
               TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
             ],
           ],
-        ),
+    );
+    if (embedded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        child: body,
+      );
+    }
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        child: body,
       ),
     );
   }

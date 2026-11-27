@@ -217,18 +217,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
                 const SizedBox(height: 8),
                 if (txs.isEmpty)
-                  SizedBox(
-                    height: 300,
-                    child: EmptyState(
-                      icon: Symbols.receipt_long_rounded,
-                      title: 'Chưa có giao dịch',
-                      hint: 'Giao dịch xuất hiện ở đây khi bạn ghi, nhờ Trợ lý AI hoặc khi ngân hàng đã kết nối có tiền vào, tiền ra.',
-                      actionLabel: 'Ghi giao dịch đầu tiên',
-                      onAction: () => context.push('/quick-entry'),
-                      secondaryLabel: 'Nhờ Trợ lý AI',
-                      onSecondary: () =>
-                          ref.read(shellTabProvider.notifier).select(2),
-                    ),
+                  EmptyState(
+                    embedded: true,
+                    icon: Symbols.receipt_long_rounded,
+                    title: 'Chưa có giao dịch',
+                    hint: 'Giao dịch xuất hiện ở đây khi bạn ghi, nhờ Trợ lý AI hoặc khi ngân hàng đã kết nối có tiền vào, tiền ra.',
+                    actionLabel: 'Ghi giao dịch đầu tiên',
+                    onAction: () => context.push('/quick-entry'),
+                    secondaryLabel: 'Nhờ Trợ lý AI',
+                    onSecondary: () =>
+                        ref.read(shellTabProvider.notifier).select(2),
                   )
                 else
                   Container(

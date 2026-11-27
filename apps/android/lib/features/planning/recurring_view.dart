@@ -48,15 +48,12 @@ class RecurringView extends ConsumerWidget {
               ),
             ),
             if (list.isEmpty)
-              const SizedBox(
-                height: 220,
-                child: EmptyState(
+              const EmptyState(embedded: true, 
                   icon: Symbols.event_repeat_rounded,
                   title: 'Chưa có khoản định kỳ',
                   hint:
                       'Thêm tiền nhà, hóa đơn, lương... để được nhắc đúng hạn.',
                 ),
-              ),
             for (final r in list) _RecurringCard(item: r),
             const SizedBox(height: 8),
             OutlinedButton.icon(
