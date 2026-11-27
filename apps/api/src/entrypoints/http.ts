@@ -14,6 +14,7 @@ import { canonicalJson, sha256Hex } from "../shared/canonical";
 import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
 import { currentVnDate, currentVnMonth, monthRangeUtc } from "../shared/report-period";
+import { registerInsightRoutes, runScheduled } from "./routes-insights";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_PAGE = 50;
@@ -481,6 +482,8 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     return ok(c as unknown as Context<Vars>, await d.gw.executeCommand(ctx, key, hash, parsed.data));
   });
 
+  registerInsightRoutes(app, getDeps, auth); // reminders + insights (routes-insights.ts)
+
   return app;
 }
 
@@ -599,4 +602,17 @@ function decodeCursor(s: string): { at: string; id: string } {
 }
 
 const app = buildApp();
-export default app;
+
+// Cron trigger (wrangler.toml): smart reminders, reviews and budget alerts. Never throws.
+async function scheduled(event: { scheduledTime: number }, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }): Promise<void> {
+  let deps: Deps;
+  try {
+    deps = compose(env);
+  } catch (e) {
+    console.log(JSON.stringify({ op: "scheduled", step: "config", outcome: "error", detail: safeDetail(e as Error) }));
+    return;
+  }
+  ctx.waitUntil(runScheduled(deps, new Date(event.scheduledTime)));
+}
+
+export default { fetch: app.fetch, scheduled };

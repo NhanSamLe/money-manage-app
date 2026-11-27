@@ -19,6 +19,8 @@ export interface Env {
   ONESIGNAL_APP_ID?: string;
   /** OneSignal REST API key. Absent => push notifications are OFF. */
   ONESIGNAL_REST_KEY?: string;
+  /** Optional: shared secret for POST /v1/internal/tick (external scheduler fallback). Absent => endpoint is 404. */
+  CRON_SECRET?: string;
 }
 
 export interface Config {
@@ -36,6 +38,8 @@ export interface Config {
   onesignalAppId?: string;
   /** Undefined => push is OFF. */
   onesignalRestKey?: string;
+  /** Undefined => POST /v1/internal/tick is disabled (404). */
+  cronSecret?: string;
   dbTimeoutMs: number;
 }
 
@@ -69,6 +73,7 @@ export function loadConfig(env: Env): Config {
     ...(env.SUPABASE_JWT_SECRET ? { jwtSecret: env.SUPABASE_JWT_SECRET } : {}),
     onesignalAppId: env.ONESIGNAL_APP_ID || DEFAULT_ONESIGNAL_APP_ID,
     ...(env.ONESIGNAL_REST_KEY ? { onesignalRestKey: env.ONESIGNAL_REST_KEY } : {}),
+    ...(env.CRON_SECRET ? { cronSecret: env.CRON_SECRET } : {}),
     dbTimeoutMs: DB_TIMEOUT_MS,
   };
 }

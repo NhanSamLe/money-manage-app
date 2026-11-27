@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="wg_grad_start">#03251E</color>
+    <color name="wg_grad_mid">#0A5A4E</color>
+    <color name="wg_grad_end">#17876A</color>
+    <color name="wg_blob">#1FFFFFFF</color>
+    <color name="wg_blob_soft">#0FFFFFFF</color>
+    <color name="wg_border">#33FFFFFF</color>
+    <color name="wg_glass">#1AFFFFFF</color>
+    <color name="wg_glass_strong">#29FFFFFF</color>
+    <color name="wg_glass_stroke">#38FFFFFF</color>
+    <color name="wg_text">#FFFFFF</color>
+    <color name="wg_text_muted">#D1FFFFFF</color>
+    <color name="wg_text_shadow">#66000000</color>
+    <color name="wg_accent">#8FE8B5</color>
+    <color name="wg_over">#FF9E8F</color>
+    <color name="wg_track">#26FFFFFF</color>
+    <color name="wg_button">#E8FFF4</color>
+    <color name="wg_button_icon">#0A5A4E</color>
+    <color name="wg_scrim">#B3000000</color>
+    <color name="wg_sheet">#14221D</color>
+    <color name="wg_sheet_text">#E8F2EE</color>
+    <color name="wg_sheet_muted">#9DB0A8</color>
+</resources>

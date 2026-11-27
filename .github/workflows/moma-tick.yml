@@ -1,0 +1,16 @@
+# External scheduler fallback for MoMa reminders/insights (Cloudflare cron trigger unavailable on this account).
+# Calls the Worker every 15 minutes; the Worker claims each push once (pf_push_log), so extra calls are harmless.
+# Needs repository secret MOMA_CRON_SECRET = Worker secret CRON_SECRET.
+name: moma-tick
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Trigger reminders tick
+        run: curl -fsS -X POST -H "x-cron-secret: ${{ secrets.MOMA_CRON_SECRET }}" https://moma-api.superaicore.indevs.in/v1/internal/tick

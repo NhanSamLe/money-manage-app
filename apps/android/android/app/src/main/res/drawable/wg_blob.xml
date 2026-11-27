@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft wave + blobs drawn over the widget gradient, clipped to a rounded box so nothing shows past the corners. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp" android:height="100dp"
+    android:viewportWidth="200" android:viewportHeight="100">
+    <clip-path android:pathData="M12,0H188A12,12 0,0 1,200 12V88A12,12 0,0 1,188 100H12A12,12 0,0 1,0 88V12A12,12 0,0 1,12 0Z" />
+    <path android:fillColor="@color/wg_blob"
+        android:pathData="M150,-30C185,-30 215,-5 212,25C209,52 182,62 160,55C140,49 128,30 126,14C123,-8 132,-30 150,-30Z" />
+    <path android:fillColor="@color/wg_blob_soft"
+        android:pathData="M0,72C30,58 60,60 92,74C122,87 152,92 200,70V100H0Z" />
+    <path android:fillColor="@color/wg_blob_soft"
+        android:pathData="M0,84C40,74 80,80 112,90C140,98 170,96 200,86V100H0Z" />
+    <path android:fillColor="@color/wg_blob_soft"
+        android:pathData="M8,18a14,14 0,1 1,28 0a14,14 0,1 1,-28 0Z" />
+</vector>

@@ -22,3 +22,8 @@ Chủ sở hữu yêu cầu luồng đăng ký/đăng nhập thông thường. `
 
 ## D-013 — Trợ lý AI chỉ đề xuất
 DeepSeek `deepseek-flash` qua Worker (khóa chỉ ở Worker). AI trả đề xuất đã kiểm tra id/số tiền/ngày; chủ sở hữu bấm Xác nhận thì lệnh `TX_CREATE` idempotent mới ghi. Chặn chi phí theo spec 05 mục 5 (đặt trước chi phí xấu nhất, trần 1 USD/tháng).
+
+## D-014 — Nhắc việc thông minh và phân tích chi tiêu (migration 008)
+- Cron Worker 15 phút (`scheduled()`) + dự phòng `POST /v1/internal/tick` (header `x-cron-secret` = secret `CRON_SECRET`, gọi từ GitHub Actions `moma-tick.yml`) vì tài khoản Cloudflare chưa đăng ký được cron. Mỗi push được "claim" một lần trong `pf_push_log` nên gọi trùng vô hại.
+- Bữa ăn "đã ghi" = có khoản chi POSTED thuộc danh mục "Ăn uống" (theo tên hoặc icon `restaurant`) hoặc danh mục con, trong khung giờ địa phương (sáng 04:00–10:30, trưa 10:30–15:00, tối 15:00–23:00). Nhắc bữa ăn/kiểm tra tiền mặt chỉ gửi trong 3 giờ sau giờ hẹn; cảnh báo ngân sách chỉ 07:00–22:00.
+- Số liệu phân tích do SQL/TS tính; AI (DeepSeek, qua trần chi phí) chỉ viết lời; tắt/hết hạn mức thì dùng văn bản theo luật. Mức chi đề xuất = trung vị các kỳ gần nhất (4 tuần / 3 tháng / 14 ngày, bỏ kỳ không ghi chép), kéo một nửa về mục tiêu ngân sách nếu cao hơn, làm tròn lên 10.000 đ. So sánh với kỳ trước cùng số ngày đã trôi qua.

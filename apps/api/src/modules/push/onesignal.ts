@@ -10,6 +10,8 @@ export interface PushMessage {
   body: string;
   data?: Record<string, unknown>;
   androidGroup?: string;
+  /** Android/iOS action buttons (OneSignal `buttons`, max 3). The tapped button's id reaches the app's click listener. */
+  buttons?: { id: string; text: string }[];
 }
 
 /**
@@ -34,6 +36,7 @@ export async function sendPush(
         contents: { en: msg.body, vi: msg.body },
         ...(msg.data ? { data: msg.data } : {}),
         ...(msg.androidGroup ? { android_group: msg.androidGroup } : {}),
+        ...(msg.buttons?.length ? { buttons: msg.buttons.slice(0, 3).map((b) => ({ id: b.id, text: b.text })) } : {}),
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });

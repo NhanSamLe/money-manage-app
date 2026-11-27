@@ -175,7 +175,7 @@ export function decidePushes(input: {
           type: "budget",
           title: `Vượt ngân sách ${name}`,
           body: `Đã chi ${formatVnd(spent)} đ / ${formatVnd(limit)} đ (${pct}%) trong tháng ${m}/${y}.`,
-          data: { type: "budget", budget_id: b.id, threshold: 100, route: "/budgets" },
+          data: { type: "budget", budget_id: b.id, threshold: 100, route: "/planning?tab=2" },
           alsoClaim: [k80],
         });
       } else if (pct >= 80 && !claimed.has(k100)) {
@@ -184,7 +184,7 @@ export function decidePushes(input: {
           type: "budget",
           title: `Sắp hết ngân sách ${name}`,
           body: `Đã dùng ${pct}% ngân sách tháng ${m}/${y}, còn ${formatVnd(limit - spent)} đ.`,
-          data: { type: "budget", budget_id: b.id, threshold: 80, route: "/budgets" },
+          data: { type: "budget", budget_id: b.id, threshold: 80, route: "/planning?tab=2" },
           alsoClaim: [],
         });
       }

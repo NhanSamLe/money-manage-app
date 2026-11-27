@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Chi tiêu hôm nay" 2x1 / 4x1 strip: rotating figure + quick "+" button. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/wg_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingEnd="8dp">
+
+    <ViewFlipper
+        android:id="@+id/s_flip"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:autoStart="true"
+        android:flipInterval="5000"
+        android:inAnimation="@anim/wg_in"
+        android:outAnimation="@anim/wg_out">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/s_today_label"
+                style="@style/WgText.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wg_today" />
+
+            <TextView
+                android:id="@+id/s_today"
+                style="@style/WgText.Big"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:autoSizeMaxTextSize="17sp"
+                android:autoSizeMinTextSize="11sp"
+                android:text="@string/wg_sample_today" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/s_month_label"
+                style="@style/WgText.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wg_sample_month_label" />
+
+            <TextView
+                android:id="@+id/s_month"
+                style="@style/WgText.Big"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:autoSizeMaxTextSize="17sp"
+                android:autoSizeMinTextSize="11sp"
+                android:text="@string/wg_sample_month" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/s_left_label"
+                style="@style/WgText.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wg_budget_left" />
+
+            <TextView
+                android:id="@+id/s_left"
+                style="@style/WgText.Big"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:autoSizeMaxTextSize="17sp"
+                android:autoSizeMinTextSize="11sp"
+                android:text="@string/wg_sample_left" />
+        </LinearLayout>
+    </ViewFlipper>
+
+    <ImageView
+        android:id="@+id/s_add"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="6dp"
+        android:background="@drawable/wg_button_circle"
+        android:contentDescription="@string/wg_act_expense_long"
+        android:padding="7dp"
+        android:src="@drawable/ic_wg_add"
+        android:tint="@color/wg_button_icon" />
+</LinearLayout>

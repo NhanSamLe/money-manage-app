@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget palette ("glass" panels on a brand gradient). Widget text is always white on the gradient. -->
+<resources>
+    <color name="wg_grad_start">#0B5444</color>
+    <color name="wg_grad_mid">#12907E</color>
+    <color name="wg_grad_end">#3DBE93</color>
+    <color name="wg_blob">#26FFFFFF</color>
+    <color name="wg_blob_soft">#14FFFFFF</color>
+    <color name="wg_border">#47FFFFFF</color>
+    <color name="wg_glass">#2BFFFFFF</color>
+    <color name="wg_glass_strong">#40FFFFFF</color>
+    <color name="wg_glass_stroke">#4DFFFFFF</color>
+    <color name="wg_text">#FFFFFF</color>
+    <color name="wg_text_muted">#E6FFFFFF</color>
+    <color name="wg_text_shadow">#59001A13</color>
+    <color name="wg_accent">#C4F7D8</color>
+    <color name="wg_over">#FFC9BD</color>
+    <color name="wg_track">#33FFFFFF</color>
+    <color name="wg_button">#FFFFFF</color>
+    <color name="wg_button_icon">#0E6B57</color>
+    <color name="wg_scrim">#99000000</color>
+    <color name="wg_sheet">#FFFFFF</color>
+    <color name="wg_sheet_text">#0B2A1F</color>
+    <color name="wg_sheet_muted">#5B6B64</color>
+</resources>
