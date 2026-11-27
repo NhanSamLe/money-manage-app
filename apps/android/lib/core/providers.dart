@@ -106,3 +106,12 @@ void refreshAll(WidgetRef ref) {
   ref.invalidate(summaryProvider);
   ref.invalidate(transactionsProvider);
 }
+
+/// Selected bottom-navigation tab of the main shell (lets Home jump to "Giao dịch" etc.).
+class ShellTab extends Notifier<int> {
+  @override
+  int build() => 0;
+  void select(int i) => state = i;
+}
+
+final shellTabProvider = NotifierProvider<ShellTab, int>(ShellTab.new);

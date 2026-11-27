@@ -22,23 +22,15 @@ class AuthService {
     }
   }
 
-  /// Step 1 of first-time setup: the deployment secret makes the server send the owner invite.
-  Future<void> startSetup(String bootstrapSecret) async {
+  /// Step 1 of sign-up: the server mails a one-time code, but only for the configured owner email.
+  Future<void> startSignup(String email) async {
     try {
-      await _api.post(
-        '/setup/start',
-        <String, dynamic>{},
-        extraHeaders: {'x-bootstrap-secret': bootstrapSecret},
-      );
+      await _api.post('/setup/start', <String, dynamic>{'email': email.trim()});
     } on ApiException catch (e) {
-      // The server answers UNAUTHENTICATED for a wrong deployment secret; say what the user actually got wrong.
-      if (e.code == 'UNAUTHENTICATED') {
-        throw ApiException('BAD_SECRET', 'Mã bí mật triển khai không đúng.');
-      }
       if (e.code == 'SETUP_ALREADY_BOUND') {
         throw ApiException(
           'SETUP_ALREADY_BOUND',
-          'Ứng dụng đã có chủ sở hữu. Hãy chọn "Tôi đã có tài khoản".',
+          'Ứng dụng đã có tài khoản. Hãy chọn "Đăng nhập".',
         );
       }
       rethrow;

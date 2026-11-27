@@ -35,11 +35,14 @@ export class SupabaseFinanceGateway implements FinanceGateway {
       p_command: command,
     });
   }
-  aiReserve(ownerId: string, estimateMicro: number, capMicro: number) {
-    return this.rpc<{ period: string }>("pf_ai_reserve", { p_owner: ownerId, p_estimate: estimateMicro, p_cap: capMicro });
+  aiReserve(ownerId: string, estimateMicro: number, capMicro: number, provider: string, model: string) {
+    return this.rpc<{ id: string }>("pf_ai_reserve", { p_owner: ownerId, p_estimate: estimateMicro, p_cap: capMicro, p_provider: provider, p_model: model });
   }
-  aiSettle(ownerId: string, period: string, estimateMicro: number, actualMicro: number) {
-    return this.rpc("pf_ai_settle", { p_owner: ownerId, p_period: period, p_estimate: estimateMicro, p_actual: actualMicro });
+  aiSettle(ownerId: string, reservationId: string, actualMicro: number) {
+    return this.rpc("pf_ai_settle", { p_owner: ownerId, p_id: reservationId, p_actual: actualMicro });
+  }
+  aiMarkUnknown(ownerId: string, reservationId: string) {
+    return this.rpc("pf_ai_mark_unknown", { p_owner: ownerId, p_id: reservationId });
   }
   aiUsage(ownerId: string) {
     return this.rpc<{ period: string; spent_micro: number; reserved_micro: number; calls: number }>("pf_ai_usage_read", { p_owner: ownerId });

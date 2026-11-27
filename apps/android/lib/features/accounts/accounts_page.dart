@@ -32,14 +32,6 @@ class AccountsPage extends ConsumerWidget {
           data: (list) => ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
-              Text(
-                'Tài khoản',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: MomaColors.forest,
-                ),
-              ),
-              const SizedBox(height: 12),
               if (list.isEmpty)
                 const EmptyState(
                   icon: Icons.account_balance_wallet_rounded,
@@ -102,6 +94,18 @@ class AccountsPage extends ConsumerWidget {
     );
   }
 }
+
+/// Opens the "add account" form (also used by the first-run setup).
+Future<void> showAddAccountSheet(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: const _AddAccountSheet(),
+      ),
+    );
 
 class _AddAccountSheet extends ConsumerStatefulWidget {
   const _AddAccountSheet();

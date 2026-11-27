@@ -5,7 +5,7 @@ import { SessionVerifier, type Session } from "../modules/auth/verify-session";
 import { IMPLEMENTED_TYPES, KNOWN_TYPES, implementedCommand } from "../modules/ledger/command-schemas";
 import type { CommandContext, FinanceGateway } from "../modules/ledger/ports";
 import { SupabaseFinanceGateway } from "../modules/ledger/supabase-gateway";
-import { MAX_INPUT_CHARS, MONTHLY_CAP_MICRO, actualMicro, buildMessages, buildRequestBody, deepseekProvider, estimateMicro, parseModelJson, resolveOutput, type AccountRef, type CategoryRef, type ProviderCall } from "../modules/ai/assistant";
+import { MAX_INPUT_CHARS, MODEL, MONTHLY_CAP_MICRO, actualMicro, buildMessages, buildRequestBody, deepseekProvider, estimateMicro, parseModelJson, resolveOutput, type AccountRef, type CategoryRef, type ProviderCall } from "../modules/ai/assistant";
 import { canonicalJson, sha256Hex } from "../shared/canonical";
 import { DomainError, isKnownCode, specFor } from "../shared/errors";
 import { API_VERSION } from "../shared/version";
@@ -188,7 +188,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   app.get("/v1/ai/status", auth, async (c) => {
     const d = getDeps(c.env);
     const u = await d.gw.aiUsage(c.get("owner")).catch(() => null);
-    return ok(c as unknown as Context<Vars>, { enabled: Boolean(d.ai), provider: "deepseek", model: "deepseek-flash", cap_micro: MONTHLY_CAP_MICRO, usage: u });
+    return ok(c as unknown as Context<Vars>, { enabled: Boolean(d.ai), provider: "deepseek", model: MODEL, cap_micro: MONTHLY_CAP_MICRO, usage: u });
   });
 
   app.post("/v1/ai/chat", auth, async (c) => {
@@ -204,9 +204,15 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     const { messages, bytes } = buildMessages(text, today, accounts, categories);
     const est = estimateMicro(bytes);
     // Reserve the worst case first (fails closed at the monthly cap); a provider failure keeps the reservation (spec 05 s5).
-    const { period } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO);
-    const out = await d.ai(buildRequestBody(messages));
-    await d.gw.aiSettle(owner, period, est, actualMicro(out.usage));
+    const { id: reservation } = await d.gw.aiReserve(owner, est, MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    let out;
+    try {
+      out = await d.ai(buildRequestBody(messages));
+    } catch (e) {
+      await d.gw.aiMarkUnknown(owner, reservation).catch(() => undefined); // vendor may still bill: keep it counted
+      throw e instanceof DomainError ? e : new DomainError("AI_UNAVAILABLE");
+    }
+    await d.gw.aiSettle(owner, reservation, actualMicro(out.usage));
     const result = resolveOutput(parseModelJson(out.content), { today, nowIso: now.toISOString(), accounts, categories });
     if (result.type === "query_summary") {
       const { from, to } = monthRangeUtc(result.month);

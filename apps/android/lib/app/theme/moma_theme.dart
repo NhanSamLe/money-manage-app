@@ -11,6 +11,7 @@ class MomaColors {
   static const income = Color(0xFF1B8A5A);
   static const expense = Color(0xFFD64545);
   static const muted = Color(0xFF5B6B64);
+  static const ink = Color(0xFF0B2A1F);
 }
 
 ThemeData buildMomaTheme() {

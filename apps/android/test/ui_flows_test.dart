@@ -7,6 +7,7 @@ import 'package:moma/core/outbox.dart';
 import 'package:moma/core/network/api_client.dart';
 import 'package:moma/core/providers.dart';
 import 'package:moma/features/dashboard/dashboard_page.dart';
+import 'package:moma/features/dashboard/reports_page.dart';
 import 'package:moma/features/planning/planning_page.dart';
 import 'package:moma/features/transactions/quick_entry_page.dart';
 import 'package:moma/features/transactions/transactions_page.dart';
@@ -66,15 +67,23 @@ void main() {
         host(const Scaffold(body: DashboardPage()), FakeApi()),
       );
       expect(find.text('10.250.000 ₫'), findsOneWidget);
-      expect(find.text('15.000.000 ₫'), findsOneWidget);
+      expect(find.text('+15.000.000 ₫'), findsWidgets);
       expect(find.textContaining('chưa biết số dư đầu kỳ'), findsOneWidget);
+    });
+
+    testWidgets('reports show the category breakdown', (tester) async {
+      await openPage(
+        tester,
+        host(const Scaffold(body: ReportsPage()), FakeApi()),
+      );
       expect(find.text('Ăn uống'), findsOneWidget);
+      expect(find.text('-250.000 ₫'), findsWidgets);
     });
 
     testWidgets('month navigation reloads for another month', (tester) async {
       await openPage(
         tester,
-        host(const Scaffold(body: DashboardPage()), FakeApi()),
+        host(const Scaffold(body: ReportsPage()), FakeApi()),
       );
       final before = find.byType(Text).evaluate().length;
       await tester.tap(find.byTooltip('Tháng trước'));

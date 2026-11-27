@@ -5,9 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/outbox.dart';
 import '../../core/sheets.dart';
 import '../../app/theme/moma_theme.dart';
-import '../accounts/accounts_page.dart';
+import '../../core/providers.dart';
+import '../../core/ui/nav.dart';
+import '../assistant/assistant_page.dart';
 import '../dashboard/dashboard_page.dart';
-import '../planning/planning_page.dart';
+import '../dashboard/reports_page.dart';
 import '../settings/settings_page.dart';
 import '../transactions/transactions_page.dart';
 
@@ -18,8 +20,6 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
-  int _index = 0;
-
   @override
   void initState() {
     super.initState();
@@ -33,58 +33,46 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   static const _pages = <Widget>[
     DashboardPage(),
     TransactionsPage(),
-    AccountsPage(),
-    PlanningPage(),
+    AssistantPage(),
+    ReportsPage(),
     SettingsPage(),
+  ];
+
+  static const _items = <NavItem>[
+    NavItem(Icons.home_outlined, 'Trang chủ'),
+    NavItem(Icons.swap_horiz_rounded, 'Giao dịch'),
+    NavItem(Icons.auto_awesome_outlined, 'Trợ lý AI'),
+    NavItem(Icons.bar_chart_rounded, 'Báo cáo'),
+    NavItem(Icons.settings_outlined, 'Cài đặt'),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final index = ref.watch(shellTabProvider);
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _OutboxBanner(),
-            Expanded(
-              child: IndexedStack(index: _index, children: _pages),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/quick-entry'),
-        tooltip: 'Nhập nhanh',
-        child: const Icon(Icons.add_rounded),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Tổng quan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.swap_horiz_rounded),
-            label: 'Giao dịch',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-            label: 'Tài khoản',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.track_changes_outlined),
-            selectedIcon: Icon(Icons.track_changes_rounded),
-            label: 'Kế hoạch',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Cài đặt',
+      resizeToAvoidBottomInset: true,
+      body: Column(
+        children: [
+          const _OutboxBanner(),
+          Expanded(
+            child: IndexedStack(index: index, children: _pages),
           ),
         ],
+      ),
+      floatingActionButton: index <= 1
+          ? FloatingActionButton(
+              onPressed: () => context.push('/quick-entry'),
+              tooltip: 'Nhập nhanh',
+              backgroundColor: MomaColors.emerald,
+              foregroundColor: Colors.white,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add_rounded, size: 32),
+            )
+          : null,
+      bottomNavigationBar: MomaNavBar(
+        items: _items,
+        index: index,
+        onSelect: (i) => ref.read(shellTabProvider.notifier).select(i),
       ),
     );
   }

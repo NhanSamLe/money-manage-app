@@ -22,14 +22,14 @@ def gradient(size):
     return g
 
 def mark(size, scale=1.0, color=MARK):
-    """M-shaped trend line on transparent canvas; scale<1 shrinks toward center (adaptive safe zone)."""
+    """Two-peak ribbon M on transparent canvas; scale<1 shrinks toward center (adaptive safe zone)."""
     n = size * S
     im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    pts = [(0.25, 0.70), (0.25, 0.32), (0.50, 0.58), (0.75, 0.32), (0.75, 0.70)]
+    pts = [(0.18, 0.68), (0.34, 0.31), (0.50, 0.59), (0.66, 0.31), (0.82, 0.68)]
     pts = [(0.5 + (x - 0.5) * scale, 0.5 + (y - 0.51) * scale) for x, y in pts]
     pts = [(x * n, y * n) for x, y in pts]
-    w = int(0.085 * n * scale)
+    w = int(0.115 * n * scale)
     d.line(pts, fill=color + (255,), width=w, joint="curve")
     for x, y in (pts[0], pts[-1]):
         d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=color + (255,))

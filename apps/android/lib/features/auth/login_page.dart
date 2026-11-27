@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/moma_theme.dart';
-import '../../core/widgets.dart';
 import '../../core/providers.dart';
+import '../../core/ui/brand.dart';
+import '../../core/widgets.dart';
 import 'auth_service.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -18,6 +19,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _password = TextEditingController();
   bool _busy = false;
   bool _hide = true;
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -28,9 +31,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _submit() async {
     if (_busy) return;
+    // Field validation is shown inline; server/network failures use a dialog.
     setState(() {
-      _busy = true;
+      _emailError = _email.text.trim().contains('@')
+          ? null
+          : 'Nhập email hợp lệ.';
+      _passwordError = _password.text.isEmpty ? 'Nhập mật khẩu.' : null;
     });
+    if (_emailError != null || _passwordError != null) return;
+    setState(() => _busy = true);
     try {
       await AuthService(ref.read(apiProvider))
           .signIn(_email.text, _password.text);
@@ -45,18 +54,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => context.go('/welcome')),
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                tooltip: 'Quay lại',
+                onPressed: () => context.go('/welcome'),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Center(child: MomaWordmark(size: 56, dark: true)),
+            const SizedBox(height: 32),
             Text(
               'Đăng nhập tài khoản',
               style: text.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: MomaColors.forest,
+                color: MomaColors.ink,
               ),
             ),
             const SizedBox(height: 4),
@@ -69,10 +87,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.mail_outline_rounded),
-                labelText: 'Email',
-                hintText: 'Nhập email',
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.mail_outline_rounded),
+                hintText: 'Email',
+                errorText: _emailError,
               ),
             ),
             const SizedBox(height: 12),
@@ -83,9 +102,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
-                labelText: 'Mật khẩu',
-                hintText: 'Nhập mật khẩu',
+                hintText: 'Mật khẩu',
+                errorText: _passwordError,
                 suffixIcon: IconButton(
+                  tooltip: _hide ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                   icon: Icon(
                     _hide
                         ? Icons.visibility_off_outlined
@@ -95,7 +115,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => context.go('/forgot'),
+                child: const Text('Quên mật khẩu?'),
+              ),
+            ),
+            const SizedBox(height: 4),
             FilledButton(
               onPressed: _busy ? null : _submit,
               child: _busy
@@ -109,14 +136,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     )
                   : const Text('Đăng nhập'),
             ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => context.go('/forgot'),
-              child: const Text('Quên mật khẩu?'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'Hoặc',
+                    style: text.bodySmall?.copyWith(color: MomaColors.muted),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
             ),
-            TextButton(
-              onPressed: () => context.go('/setup'),
-              child: const Text('Chưa thiết lập? Thiết lập mới'),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () => context.go('/register'),
+              child: const Text('Tạo tài khoản mới'),
             ),
           ],
         ),
