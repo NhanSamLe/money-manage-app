@@ -98,13 +98,34 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
     // the lease id is derived from the secret (same holder re-enters; the 15 min expiry still bounds stale state).
     const lease = await leaseIdFor(d.cfg.bootstrapSecret);
     await rpcSetup(d, "pf_setup_reserve", { p_lease: lease, p_expires: new Date(Date.now() + 15 * 60_000).toISOString() });
-    const res = await fetch(`${d.cfg.supabaseUrl}/auth/v1/invite`, {
-      method: "POST",
-      headers: serviceHeaders(d.cfg),
-      body: JSON.stringify({ email: d.cfg.ownerEmail }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) throw new DomainError("TEMPORARY_FAILURE");
+    const invite = () =>
+      fetch(`${d.cfg.supabaseUrl}/auth/v1/invite`, {
+        method: "POST",
+        headers: serviceHeaders(d.cfg),
+        body: JSON.stringify({ email: d.cfg.ownerEmail }),
+        signal: AbortSignal.timeout(10_000),
+      });
+    let res = await invite();
+    if (res.status === 422) {
+      // A previous invite already created the (still unconfirmed) owner user: replace it so a fresh code is mailed.
+      const stale = await findUnconfirmedOwner(d);
+      if (stale) {
+        await rpcSetup(d, "pf_setup_reset_invite", { p_lease: lease });
+        const del = await fetch(`${d.cfg.supabaseUrl}/auth/v1/admin/users/${stale}`, {
+          method: "DELETE",
+          headers: serviceHeaders(d.cfg),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!del.ok) throw new DomainError("TEMPORARY_FAILURE");
+        res = await invite();
+      }
+    }
+    if (!res.ok) {
+      // Upstream status and error_code only (never the body text, which may echo input).
+      const e = (await res.json().catch(() => ({}))) as { error_code?: string };
+      console.log(JSON.stringify({ request_id: c.get("rid"), op: "auth.invite", upstream_status: res.status, upstream_code: typeof e.error_code === "string" ? e.error_code : undefined }));
+      throw new DomainError("TEMPORARY_FAILURE");
+    }
     const user = (await res.json()) as { id?: string };
     if (!user.id) throw new DomainError("TEMPORARY_FAILURE");
     await rpcSetup(d, "pf_setup_record_invite", { p_lease: lease, p_user: user.id });
@@ -181,6 +202,18 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   });
 
   return app;
+}
+
+// Returns the owner's auth user id only when that user never confirmed (an abandoned invite); a confirmed user is never touched.
+async function findUnconfirmedOwner(d: Deps): Promise<string | undefined> {
+  const r = await fetch(`${d.cfg.supabaseUrl}/auth/v1/admin/users?per_page=200`, {
+    headers: serviceHeaders(d.cfg),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!r.ok) return undefined;
+  const body = (await r.json()) as { users?: { id: string; email?: string; email_confirmed_at?: string | null; confirmed_at?: string | null }[] };
+  const u = (body.users ?? []).find((x) => x.email?.toLowerCase() === d.cfg.ownerEmail);
+  return u && !u.email_confirmed_at && !u.confirmed_at ? u.id : undefined;
 }
 
 async function leaseIdFor(secret: string): Promise<string> {
