@@ -1,6 +1,6 @@
 import 'money/money.dart';
 
-/// Field validators (UX standard: every field validates itself as the user types or leaves it, and again on submit).
+/// Field validators. Messages are deliberately short, one sentence, with no examples.
 /// Each returns a Vietnamese message or null when valid.
 typedef Validator = String? Function(String? value);
 
@@ -10,32 +10,31 @@ class V {
   static final _email = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
 
   static Validator required(String label) =>
-      (v) => (v ?? '').trim().isEmpty ? 'Vui lòng nhập $label.' : null;
+      (v) => (v ?? '').trim().isEmpty
+      ? 'Vui lòng nhập ${label.toLowerCase()}.'
+      : null;
 
   static String? email(String? v) {
     final t = (v ?? '').trim();
     if (t.isEmpty) return 'Vui lòng nhập email.';
-    if (t.length > 254 || !_email.hasMatch(t)) {
-      return 'Email chưa đúng định dạng (ví dụ: ten@gmail.com).';
-    }
+    if (t.length > 254 || !_email.hasMatch(t)) return 'Email không hợp lệ.';
     return null;
   }
 
   static Validator minLength(int n, String label) =>
-      (v) =>
-          (v ?? '').trim().length < n ? '$label cần tối thiểu $n ký tự.' : null;
+      (v) => (v ?? '').trim().length < n ? '$label tối thiểu $n ký tự.' : null;
 
   static Validator maxLength(int n, String label) =>
       (v) => (v ?? '').trim().length > n ? '$label tối đa $n ký tự.' : null;
 
-  /// Display name: 2 to 80 characters and not only digits/symbols.
+  /// Display name: 2 to 80 characters and at least one letter.
   static String? displayName(String? v) {
     final t = (v ?? '').trim();
-    if (t.isEmpty) return 'Vui lòng nhập tên hiển thị.';
-    if (t.length < 2) return 'Tên hiển thị cần tối thiểu 2 ký tự.';
-    if (t.length > 80) return 'Tên hiển thị tối đa 80 ký tự.';
+    if (t.isEmpty) return 'Vui lòng nhập tên.';
+    if (t.length < 2) return 'Tên cần từ 2 ký tự.';
+    if (t.length > 80) return 'Tên tối đa 80 ký tự.';
     if (!RegExp(r'\p{L}', unicode: true).hasMatch(t)) {
-      return 'Tên hiển thị cần có chữ cái.';
+      return 'Tên cần có chữ cái.';
     }
     return null;
   }
@@ -44,11 +43,11 @@ class V {
   static String? newPassword(String? v) {
     final t = v ?? '';
     if (t.isEmpty) return 'Vui lòng nhập mật khẩu.';
-    if (t.length < 8) return 'Mật khẩu cần tối thiểu 8 ký tự.';
-    if (t.length > 72) return 'Mật khẩu tối đa 72 ký tự.';
+    if (t.length < 8) return 'Tối thiểu 8 ký tự.';
+    if (t.length > 72) return 'Tối đa 72 ký tự.';
     if (!RegExp(r'\p{L}', unicode: true).hasMatch(t) ||
         !RegExp(r'\d').hasMatch(t)) {
-      return 'Mật khẩu cần có cả chữ và số.';
+      return 'Cần có cả chữ và số.';
     }
     return null;
   }
@@ -64,10 +63,8 @@ class V {
   /// One-time email code: 6 to 8 digits.
   static String? otp(String? v) {
     final t = (v ?? '').trim();
-    if (t.isEmpty) return 'Vui lòng nhập mã xác nhận.';
-    if (!RegExp(r'^\d{6,8}$').hasMatch(t)) {
-      return 'Mã xác nhận gồm 6 đến 8 chữ số.';
-    }
+    if (t.isEmpty) return 'Vui lòng nhập mã.';
+    if (!RegExp(r'^\d{6,8}$').hasMatch(t)) return 'Mã gồm 6 đến 8 số.';
     return null;
   }
 
@@ -82,9 +79,7 @@ class V {
       return allowEmpty ? null : 'Vui lòng nhập ${label.toLowerCase()}.';
     }
     final n = parseVndInput(t);
-    if (n == null) {
-      return '$label chưa hợp lệ. Chỉ nhập số, ví dụ 65.000 hoặc 65k.';
-    }
+    if (n == null) return '$label không hợp lệ.';
     if (n <= 0) return '$label phải lớn hơn 0.';
     if (n > max) return '$label quá lớn.';
     return null;

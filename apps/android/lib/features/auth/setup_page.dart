@@ -107,12 +107,10 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                 ),
               ] else
                 ActionButtons(
-                  primaryLabel: 'Xác nhận và tạo tài khoản',
+                  primaryLabel: 'Xác nhận',
                   onPrimary: _finish,
                   secondaryLabel: 'Quay lại',
                   onSecondary: () => setState(() => _step = 0),
-                  tertiaryLabel: 'Gửi lại mã',
-                  onTertiary: _sendCode,
                   busy: _busy,
                 ),
             ],
@@ -205,7 +203,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   onSubmitted: (_) => _sendCode(),
                   validator: V.sameAs(
                     () => _password.text,
-                    'Mật khẩu nhập lại chưa khớp.',
+                    'Mật khẩu chưa khớp.',
                   ),
                 ),
               ] else ...[
@@ -221,11 +219,12 @@ class _SetupPageState extends ConsumerState<SetupPage> {
                   onSubmitted: (_) => _finish(),
                   validator: V.otp,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Không thấy thư? Kiểm tra mục Spam hoặc Quảng cáo.',
-                  textAlign: TextAlign.center,
-                  style: text.bodySmall?.copyWith(color: context.pal.muted),
+                const SizedBox(height: 4),
+                Center(
+                  child: TextButton(
+                    onPressed: _busy ? null : _sendCode,
+                    child: const Text('Gửi lại mã'),
+                  ),
                 ),
               ],
             ],

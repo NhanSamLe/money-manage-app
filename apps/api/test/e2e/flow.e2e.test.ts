@@ -54,6 +54,18 @@ describe("setup and auth", () => {
     expect((await call("POST", "/v1/setup/start", { auth: false, body: { email: "stranger@example.test" } })).status).toBe(403);
   });
 
+  it("re-sending the invite replaces a leftover owner user (even one that already opened the old link)", async () => {
+    const first = await call("POST", "/v1/setup/start", { auth: false, body: { email: "owner@example.test" } });
+    expect(first.status).toBe(200);
+    const again = await call("POST", "/v1/setup/start", { auth: false, body: { email: "owner@example.test" } });
+    expect(again.status).toBe(200);
+    const users = await h.db.query("select id from auth.users where email = 'owner@example.test'");
+    expect(users.rowCount).toBe(1);
+    const setup = await h.db.query("select state, invite_user_id from pf_setup");
+    expect(setup.rows[0].state).toBe("INVITE_PENDING");
+    expect(setup.rows[0].invite_user_id).toBe(users.rows[0].id);
+  });
+
   it("runs the owner bootstrap: invite -> claim -> device", async () => {
     const start = await call("POST", "/v1/setup/start", { auth: false, body: { email: "Owner@Example.test" } });
     expect(start.status).toBe(200);

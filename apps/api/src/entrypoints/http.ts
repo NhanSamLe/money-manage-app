@@ -110,8 +110,9 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
       });
     let res = await invite();
     if (res.status === 422) {
-      // A previous invite already created the (still unconfirmed) owner user: replace it so a fresh code is mailed.
-      const stale = await findUnconfirmedOwner(d);
+      // An earlier attempt already created the owner user (it may even have opened the old link): while no owner is
+      // bound, replace it so a fresh code is mailed. The reset RPC below refuses once setup is BOUND.
+      const stale = await findOwnerAuthUser(d);
       if (stale) {
         await rpcSetup(d, "pf_setup_reset_invite", { p_lease: lease });
         const del = await fetch(`${d.cfg.supabaseUrl}/auth/v1/admin/users/${stale}`, {
@@ -245,16 +246,16 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   return app;
 }
 
-// Returns the owner's auth user id only when that user never confirmed (an abandoned invite); a confirmed user is never touched.
-async function findUnconfirmedOwner(d: Deps): Promise<string | undefined> {
+// Returns the auth user id registered for the owner email, if any. Only ever used while setup is not BOUND:
+// pf_setup_reset_invite refuses to run once an owner is bound, so a real owner account can never be replaced.
+async function findOwnerAuthUser(d: Deps): Promise<string | undefined> {
   const r = await fetch(`${d.cfg.supabaseUrl}/auth/v1/admin/users?per_page=200`, {
     headers: serviceHeaders(d.cfg),
     signal: AbortSignal.timeout(10_000),
   });
   if (!r.ok) return undefined;
-  const body = (await r.json()) as { users?: { id: string; email?: string; email_confirmed_at?: string | null; confirmed_at?: string | null }[] };
-  const u = (body.users ?? []).find((x) => x.email?.toLowerCase() === d.cfg.ownerEmail);
-  return u && !u.email_confirmed_at && !u.confirmed_at ? u.id : undefined;
+  const body = (await r.json()) as { users?: { id: string; email?: string }[] };
+  return (body.users ?? []).find((x) => x.email?.toLowerCase() === d.cfg.ownerEmail)?.id;
 }
 
 async function leaseIdFor(seed: string): Promise<string> {

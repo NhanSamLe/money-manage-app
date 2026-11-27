@@ -18,9 +18,9 @@ void main() {
   group('password', () {
     test('needs length, a letter and a digit', () {
       expect(V.newPassword(''), 'Vui lòng nhập mật khẩu.');
-      expect(V.newPassword('abc123'), 'Mật khẩu cần tối thiểu 8 ký tự.');
-      expect(V.newPassword('abcdefgh'), 'Mật khẩu cần có cả chữ và số.');
-      expect(V.newPassword('12345678'), 'Mật khẩu cần có cả chữ và số.');
+      expect(V.newPassword('abc123'), 'Tối thiểu 8 ký tự.');
+      expect(V.newPassword('abcdefgh'), 'Cần có cả chữ và số.');
+      expect(V.newPassword('12345678'), 'Cần có cả chữ và số.');
       expect(V.newPassword('matkhau123'), isNull);
     });
     test('confirmation must match', () {
@@ -35,7 +35,7 @@ void main() {
     test('display name', () {
       expect(V.displayName(' '), isNotNull);
       expect(V.displayName('A'), isNotNull);
-      expect(V.displayName('1234'), 'Tên hiển thị cần có chữ cái.');
+      expect(V.displayName('1234'), 'Tên cần có chữ cái.');
       expect(V.displayName('Lê Đào Nhân Sâm'), isNull);
     });
     test('otp is 6 to 8 digits', () {

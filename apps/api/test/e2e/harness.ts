@@ -70,8 +70,29 @@ export async function startHarness(): Promise<Harness> {
     }
     if (url.pathname === "/auth/v1/invite" && req.method === "POST") {
       const { email } = JSON.parse(body.toString()) as { email: string };
+      const exists = await db.query("select 1 from auth.users where email = $1", [email]);
+      if (exists.rowCount) {
+        res.statusCode = 422; // Supabase: the address is already registered
+        res.setHeader("content-type", "application/json").end(JSON.stringify({ error_code: "email_exists" }));
+        return;
+      }
       const r = await db.query("insert into auth.users(email, email_confirmed_at) values ($1, now()) returning id", [email]);
       res.setHeader("content-type", "application/json").end(JSON.stringify({ id: r.rows[0].id }));
+      return;
+    }
+    if (url.pathname === "/auth/v1/admin/users" && req.method === "GET") {
+      const r = await db.query("select id, email from auth.users");
+      res.setHeader("content-type", "application/json").end(JSON.stringify({ users: r.rows }));
+      return;
+    }
+    if (url.pathname.startsWith("/auth/v1/admin/users/") && req.method === "DELETE") {
+      try {
+        await db.query("delete from auth.users where id = $1", [url.pathname.split("/").pop()]);
+        res.statusCode = 200;
+      } catch {
+        res.statusCode = 500; // FK still pointing at the user: the worker must reset the binding first
+      }
+      res.end("{}");
       return;
     }
     if (url.pathname.startsWith("/rest/v1/")) {
