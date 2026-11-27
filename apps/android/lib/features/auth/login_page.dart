@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../core/widgets.dart';
 import '../../core/providers.dart';
 import 'auth_service.dart';
 
@@ -17,7 +18,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _password = TextEditingController();
   bool _busy = false;
   bool _hide = true;
-  String? _error;
 
   @override
   void dispose() {
@@ -30,13 +30,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (_busy) return;
     setState(() {
       _busy = true;
-      _error = null;
     });
     try {
       await AuthService(ref.read(apiProvider))
           .signIn(_email.text, _password.text);
     } on Exception catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) await showErrorDialog(context, e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -96,14 +95,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
             ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: MomaColors.expense),
-                ),
-              ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _submit,

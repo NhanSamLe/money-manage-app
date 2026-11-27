@@ -150,7 +150,7 @@ class _AddAccountSheetState extends ConsumerState<_AddAccountSheet> {
       refreshAll(ref);
       if (mounted) Navigator.pop(context);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) await showErrorDialog(context, e.message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

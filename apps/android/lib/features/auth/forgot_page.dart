@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../core/widgets.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import 'auth_service.dart';
@@ -21,7 +22,6 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
   final _password = TextEditingController();
   bool _sent = false;
   bool _busy = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -35,15 +35,14 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
     if (_busy) return;
     setState(() {
       _busy = true;
-      _error = null;
     });
     try {
       await job();
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) await showErrorDialog(context, e.message);
     } on AuthException {
       if (mounted) {
-        setState(() => _error = 'Không thực hiện được. Kiểm tra email và mã.');
+        await showErrorDialog(context, 'Kiểm tra lại email và mã xác nhận.');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -131,14 +130,6 @@ class _ForgotPageState extends ConsumerState<ForgotPage> {
                 ),
               ),
             ],
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: MomaColors.expense),
-                ),
-              ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : (_sent ? _reset : _send),

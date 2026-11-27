@@ -110,13 +110,14 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
             );
             context.pop();
           } else {
-            setState(
-              () => _error = 'Hàng đợi offline đã đầy. Hãy đồng bộ trước.',
+            await showErrorDialog(
+              context,
+              'Hàng đợi offline đã đầy. Hãy đồng bộ trước.',
             );
           }
         }
       } else if (mounted) {
-        setState(() => _error = e.message);
+        await showErrorDialog(context, e.message);
       }
     } finally {
       if (mounted) setState(() => _busy = false);

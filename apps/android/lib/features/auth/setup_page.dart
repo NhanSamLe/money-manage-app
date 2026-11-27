@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/moma_theme.dart';
+import '../../core/widgets.dart';
 import '../../core/providers.dart';
 import 'auth_service.dart';
 
@@ -41,7 +42,7 @@ class _SetupPageState extends ConsumerState<SetupPage> {
       await job();
       if (mounted) onDone?.call();
     } on Exception catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) await showErrorDialog(context, e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }

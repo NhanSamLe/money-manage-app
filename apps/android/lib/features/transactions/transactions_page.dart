@@ -51,7 +51,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     try {
       await ref.read(transactionsProvider.notifier).loadMore();
     } on ApiException catch (e) {
-      if (mounted) showSnack(context, e.message);
+      if (mounted) await showErrorDialog(context, e.message);
     } finally {
       if (mounted) setState(() => _loadingMore = false);
     }

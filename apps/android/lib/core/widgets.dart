@@ -84,3 +84,26 @@ void showSnack(BuildContext context, String message) {
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(message)));
 }
+
+/// Server / network / unexpected failures are shown as a modal dialog the user must acknowledge.
+/// Inline text is reserved for field validation (see AGENTS.md UX rule).
+Future<void> showErrorDialog(
+  BuildContext context,
+  String message, {
+  String title = 'Không thực hiện được',
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: const Icon(Icons.error_outline_rounded, color: MomaColors.expense),
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Đóng'),
+        ),
+      ],
+    ),
+  );
+}

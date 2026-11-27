@@ -13,3 +13,6 @@
 | D-009 | 2026-11-27 | CSV import = client-side parse + one idempotent TX_CREATE per row with a deterministic command id (account + file fingerprint + row). | Gives re-import safety without new server tables; cross-source dedup stays in Gate 3. |
 | D-010 | 2026-11-27 | Dashboard counts transfer fees, bad debt and interest as classified income/expense; only SYS_ADJUSTMENT_* is excluded. | docs/03 BR-15, BR-19, section 7. |
 
+
+## D-011 — Hiển thị lỗi: hộp thoại cho lỗi hệ thống, inline cho validate
+Chủ sở hữu yêu cầu: lỗi từ máy chủ/mạng/không mong đợi hiện bằng hộp thoại modal (`showErrorDialog`); chỉ lỗi kiểm tra dữ liệu nhập (thiếu số tiền, mật khẩu < 8 ký tự…) hiện inline cạnh form. Thông báo thành công/thông tin dùng SnackBar.
