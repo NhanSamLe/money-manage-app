@@ -140,6 +140,17 @@ const txRow = z.object({
   bank_brand_name: z.string().nullish(),
 });
 
+const ACCOUNTS_TTL_MS = 60_000;
+const accountsCache = new Map<string, { at: number; value: SepayAccount[] }>();
+const accountsInflight = new Map<string, Promise<SepayAccount[]>>();
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Test hook: forget cached SePay account lists. */
+export function resetSepayCache(): void {
+  accountsCache.clear();
+  accountsInflight.clear();
+}
+
 export class SepayClient {
   constructor(
     private readonly token: string,
@@ -148,17 +159,45 @@ export class SepayClient {
     private readonly base = "https://userapi.sepay.vn/v2",
   ) {}
 
+  /** GET with SePay's 3-requests-per-second limit handled: on 429 wait for the reset window and retry (max 2). */
   private async get(path: string): Promise<unknown> {
-    const res = await this.fetchImpl(`${this.base}${path}`, {
-      headers: { authorization: `Bearer ${this.token}`, accept: "application/json", "user-agent": "MoMa/1.0 (+https://moma-api.superaicore.indevs.in)" },
-      signal: AbortSignal.timeout(12_000),
-    });
-    if (res.status === 429) throw new Error("SEPAY_RATE_LIMITED");
-    if (!res.ok) throw new Error(`SEPAY_HTTP_${res.status}:${(await res.text().catch(() => "")).slice(0, 120)}`);
-    return res.json();
+    for (let attempt = 0; ; attempt++) {
+      const res = await this.fetchImpl(`${this.base}${path}`, {
+        headers: { authorization: `Bearer ${this.token}`, accept: "application/json", "user-agent": "MoMa/1.0 (+https://moma-api.superaicore.indevs.in)" },
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (res.status === 429) {
+        if (attempt >= 2) throw new Error("SEPAY_RATE_LIMITED");
+        const reset = Number(res.headers.get("x-ratelimit-reset") ?? res.headers.get("retry-after") ?? "1");
+        await sleep(Math.min(3000, Math.max(400, (Number.isFinite(reset) ? reset : 1) * 1000 + 150 + attempt * 300)));
+        continue;
+      }
+      if (!res.ok) throw new Error(`SEPAY_HTTP_${res.status}:${(await res.text().catch(() => "")).slice(0, 120)}`);
+      return res.json();
+    }
   }
 
+  /**
+   * Linked bank accounts. Cached per token for 60 s and shared by concurrent callers, so the many screens that
+   * show bank info (accounts, receive QR, widgets, notification capture) cost SePay one call, not one each.
+   */
   async accounts(): Promise<SepayAccount[]> {
+    const hit = accountsCache.get(this.token);
+    const now = Date.now();
+    if (hit && now - hit.at < ACCOUNTS_TTL_MS) return hit.value;
+    const pending = accountsInflight.get(this.token);
+    if (pending) return pending;
+    const p = this.fetchAccounts()
+      .then((value) => {
+        accountsCache.set(this.token, { at: Date.now(), value });
+        return value;
+      })
+      .finally(() => accountsInflight.delete(this.token));
+    accountsInflight.set(this.token, p);
+    return p;
+  }
+
+  private async fetchAccounts(): Promise<SepayAccount[]> {
     const j = (await this.get("/bank-accounts?per_page=100")) as { data?: unknown[] };
     const out: SepayAccount[] = [];
     for (const r of j.data ?? []) {

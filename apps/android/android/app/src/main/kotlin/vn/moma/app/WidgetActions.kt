@@ -12,6 +12,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import io.flutter.FlutterInjector
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 
@@ -82,6 +83,29 @@ class QuickEntryActivity : FlutterActivity() {
         listOf(intent?.getStringExtra(EXTRA_KIND) ?: "expense")
 
     override fun shouldHandleDeeplinking(): Boolean = false
+
+    // Translucent window over the home screen: Flutter must render with a transparent background.
+    override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
+
+    private var uiShown = false
+    private val watchdog = Handler(Looper.getMainLooper())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Safety net: if the Dart side never draws (entry point missing, init failure), close instead of leaving an
+        // invisible window that swallows every touch.
+        watchdog.postDelayed({ if (!uiShown && !isFinishing) finish() }, 6000)
+    }
+
+    override fun onFlutterUiDisplayed() {
+        super.onFlutterUiDisplayed()
+        uiShown = true
+    }
+
+    override fun onDestroy() {
+        watchdog.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

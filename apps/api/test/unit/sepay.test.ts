@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { eventKey, hmacHex, parseWebhook, ruleCategory, SepayClient, verifyWebhook, vnToIso } from "../../src/modules/bank/sepay";
+import { eventKey, hmacHex, parseWebhook, resetSepayCache, ruleCategory, SepayClient, verifyWebhook, vnToIso } from "../../src/modules/bank/sepay";
 
 const cats = [
   { id: "a", name: "Ăn uống", type: "EXPENSE" },
@@ -78,11 +78,41 @@ describe("SepayClient default fetch", () => {
       return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }));
     });
     vi.stubGlobal("fetch", strictFetch);
+    resetSepayCache();
     try {
       await expect(new SepayClient("tok").accounts()).resolves.toEqual([]);
       expect(strictFetch).toHaveBeenCalledOnce();
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("SepayClient rate limit and cache", () => {
+  const ok = () => new Response(JSON.stringify({ data: [{ id: "x", account_number: "123456", bank_short_name: "TPBank", bank_bin: "970423" }] }), { status: 200 });
+  const limited = () => new Response("{}", { status: 429, headers: { "x-ratelimit-reset": "0" } });
+
+  it("retries after a 429 instead of failing", async () => {
+    resetSepayCache();
+    const f = vi.fn().mockResolvedValueOnce(limited()).mockResolvedValueOnce(ok());
+    const list = await new SepayClient("tok-retry", f as unknown as typeof fetch).accounts();
+    expect(list.map((a) => a.bank)).toEqual(["TPBank"]);
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after repeated 429s", async () => {
+    resetSepayCache();
+    const f = vi.fn().mockImplementation(async () => limited());
+    await expect(new SepayClient("tok-busy", f as unknown as typeof fetch).accounts()).rejects.toThrow("SEPAY_RATE_LIMITED");
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it("shares one SePay call between concurrent and repeated requests", async () => {
+    resetSepayCache();
+    const f = vi.fn().mockImplementation(async () => ok());
+    const c = new SepayClient("tok-cache", f as unknown as typeof fetch);
+    await Promise.all([c.accounts(), c.accounts(), new SepayClient("tok-cache", f as unknown as typeof fetch).accounts()]);
+    await c.accounts();
+    expect(f).toHaveBeenCalledTimes(1);
   });
 });

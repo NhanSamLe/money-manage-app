@@ -1,7 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Config } from "../../src/bootstrap/config";
 import { buildApp } from "../../src/entrypoints/http";
 import { SessionVerifier } from "../../src/modules/auth/verify-session";
+import { resetSepayCache } from "../../src/modules/bank/sepay";
 import { SupabaseFinanceGateway } from "../../src/modules/ledger/supabase-gateway";
 import { startHarness, type Harness } from "./harness";
 
@@ -339,6 +340,8 @@ describe("bank connection via SePay (SePay faked, database real)", () => {
   const NUMBER = "1017588888";
   const KEY = "webhook-shared-key";
   let sepayCalls = 0;
+  // The client caches account lists for 60 s; each test here starts from a fresh SePay state.
+  beforeEach(() => resetSepayCache());
   const fakeSepay: typeof fetch = async (input) => {
     sepayCalls++;
     const url = String(input);

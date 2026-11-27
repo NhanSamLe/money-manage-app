@@ -11,6 +11,10 @@ import 'core/config/app_config.dart';
 import 'core/storage/secure_session_storage.dart';
 import 'features/lock/lock_screen.dart';
 
+// Keep the home-screen widget entry points (quick-entry sheet, background refresh) in the release snapshot:
+// they are launched by Android directly, so nothing else in the app references them.
+export 'features/widgets/entrypoints.dart' show quickEntryMain, widgetRefreshMain;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
