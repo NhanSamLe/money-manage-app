@@ -11,3 +11,8 @@ SUPABASE_PUBLISHABLE_KEY = "sb_publishable_RamavXHPtMcVAwC6PswQWQ_wZPBdXol"
 # Smart reminders, daily/weekly/monthly reviews and budget alerts (scheduled() in src/entrypoints/http.ts).
 [triggers]
 crons = ["*/15 * * * *"]
+
+# Receipt / transfer pictures attached to transactions (migration 013). Never public; served by /v1/attachments/:id.
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "moma-attachments"

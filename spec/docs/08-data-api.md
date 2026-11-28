@@ -66,7 +66,9 @@ Base `https://api.<domain>/v1`. JSON only; bearer owner JWT except health/setup 
 | CONTACT_CREATE | alias,note? | no login user |
 | DEBT_CREATE | direction,contact_id,account_id?,principal,originated_at,due_date?,note?,existing_tx_id?,historical? | opening/actual/linked movement paths; no double booking |
 | DEBT_REPAY | debt_id,account_id,principal,interest?,effective_at,existing_tx_id?,expected_version | principal <= remaining, payment and ledger atomic |
-| DEBT_UPDATE | debt_id,due_date?,note?,expected_version | no principal mutation |
+| DEBT_UPDATE | debt_id,contact_id?,due_date?,note?,principal?,expected_version | principal only while no repayment/write-off is in effect (DEBT_HAS_PAYMENTS); reversal + replacement journal (D-019) |
+| DEBT_PAYMENT_REVERSE | debt_id,payment_id,expected_version | undo one repayment/write-off: reverse its tx (VOID), restore remaining + state |
+| DEBT_CANCEL | debt_id,expected_version,reason? | confirm; reverse every active payment + origin tx; state CANCELLED, hidden from lists; row kept |
 | DEBT_WRITE_OFF | debt_id,amount,reason,effective_at,expected_version | confirm, <= remaining |
 | GOAL_CREATE | name,target,due_date? | virtual goal |
 | GOAL_ALLOCATE | goal_id,account_id,amount,expected_version | add reservation, check available |

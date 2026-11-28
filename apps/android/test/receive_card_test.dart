@@ -11,8 +11,7 @@ void main() {
   ) async {
     final bytes = await tester.runAsync(
       () => renderReceiveCard(
-        payload:
-            '00020101021138570010A000000727012700069704230113464141020040208QRIBFTTA53037045802VN6304ABCD',
+        payload: '00020101021138570010A000000727012700069704230113464141020040208QRIBFTTA53037045802VN6304ABCD',
         bank: 'TPBank',
         holder: 'Le Dao Nhan Sam',
         accountNumber: '46414102004',

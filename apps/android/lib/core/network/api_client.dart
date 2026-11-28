@@ -75,6 +75,35 @@ class ApiClient {
     return _decode(await _send(() => _http.delete(uri, headers: headers)));
   }
 
+  /// Uploads raw bytes (a compressed photo) as the request body; returns the decoded `data`.
+  Future<dynamic> postBytes(
+    String path,
+    List<int> bytes, {
+    String contentType = 'image/jpeg',
+  }) async {
+    final uri = Uri.parse('${await _store.apiBase()}$path');
+    final headers = {...await _headers(), 'content-type': contentType};
+    return _decode(
+      await _send(
+        () => _http.post(uri, headers: headers, body: bytes),
+        timeout: const Duration(seconds: 60),
+      ),
+    );
+  }
+
+  /// Downloads a binary resource (an attachment picture). Errors come back as [ApiException] like JSON calls.
+  Future<List<int>> getBytes(String path) async {
+    final uri = Uri.parse('${await _store.apiBase()}$path');
+    final headers = await _headers();
+    final res = await _send(
+      () => _http.get(uri, headers: headers),
+      timeout: const Duration(seconds: 60),
+    );
+    if (res.statusCode >= 200 && res.statusCode < 300) return res.bodyBytes;
+    _decode(res);
+    throw ApiException('UNKNOWN', 'Có lỗi không xác định (${res.statusCode}).');
+  }
+
   /// Sends one command. The caller owns [commandId] so a retry after a lost response reuses the same id.
   Future<Map<String, dynamic>> command(
     String type,
@@ -94,9 +123,12 @@ class ApiClient {
 
   Future<String> deviceIdForRegistration() => _store.deviceId();
 
-  Future<http.Response> _send(Future<http.Response> Function() call) async {
+  Future<http.Response> _send(
+    Future<http.Response> Function() call, {
+    Duration timeout = _timeout,
+  }) async {
     try {
-      return await call().timeout(_timeout);
+      return await call().timeout(timeout);
     } on Exception {
       throw ApiException(
         'OFFLINE',

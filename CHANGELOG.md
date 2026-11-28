@@ -5,6 +5,20 @@ theo [Semantic Versioning](https://semver.org/lang/vi/): trước bản hoàn ch
 năng mới, PATCH khi chỉ sửa lỗi), bản hoàn chỉnh đầu tiên là `1.0.0` (quyết định D-016). Số build `+N` luôn tăng.
 Bản cài: [GitHub Releases](https://github.com/NhanSamLe/money-manage-app/releases).
 
+## [1.1.0] — 2026-11-28
+
+Cần chạy `supabase/pending/apply-013.sql` và `apply-014.sql` (Supabase SQL Editor) trước khi dùng các tính năng mới.
+
+### Added
+- **Ảnh chứng từ cho giao dịch** (migration 013): chụp hoặc chọn nhiều ảnh (tối đa 10/giao dịch) trong Chi tiết giao
+  dịch; xem toàn màn hình, phóng to, chia sẻ/lưu, xóa. Ảnh được nén trên máy và lưu riêng tư trên Cloudflare R2, không
+  lưu trong cơ sở dữ liệu; sửa giao dịch thì ảnh cũ vẫn đi theo bản mới.
+- **Xóa khoản nợ nhập nhầm** (migration 014, D-019): đảo toàn bộ bút toán của khoản nợ (gốc và các lần trả), số dư tài
+  khoản trở lại như chưa từng ghi; lịch sử vẫn được giữ.
+- **Hoàn tác một lần ghi trả / xóa nợ**: số còn lại và trạng thái được tính lại.
+- **Sửa khoản nợ**: người liên quan, hạn trả, ghi chú; số tiền gốc sửa được khi chưa có lần trả nào.
+- Chi tiết khoản nợ với lịch sử trả; giao dịch thuộc công nợ có nút **Mở khoản nợ**.
+
 ## [1.0.0] — 2026-11-28
 
 Bản hoàn chỉnh đầu tiên.

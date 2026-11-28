@@ -63,6 +63,12 @@
       "$ref": "#/$defs/DEBT_WRITE_OFF"
     },
     {
+      "$ref": "#/$defs/DEBT_PAYMENT_REVERSE"
+    },
+    {
+      "$ref": "#/$defs/DEBT_CANCEL"
+    },
+    {
       "$ref": "#/$defs/GOAL_CREATE"
     },
     {
@@ -1416,6 +1422,15 @@
               "type": "string",
               "minLength": 0,
               "maxLength": 1000
+            },
+            "contact_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "principal": {
+              "type": "string",
+              "pattern": "^(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|9000000000000000)$",
+              "description": "Only while no repayment / write-off is in effect (DEBT_HAS_PAYMENTS otherwise). Migration 014."
             }
           },
           "required": [
@@ -1477,6 +1492,98 @@
             "amount",
             "reason",
             "effective_at",
+            "expected_version"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "command_id",
+        "command_type",
+        "schema_version",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "DEBT_PAYMENT_REVERSE": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "command_type": {
+          "const": "DEBT_PAYMENT_REVERSE"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "debt_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "payment_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "expected_version": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "required": [
+            "debt_id",
+            "payment_id",
+            "expected_version"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "command_id",
+        "command_type",
+        "schema_version",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "DEBT_CANCEL": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "command_type": {
+          "const": "DEBT_CANCEL"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "debt_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "expected_version": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "debt_id",
             "expected_version"
           ],
           "additionalProperties": false

@@ -140,6 +140,12 @@ void main() {
         await tester.tap(find.text('Cơm trưa'));
         await tester.pumpAndSettle();
         expect(find.text('Chi tiết giao dịch'), findsOneWidget);
+        // Actions sit below the receipts card: scroll to them like a user would.
+        await tester.scrollUntilVisible(
+          find.text('Hủy giao dịch'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
         expect(find.text('Chỉnh sửa'), findsOneWidget);
         await tester.tap(find.text('Hủy giao dịch'));
         await tester.pumpAndSettle();
@@ -154,6 +160,11 @@ void main() {
 
         await tester.tap(find.text('Thu nợ'));
         await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text('Hủy giao dịch'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
         expect(find.textContaining('thuộc một khoản công nợ'), findsOneWidget);
         final cancel = tester.widget<FilledButton>(
           find.widgetWithText(FilledButton, 'Hủy giao dịch'),

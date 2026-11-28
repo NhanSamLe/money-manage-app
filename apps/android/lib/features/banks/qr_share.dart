@@ -251,10 +251,7 @@ Future<Uint8List?> renderReceiveCard({
   final rec = ui.PictureRecorder();
   final c = Canvas(rec, Rect.fromLTWH(0, 0, w, h));
   // Opaque white edge to edge: pasted into chat apps it never shows transparent corners.
-  c.drawRect(
-    Rect.fromLTWH(0, 0, w, h),
-    Paint()..color = Colors.white,
-  );
+  c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = Colors.white);
 
   // Header: logo + bank name, centred together.
   var y = pad;

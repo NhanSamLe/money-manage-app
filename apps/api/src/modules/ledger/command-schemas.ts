@@ -85,6 +85,28 @@ const debtWriteOff = command(
   z.object({ debt_id: uuid, amount: posMoney, reason: z.string().min(1).max(1000), effective_at: iso, expected_version: version }).strict(),
 );
 
+/** Person, due date (null clears it), note; principal only while nothing was repaid / written off (migration 014). */
+const debtUpdate = command(
+  "DEBT_UPDATE",
+  z
+    .object({
+      debt_id: uuid,
+      expected_version: version,
+      contact_id: uuid.optional(),
+      due_date: localDate.nullable().optional(),
+      note: z.string().max(500).optional(),
+      principal: posMoney.optional(),
+    })
+    .strict(),
+);
+/** Undo one repayment or write-off: its transaction is reversed and the remaining principal restored (migration 014). */
+const debtPaymentReverse = command(
+  "DEBT_PAYMENT_REVERSE",
+  z.object({ debt_id: uuid, payment_id: uuid, expected_version: version }).strict(),
+);
+/** "Xóa khoản nợ": reverses every payment and the origin transaction; the debt becomes CANCELLED (migration 014). */
+const debtCancel = command("DEBT_CANCEL", z.object({ debt_id: uuid, expected_version: version, reason: z.string().max(200).optional() }).strict());
+
 const goalCreate = command("GOAL_CREATE", z.object({ name: z.string().min(1).max(120), target: posMoney, due_date: localDate.optional() }).strict());
 const goalMove = z.object({ goal_id: uuid, account_id: uuid, amount: posMoney, expected_version: version }).strict();
 const goalAllocate = command("GOAL_ALLOCATE", goalMove);
@@ -208,6 +230,9 @@ export const implementedCommand = z.discriminatedUnion("command_type", [
   debtCreate,
   debtRepay,
   debtWriteOff,
+  debtUpdate,
+  debtPaymentReverse,
+  debtCancel,
   goalCreate,
   goalAllocate,
   goalRelease,
@@ -228,7 +253,7 @@ export const IMPLEMENTED_TYPES: ReadonlySet<string> = new Set(implementedCommand
 export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   "ACCOUNT_CREATE", "ACCOUNT_UPDATE", "BASELINE_SET", "SOURCE_SET", "SETTINGS_UPDATE", "CONNECTION_CREATE", "CONNECTION_PAUSE", "CONNECTION_VERIFY",
   "TX_CREATE", "TX_ANNOTATE", "TX_CORRECT", "TX_REVERSE", "REVIEW_RESOLVE", "IMPORT_COMMIT", "CONTACT_CREATE", "CONTACT_UPDATE", "DEBT_CREATE",
-  "DEBT_REPAY", "DEBT_UPDATE", "DEBT_WRITE_OFF", "GOAL_CREATE", "GOAL_ALLOCATE", "GOAL_RELEASE", "GOAL_UPDATE", "BUDGET_UPSERT", "CATEGORY_UPSERT",
+  "DEBT_REPAY", "DEBT_UPDATE", "DEBT_WRITE_OFF", "DEBT_PAYMENT_REVERSE", "DEBT_CANCEL", "GOAL_CREATE", "GOAL_ALLOCATE", "GOAL_RELEASE", "GOAL_UPDATE", "BUDGET_UPSERT", "CATEGORY_UPSERT",
   "RULE_UPSERT", "RECURRING_UPSERT", "OCCURRENCE_MATCH", "DEVICE_REVOKE", "DEVICE_SOURCE_SET", "AI_ACCEPT", "AI_DISMISS", "REMINDER_UPSERT",
   "PROFILE_UPDATE", "TAG_UPSERT", "TX_TAG_SET", "ADJUSTMENT_CREATE", "SPLIT_BILL_CREATE",
 ]);

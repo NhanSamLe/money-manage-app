@@ -21,6 +21,8 @@ export interface Env {
   ONESIGNAL_REST_KEY?: string;
   /** Optional: shared secret for POST /v1/internal/tick (external scheduler fallback). Absent => endpoint is 404. */
   CRON_SECRET?: string;
+  /** R2 bucket moma-attachments (receipt pictures). Absent => attachments return STORAGE_UNAVAILABLE. */
+  ATTACHMENTS?: import("../entrypoints/routes-attachments").AttachmentBucket;
 }
 
 export interface Config {
@@ -56,7 +58,7 @@ const DB_TIMEOUT_MS = 5_000;
 
 // Fail closed: any missing or placeholder secret aborts the request.
 export function loadConfig(env: Env): Config {
-  const need = (k: keyof Env): string => {
+  const need = (k: Exclude<keyof Env, "ATTACHMENTS">): string => {
     const v = env[k];
     if (!v || v.startsWith("REPLACE") || v.includes("PROJECT_REF")) throw new Error(`CONFIG_MISSING:${k}`);
     return v;

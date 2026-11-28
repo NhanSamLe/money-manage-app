@@ -9,7 +9,20 @@ const valid = (c: unknown) => implementedCommand.safeParse(c).success;
 describe("command schemas", () => {
   it("every implemented command is part of the published catalogue", () => {
     for (const t of IMPLEMENTED_TYPES) expect(KNOWN_TYPES.has(t), t).toBe(true);
-    expect(IMPLEMENTED_TYPES.size).toBe(19);
+    expect(IMPLEMENTED_TYPES.size).toBe(22);
+  });
+
+  it("debt fixes: update / undo a payment / cancel (migration 014)", () => {
+    expect(valid(wrap("DEBT_UPDATE", { debt_id: U, expected_version: 2, due_date: null, note: "" }))).toBe(true);
+    expect(valid(wrap("DEBT_UPDATE", { debt_id: U, expected_version: 2, due_date: "2026-12-31", contact_id: U, principal: "300000" }))).toBe(true);
+    expect(valid(wrap("DEBT_UPDATE", { debt_id: U, expected_version: 2, principal: "0" }))).toBe(false);
+    expect(valid(wrap("DEBT_UPDATE", { debt_id: U, expected_version: 2, due_date: "31/12/2026" }))).toBe(false);
+    expect(valid(wrap("DEBT_UPDATE", { debt_id: U }))).toBe(false);
+    expect(valid(wrap("DEBT_PAYMENT_REVERSE", { debt_id: U, payment_id: U, expected_version: 3 }))).toBe(true);
+    expect(valid(wrap("DEBT_PAYMENT_REVERSE", { debt_id: U, expected_version: 3 }))).toBe(false);
+    expect(valid(wrap("DEBT_CANCEL", { debt_id: U, expected_version: 1 }))).toBe(true);
+    expect(valid(wrap("DEBT_CANCEL", { debt_id: U, expected_version: 1, reason: "Nhập nhầm" }))).toBe(true);
+    expect(valid(wrap("DEBT_CANCEL", { debt_id: U, expected_version: 1, amount: "1" }))).toBe(false);
   });
 
   it("rejects floating point and padded money everywhere", () => {

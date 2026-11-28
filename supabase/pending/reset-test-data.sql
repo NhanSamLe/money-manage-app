@@ -5,7 +5,8 @@
 --          thiết bị đã đăng ký (pf_device), cài đặt (pf_settings), cài đặt nhắc nhở (pf_reminder_settings),
 --          lịch sử chi phí AI (pf_ai_usage).
 -- Xóa: tài khoản tiền, giao dịch, sổ cái, danh mục, công nợ, người liên hệ, ngân sách, mục tiêu, định kỳ,
---      liên kết ngân hàng SePay, sự kiện ngân hàng, phân tích, ghi nhớ của Trợ lý, nhật ký lệnh/đồng bộ...
+--      liên kết ngân hàng SePay, sự kiện ngân hàng, phân tích, ghi nhớ của Trợ lý, nhật ký lệnh/đồng bộ,
+--      hộp thông báo, cặp chuyển khoản nội bộ, ảnh chứng từ (chỉ dòng dữ liệu; ảnh trên R2 không bị ảnh hưởng)...
 -- Sau khi xóa: tạo lại danh mục mặc định và tài khoản sổ cái hệ thống (như lúc mới đăng ký).
 -- Sau khi chạy: mở app, kéo xuống để làm mới; app tự mở các bước thiết lập ban đầu. Liên kết lại TPBank
 -- trong Cài đặt → Kết nối ngân hàng.
@@ -25,6 +26,7 @@ declare
     'pf_account_link', 'pf_connection', 'pf_device_source', 'pf_import_row', 'pf_import', 'pf_attachment',
     'pf_reconciliation', 'pf_balance_snapshot', 'pf_review', 'pf_reminder', 'pf_reminder_skip', 'pf_push_log',
     'pf_insight', 'pf_ai_memory', 'pf_ai_proposal', 'pf_rule', 'pf_job', 'pf_change', 'pf_command', 'pf_audit',
+    'pf_notification', 'pf_transfer_pair', 'pf_tx_attachment',
     'pf_tx', 'pf_journal', 'pf_debt', 'pf_contact', 'pf_goal', 'pf_budget', 'pf_recurring',
     'pf_account', 'pf_category', 'pf_ledger_account'];
 begin

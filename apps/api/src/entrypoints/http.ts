@@ -16,6 +16,7 @@ import { API_VERSION } from "../shared/version";
 import { currentVnDate, currentVnMonth, monthRangeUtc } from "../shared/report-period";
 import { registerInsightRoutes, runScheduled } from "./routes-insights";
 import { registerNotificationRoutes } from "./routes-notifications";
+import { registerAttachmentRoutes } from "./routes-attachments";
 import { afterAgentTurn, agentMemory, observeCommand, registerMemoryRoutes } from "./routes-memory";
 import type { MemoryGateway } from "../modules/ai/memory-gateway";
 import { pairAfterCommand, pairAfterTx, registerTransferRoutes } from "./routes-transfers";
@@ -564,6 +565,7 @@ export function buildApp(getDeps: (env: Env) => Deps = compose) {
   registerMemoryRoutes(app, getDeps, auth); // assistant memory (routes-memory.ts)
   registerTransferRoutes(app, getDeps, auth); // own-account transfer pairing (routes-transfers.ts)
   registerNotificationRoutes(app, getDeps, auth); // notification inbox (routes-notifications.ts)
+  registerAttachmentRoutes(app, getDeps, (env) => env?.ATTACHMENTS, auth); // receipt pictures in R2 (routes-attachments.ts)
 
   return app;
 }

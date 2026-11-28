@@ -12,6 +12,42 @@ class Contact {
   final int version;
 }
 
+/// One repayment or write-off of a debt (migration 014). [reversed] = already undone, kept for history.
+class DebtPayment {
+  DebtPayment({
+    required this.id,
+    required this.kind,
+    required this.principal,
+    required this.interest,
+    required this.txId,
+    required this.accountId,
+    required this.effectiveAt,
+    required this.reversed,
+  });
+  factory DebtPayment.fromJson(Map<String, dynamic> j) => DebtPayment(
+    id: j['id'] as String,
+    kind: j['kind'] as String,
+    principal: parseVnd('${j['principal'] ?? '0'}'),
+    interest: parseVnd('${j['interest'] ?? '0'}'),
+    txId: j['tx_id'] as String?,
+    accountId: j['account_id'] as String?,
+    effectiveAt: DateTime.tryParse('${j['effective_at']}')?.toLocal(),
+    reversed: j['reversed'] == true,
+  );
+  final String id;
+
+  /// REPAYMENT or WRITEOFF.
+  final String kind;
+  final int principal;
+  final int interest;
+  final String? txId;
+  final String? accountId;
+  final DateTime? effectiveAt;
+  final bool reversed;
+
+  bool get isWriteOff => kind == 'WRITEOFF';
+}
+
 class Debt {
   Debt({
     required this.id,
@@ -23,6 +59,12 @@ class Debt {
     required this.dueDate,
     required this.overdue,
     required this.version,
+    this.contactId,
+    this.note,
+    this.originTxId,
+    this.accountId,
+    this.originatedAt,
+    this.payments = const [],
   });
   factory Debt.fromJson(Map<String, dynamic> j) => Debt(
     id: j['id'] as String,
@@ -34,6 +76,15 @@ class Debt {
     dueDate: j['due_date'] as String?,
     overdue: j['overdue'] as bool,
     version: j['version'] as int,
+    contactId: j['contact_id'] as String?,
+    note: j['note'] as String?,
+    originTxId: j['origin_tx_id'] as String?,
+    accountId: j['account_id'] as String?,
+    originatedAt: DateTime.tryParse('${j['originated_at']}')?.toLocal(),
+    payments: [
+      for (final p in (j['payments'] as List? ?? const []))
+        DebtPayment.fromJson((p as Map).cast<String, dynamic>()),
+    ],
   );
   final String id;
   final String direction;
@@ -44,9 +95,26 @@ class Debt {
   final String? dueDate;
   final bool overdue;
   final int version;
+  final String? contactId;
+  final String? note;
+  final String? originTxId;
+
+  /// Cash account of the origin transaction (null for a historical debt).
+  final String? accountId;
+  final DateTime? originatedAt;
+
+  /// Newest first, including undone ones.
+  final List<DebtPayment> payments;
 
   bool get isReceivable => direction == 'RECEIVABLE';
   bool get isOpen => state == 'OPEN' || state == 'PARTIAL';
+  List<DebtPayment> get activePayments => [
+    for (final p in payments)
+      if (!p.reversed) p,
+  ];
+
+  /// The amount can change only while nothing was repaid or written off (server: DEBT_HAS_PAYMENTS).
+  bool get amountEditable => activePayments.isEmpty;
 }
 
 class Goal {

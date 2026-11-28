@@ -19,6 +19,8 @@ import '../../core/widgets.dart';
 import 'transactions_page.dart' show txKindLabel;
 import 'tx_sheets.dart' show TxEditSheet;
 import '../transfers/transfer_pair_section.dart';
+import 'tx_attachments.dart';
+import '../planning/debts_view.dart' show openDebt;
 
 /// How a transaction entered the ledger (server column `source`, migration 009).
 String txSourceLabel(MomaTx tx) => switch (tx.source) {
@@ -311,6 +313,8 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
           ),
         ),
         if (isTransfer && !tx.isVoid) TransferPairSection(txId: tx.id),
+        // Receipts / transfer screenshots kept as evidence (also allowed on cancelled rows, to view old proof).
+        TxAttachmentsSection(txId: tx.id, canAdd: !tx.isVoid),
         if (tx.debtLinked) ...[
           const SizedBox(height: 12),
           Text(
@@ -318,6 +322,14 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
             'Muốn sửa số tiền hoặc hủy, hãy thao tác trong mục Công nợ.',
             style: TextStyle(color: pal.muted, fontSize: 13, height: 1.45),
           ),
+          if (tx.debtId != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => openDebt(context, tx.debtId!),
+              icon: const Icon(Symbols.handshake_rounded),
+              label: const Text('Mở khoản nợ'),
+            ),
+          ],
         ],
         if (editable) ...[
           const SizedBox(height: 20),
