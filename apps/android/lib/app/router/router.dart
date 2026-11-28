@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/push.dart';
+import '../../features/classify/classify_page.dart';
+import '../../features/settings/capacity_page.dart';
 import '../../features/insights/insights_page.dart';
 import '../../features/reminders/reminder_settings_page.dart';
 import '../../core/ui/header.dart';
@@ -23,6 +25,7 @@ import '../../features/accounts/accounts_page.dart';
 import '../../features/auth/onboarding_page.dart';
 import '../../features/auth/setup_page.dart';
 import '../../features/planning/planning_page.dart';
+import '../../features/plans/plan_pages.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/auth/welcome_page.dart';
 import '../../features/home/home_shell.dart';
@@ -32,6 +35,7 @@ import '../../features/settings/categories_page.dart';
 import '../../features/auth/forgot_page.dart';
 import '../../features/transactions/quick_entry_page.dart';
 import '../../features/transactions/tx_detail_page.dart';
+import '../../features/collect/collect.dart' show ReminderPage;
 import '../../features/voice/voice_prefs.dart';
 
 const _publicRoutes = {
@@ -145,6 +149,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/home',
         pageBuilder: (_, state) => _fade(state, const HomeShell()),
       ),
+      // Kế hoạch & Dự toán (pushes route here: "/plans", "/plans/event/:id", "/plans/life/:id").
+      GoRoute(path: '/plans', redirect: (_, _) => '/planning?tab=4'),
+      GoRoute(
+        path: '/plans/event/:id',
+        builder: (_, state) => EventPlanPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/plans/life/:id',
+        builder: (_, state) => LifePlanPage(id: state.pathParameters['id']!),
+      ),
       GoRoute(path: '/quick-entry', builder: (_, _) => const QuickEntryPage()),
       GoRoute(
         path: '/guide',
@@ -194,6 +208,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ReminderSettingsPage(),
       ),
       GoRoute(path: '/profile', builder: (_, _) => const ProfilePage()),
+      // "Chọn loại nhanh": unclear money (push "N khoản chưa rõ loại", bell, home banner).
+      GoRoute(path: '/classify', builder: (_, _) => const QuickClassifyPage()),
+      // Push "Dữ liệu đã dùng N% dung lượng miễn phí" (migration 022).
+      GoRoute(
+        path: '/settings/capacity',
+        builder: (_, _) => const CapacityPage(),
+      ),
+      // Push "Nhắc Nam trả 535.000đ?" / "Sắp đến hạn trả…": message + QR / creditor bank (migration 019).
+      GoRoute(
+        path: '/debts/remind/:id',
+        builder: (_, s) => ReminderPage(debtId: s.pathParameters['id']!),
+      ),
     ],
   );
   // Notification taps navigate through this router (queued until the app is past splash/sign-in).

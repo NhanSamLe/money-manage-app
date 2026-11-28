@@ -27,15 +27,21 @@ Future<void> initWidgetBackend() async {
   }
 }
 
-/// Entry point of the translucent quick-entry sheet (QuickEntryActivity). args[0] = expense | income.
+/// Entry point of the translucent quick-entry sheet (QuickEntryActivity). args[0] = expense | income;
+/// a quick bar routine action adds args[1] = slot, args[2] = option key (recorded right away).
 @pragma('vm:entry-point')
 Future<void> quickEntryMain(List<String> args) async {
   await initWidgetBackend();
   final income = args.isNotEmpty && args.first == 'income';
+  final routine = args.length >= 3 && args[1].isNotEmpty && args[2].isNotEmpty;
   runApp(
     ProviderScope(
       retry: (_, _) => null,
-      child: QuickEntryOverlayApp(income: income),
+      child: QuickEntryOverlayApp(
+        income: income,
+        routineSlot: routine ? args[1] : null,
+        routineKey: routine ? args[2] : null,
+      ),
     ),
   );
 }

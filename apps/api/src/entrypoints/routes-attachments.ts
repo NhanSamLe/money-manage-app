@@ -11,6 +11,12 @@ export interface AttachmentBucket {
   put(key: string, value: ArrayBuffer, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
   get(key: string): Promise<{ body: ReadableStream; size: number } | null>;
   delete(key: string): Promise<void>;
+  /** One page of keys under a prefix (orphan sweep, routes-maintenance.ts). Optional so test fakes may omit it. */
+  list?(opts: { prefix?: string; cursor?: string; limit?: number }): Promise<{
+    objects: { key: string; uploaded?: Date; size?: number }[];
+    truncated: boolean;
+    cursor?: string;
+  }>;
 }
 
 interface AttachmentDeps {

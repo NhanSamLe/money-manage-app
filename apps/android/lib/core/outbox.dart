@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'models.dart';
 import 'network/api_client.dart';
 import 'providers.dart';
 
@@ -141,6 +142,61 @@ class OutboxController extends Notifier<OutboxState> {
     }
     return sent;
   }
+}
+
+/// Transactions saved offline, shown at the top of lists as "Chờ đồng bộ" until the outbox sends them.
+List<MomaTx> pendingTransactions(OutboxState box) => [
+  for (final c in box.items.reversed)
+    if (c.type == 'TX_CREATE' && c.error == null) _pendingTx(c),
+];
+
+MomaTx _pendingTx(PendingCommand c) {
+  final p = c.payload;
+  final at = '${p['effective_at'] ?? c.createdAt.toUtc().toIso8601String()}';
+  return MomaTx(
+    id: 'pending:${c.commandId}',
+    kind: '${p['kind'] ?? 'EXPENSE'}',
+    status: 'PENDING',
+    effectiveAt: (DateTime.tryParse(at) ?? c.createdAt).toLocal(),
+    amount: int.tryParse('${p['amount']}') ?? 0,
+    fee: int.tryParse('${p['fee'] ?? 0}') ?? 0,
+    accountId: p['account_id'] as String?,
+    toAccountId: p['to_account_id'] as String?,
+    categoryId: p['category_id'] as String?,
+    merchant: p['merchant'] as String?,
+    note: p['note'] as String?,
+    version: 0,
+    rawEffectiveAt: at,
+    relatedTxId: null,
+    debtLinked: false,
+    source: '${p['source'] ?? 'MANUAL'}',
+    pending: true,
+  );
+}
+
+/// Balances as they will be once the outbox is sent (money in/out/transfer saved offline).
+List<Account> withPendingBalances(List<Account> accounts, OutboxState box) {
+  final delta = <String, int>{};
+  for (final t in pendingTransactions(box)) {
+    final from = t.accountId;
+    if (from == null) continue;
+    if (t.isIncome) {
+      delta[from] = (delta[from] ?? 0) + t.amount;
+    } else if (t.isExpense) {
+      delta[from] = (delta[from] ?? 0) - t.amount;
+    } else if (t.kind == 'TRANSFER') {
+      delta[from] = (delta[from] ?? 0) - t.amount - t.fee;
+      final to = t.toAccountId;
+      if (to != null) delta[to] = (delta[to] ?? 0) + t.amount;
+    }
+  }
+  if (delta.isEmpty) return accounts;
+  return [
+    for (final a in accounts)
+      delta[a.id] == null || a.balance == null
+          ? a
+          : a.withBalance(a.balance! + delta[a.id]!),
+  ];
 }
 
 final outboxProvider = NotifierProvider<OutboxController, OutboxState>(

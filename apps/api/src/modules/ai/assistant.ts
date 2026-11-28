@@ -7,12 +7,32 @@ import { DomainError } from "../../shared/errors";
 export const MODEL = "deepseek-flash";
 export const MAX_INPUT_CHARS = 1600;
 export const MAX_OUTPUT_TOKENS = 400;
-/** Monthly hard cap, integer micro-USD ($1.00). */
 /** Owner decision: no practical monthly AI spending cap (usage is still recorded per call). */
 export const MONTHLY_CAP_MICRO = 1_000_000_000_000_000;
-// Conservative peak prices (USD per 1M tokens == micro-USD per token): input 0.30, output 1.20.
-const PRICE_IN_MICRO_PER_TOKEN = 0.3;
-const PRICE_OUT_MICRO_PER_TOKEN = 1.2;
+
+// Official deepseek-flash prices (api-docs.deepseek.com/quick_start/pricing, checked 2026-11-29), USD per 1M tokens ==
+// micro-USD per token. Off-peak is half of peak. Peak: 01-04 and 06-10 UTC, Monday-Friday (Chinese holidays are
+// off-peak too; ignored here, so costs are never under-estimated).
+export const PRICES = {
+  peak: { hit: 0.006, miss: 0.3, out: 1.2 },
+  offPeak: { hit: 0.003, miss: 0.15, out: 0.6 },
+} as const;
+const PRICE_IN_MICRO_PER_TOKEN = PRICES.peak.miss;
+const PRICE_OUT_MICRO_PER_TOKEN = PRICES.peak.out;
+
+/** DeepSeek peak window (UTC): 01:00-04:00 and 06:00-10:00, Monday to Friday. */
+export function isPeak(at: Date = new Date()): boolean {
+  const day = at.getUTCDay();
+  if (day === 0 || day === 6) return false;
+  const h = at.getUTCHours();
+  return (h >= 1 && h < 4) || (h >= 6 && h < 10);
+}
+
+/**
+ * Which feature made the call (stored with each usage row so the capacity screen shows cost per feature):
+ * agent = chat assistant, assistant = legacy one-shot parser, classify, bill, insight, reflect, plan, knowledge.
+ */
+export type AiFeature = "agent" | "assistant" | "classify" | "bill" | "insight" | "reflect" | "plan" | "knowledge" | "other";
 
 export interface AccountRef {
   id: string;
@@ -47,14 +67,19 @@ export type AssistantResult =
 export interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
+  /** Prompt tokens served from DeepSeek's automatic prefix cache (≈50× cheaper). Absent = unknown (all billed as miss). */
+  cache_hit_tokens?: number;
 }
 
 /** Worst-case cost (micro-USD) reserved before the call: 1 token per UTF-8 byte of the prompt + full output budget. */
 export function estimateMicro(promptBytes: number, maxOutputTokens: number = MAX_OUTPUT_TOKENS): number {
   return Math.ceil(promptBytes * PRICE_IN_MICRO_PER_TOKEN + maxOutputTokens * PRICE_OUT_MICRO_PER_TOKEN);
 }
-export function actualMicro(u: Usage): number {
-  return Math.ceil(u.prompt_tokens * PRICE_IN_MICRO_PER_TOKEN + u.completion_tokens * PRICE_OUT_MICRO_PER_TOKEN);
+/** What the call really cost: cache hits / misses / output at the peak or off-peak price of the call time. */
+export function actualMicro(u: Usage, at: Date = new Date()): number {
+  const p = isPeak(at) ? PRICES.peak : PRICES.offPeak;
+  const hit = Math.min(Math.max(u.cache_hit_tokens ?? 0, 0), u.prompt_tokens);
+  return Math.ceil(hit * p.hit + (u.prompt_tokens - hit) * p.miss + u.completion_tokens * p.out);
 }
 
 const SYSTEM_PROMPT = [
@@ -70,11 +95,12 @@ const SYSTEM_PROMPT = [
 ].join("\n");
 
 export function buildMessages(text: string, today: string, accounts: AccountRef[], categories: CategoryRef[]) {
+  // Stable owner data first, per-request data (today, text) last: keeps the cacheable prefix long.
   const data = {
-    today,
     timezone: "Asia/Ho_Chi_Minh",
     accounts: accounts.map((a) => ({ id: a.id, name: a.name, kind: a.kind })),
     categories: categories.map((c) => ({ id: c.id, name: c.name, type: c.type })),
+    today,
     text,
   };
   const messages = [
@@ -98,10 +124,21 @@ export function deepseekProvider(apiKey: string, fetchImpl: typeof fetch = fetch
       signal: AbortSignal.timeout(25_000),
     });
     if (!res.ok) throw new DomainError("AI_UNAVAILABLE");
-    const j = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: Partial<Usage> };
+    const j = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+      usage?: Partial<Usage> & { prompt_cache_hit_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
+    };
     const content = j.choices?.[0]?.message?.content;
     if (typeof content !== "string") throw new DomainError("AI_UNAVAILABLE");
-    return { content, usage: { prompt_tokens: j.usage?.prompt_tokens ?? 0, completion_tokens: j.usage?.completion_tokens ?? 0 } };
+    const hit = j.usage?.prompt_cache_hit_tokens ?? j.usage?.prompt_tokens_details?.cached_tokens;
+    return {
+      content,
+      usage: {
+        prompt_tokens: j.usage?.prompt_tokens ?? 0,
+        completion_tokens: j.usage?.completion_tokens ?? 0,
+        ...(typeof hit === "number" ? { cache_hit_tokens: hit } : {}),
+      },
+    };
   };
 }
 
@@ -164,6 +201,12 @@ export function resolveOutput(
   };
 }
 
+/**
+ * Every MoMa call is structured JSON work, so thinking mode is OFF: deepseek-flash thinks by default and bills the
+ * hidden reasoning as output tokens (the dearest part), which also adds seconds of latency. Prompts put the stable
+ * part first (system prompt, tool list, category list...) and per-request data last, so DeepSeek's automatic prefix
+ * cache serves the shared head at the cache-hit price.
+ */
 export function buildRequestBody(messages: unknown[], maxTokens: number = MAX_OUTPUT_TOKENS): Record<string, unknown> {
   return {
     model: MODEL,
@@ -171,6 +214,7 @@ export function buildRequestBody(messages: unknown[], maxTokens: number = MAX_OU
     response_format: { type: "json_object" },
     max_tokens: maxTokens,
     temperature: 0,
+    thinking: { type: "disabled" },
     stream: false,
   };
 }

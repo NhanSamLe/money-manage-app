@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../storage/local_store.dart';
+import '../storage/offline_cache.dart';
 
 class ApiException implements Exception {
   ApiException(this.code, this.message, {this.retryable = false});
@@ -17,14 +18,21 @@ class ApiException implements Exception {
 
 /// Thin HTTP client for the MoMa API. Business rules live on the server/database, not here.
 class ApiClient {
-  ApiClient(this._store, {http.Client? client})
-    : _http = client ?? http.Client();
+  ApiClient(this._store, {http.Client? client, OfflineCache? cache})
+    : _http = client ?? http.Client(),
+      _cache = cache ?? OfflineCache.instance;
   final LocalStore _store;
   final http.Client _http;
+  final OfflineCache? _cache;
   static const _timeout = Duration(seconds: 15);
 
   Future<Map<String, String>> _headers({String? idempotencyKey}) async {
-    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    String? token;
+    try {
+      token = Supabase.instance.client.auth.currentSession?.accessToken;
+    } catch (_) {
+      token = null; // Supabase not initialised (tests, a background engine before init)
+    }
     final bearer = token == null ? null : 'Bearer $token';
     return {
       'content-type': 'application/json',
@@ -34,11 +42,33 @@ class ApiClient {
     };
   }
 
+  /// Reads go network first and fall back to the last saved copy when there is no connection (D-021); a few
+  /// rarely-changing endpoints are reused from the cache for a while without any request.
   Future<dynamic> get(String path, {Map<String, String>? query}) async {
+    final cache = _cache;
+    final cacheable = cache != null && OfflineCache.cacheable(path);
+    final key = OfflineCache.keyFor(path, query);
+    if (cacheable) {
+      final fresh = await cache.fresh(path, key);
+      if (fresh != null) return fresh.data;
+    }
     final uri = Uri.parse('${await _store.apiBase()}$path')
         .replace(queryParameters: query);
     final headers = await _headers();
-    return _decode(await _send(() => _http.get(uri, headers: headers)));
+    final http.Response res;
+    try {
+      res = await _send(() => _http.get(uri, headers: headers));
+    } on ApiException catch (e) {
+      if (e.code == 'OFFLINE') {
+        final saved = cacheable ? await cache.read(key) : null;
+        if (saved != null) NetStatus.wentOffline(dataAt: saved.at);
+        if (saved != null) return saved.data;
+      }
+      rethrow;
+    }
+    final data = _decode(res);
+    if (cacheable) await cache.write(key, data);
+    return data;
   }
 
   Future<dynamic> post(
@@ -116,6 +146,8 @@ class ApiClient {
       'schema_version': 1,
       'payload': payload,
     }, idempotencyKey: commandId);
+    // Balances, lists... may all have changed: the next reads ask the server instead of the cache.
+    _cache?.invalidate();
     return res as Map<String, dynamic>;
   }
 
@@ -128,11 +160,14 @@ class ApiClient {
     Duration timeout = _timeout,
   }) async {
     try {
-      return await call().timeout(timeout);
+      final res = await call().timeout(timeout);
+      if (res.statusCode < 500) NetStatus.online();
+      return res;
     } on Exception {
+      NetStatus.wentOffline();
       throw ApiException(
         'OFFLINE',
-        'Không kết nối được máy chủ. Hãy kiểm tra mạng và thử lại.',
+        'Đang offline: thao tác này cần mạng. MoMa sẽ dùng được ngay khi có kết nối.',
         retryable: true,
       );
     }

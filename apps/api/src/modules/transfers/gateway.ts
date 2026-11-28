@@ -41,6 +41,10 @@ export interface TransferPair {
 export interface PairResult {
   /** ABSORBED: the late missing leg of a one-leg transfer was attached to it. */
   status: "NONE" | "AUTO" | "SUGGESTED" | "ABSORBED";
+  /** SAME_PAYMENT: the result is a duplicate merge / suggestion (migration 018), not an own-account transfer. */
+  kind?: "SAME_PAYMENT";
+  same_id?: string;
+  keep_tx_id?: string;
   pair_id?: string;
   transfer_tx_id?: string;
   suggested?: number;
@@ -53,7 +57,27 @@ export interface SweepResult {
   failed: number;
 }
 
-export interface TransferGateway {
+/** One payment seen twice (migration 018): `keep` stays, `dup` is merged into it. */
+export interface SamePayment {
+  id: string;
+  state: PairState;
+  score: number;
+  hints: string[];
+  created_at: string;
+  decided_at?: string | null;
+  keep: TransferLeg | null;
+  dup: TransferLeg | null;
+  can_undo: boolean;
+}
+
+export interface SamePaymentGateway {
+  duplicateSuggestions(owner: string): Promise<SamePayment[]>;
+  duplicateDecide(owner: string, id: string, accept: boolean): Promise<{ id: string; state: PairState; keep_tx_id?: string }>;
+  duplicateUndo(owner: string, id: string): Promise<{ id: string; state: PairState; keep_tx_id: string; restored_tx_id: string }>;
+  duplicateForTx(owner: string, txId: string): Promise<SamePayment | null>;
+}
+
+export interface TransferGateway extends SamePaymentGateway {
   tryPair(owner: string, txId: string): Promise<PairResult>;
   sweep(owner: string, hours: number): Promise<SweepResult>;
   suggestions(owner: string): Promise<TransferPair[]>;
@@ -100,5 +124,17 @@ export class SupabaseTransferGateway implements TransferGateway {
   }
   pairForTx(owner: string, txId: string) {
     return this.rpc<TransferPair | null>("pf_transfer_pair_for_tx", { p_owner: owner, p_tx: txId });
+  }
+  duplicateSuggestions(owner: string) {
+    return this.rpc<SamePayment[]>("pf_same_payment_suggestions", { p_owner: owner });
+  }
+  duplicateDecide(owner: string, id: string, accept: boolean) {
+    return this.rpc<{ id: string; state: PairState; keep_tx_id?: string }>("pf_same_payment_decide", { p_owner: owner, p_id: id, p_accept: accept });
+  }
+  duplicateUndo(owner: string, id: string) {
+    return this.rpc<{ id: string; state: PairState; keep_tx_id: string; restored_tx_id: string }>("pf_same_payment_undo", { p_owner: owner, p_id: id });
+  }
+  duplicateForTx(owner: string, txId: string) {
+    return this.rpc<SamePayment | null>("pf_same_payment_for_tx", { p_owner: owner, p_tx: txId });
   }
 }

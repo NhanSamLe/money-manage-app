@@ -20,6 +20,7 @@ import '../../core/widgets.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/brands/person_avatar.dart';
+import '../collect/collect.dart' show openReminder;
 
 class DebtsView extends ConsumerStatefulWidget {
   const DebtsView({super.key});
@@ -207,6 +208,7 @@ class _DebtDetailSheetState extends ConsumerState<DebtDetailSheet> {
       destructive: true,
     );
     if (!yes || !mounted) return;
+    // A repayment MoMa recorded from incoming money: the server gives that money back exactly as it arrived.
     final ok = await _run.run(
       () => ref.read(apiProvider).command('DEBT_PAYMENT_REVERSE', {
         'debt_id': d.id,
@@ -351,6 +353,18 @@ class _DebtDetailSheetState extends ConsumerState<DebtDetailSheet> {
                   : Symbols.north_east_rounded,
             ),
             label: Text(d.isReceivable ? 'Thu nợ' : 'Trả nợ'),
+          ),
+          const SizedBox(height: 8),
+          // Polite reminder with a QR of the exact amount / the creditor's bank to pay now (migration 019).
+          OutlinedButton.icon(
+            key: const ValueKey('debt-remind'),
+            onPressed: _run.busy ? null : () => openReminder(context, d.id),
+            icon: Icon(
+              d.isReceivable
+                  ? Symbols.notifications_active_rounded
+                  : Symbols.qr_code_2_rounded,
+            ),
+            label: Text(d.isReceivable ? 'Nhắc nợ kèm mã QR' : 'Trả ngay'),
           ),
           const SizedBox(height: 8),
         ],

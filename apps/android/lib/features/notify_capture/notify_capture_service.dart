@@ -305,14 +305,116 @@ class NotifyCapturePrefs {
 
 final _ns = Namespace.url.value;
 
-/// One command id per notification: recording the same notification twice (button + auto) replays, never doubles.
-/// A MoMo transaction code wins over the queue key, so the same payment seen in the app and by email is one.
-String notifyCommandId(CapturedNotification n) {
-  final code = n.parsed.txCode;
+/// One command id per real payment, so recording the same payment twice replays on the server instead of doubling.
+/// Strongest first: the MoMo transaction code (the same payment seen in the app and by email), the bank reference
+/// (FT...), the balance after the payment (a re-post reports the same balance, two real payments never do), and only
+/// then this notification's own key. Re-posts without any of these are caught by [captureFingerprint].
+String notifyCommandId(CapturedNotification n, {String? accountId}) {
+  final p = n.parsed;
+  final code = p.txCode;
   if (code != null) {
     return const Uuid().v5(_ns, 'moma-notify-tx|${n.package}|$code');
   }
+  final ref = p.bankRef;
+  if (ref != null && ref.isNotEmpty) {
+    return const Uuid().v5(_ns, 'moma-notify-ref|${n.package}|$ref');
+  }
+  final balance = p.balance;
+  if (balance != null && p.amount != null && p.direction != null) {
+    // + the day: out 25k, in 25k, out 25k can land on the same balance again, but not across a re-post's minutes.
+    final d = n.postTime.toLocal();
+    return const Uuid().v5(
+      _ns,
+      'moma-notify-bal|${n.package}|${accountId ?? ''}|${p.direction!.name}|${p.amount}|$balance|${d.year}-${d.month}-${d.day}',
+    );
+  }
   return const Uuid().v5(_ns, 'moma-notify|${n.package}|${n.key}');
+}
+
+/// True when [notifyCommandId] could only use the notification key (no code, reference or balance).
+bool needsFingerprint(CapturedNotification n) {
+  final p = n.parsed;
+  return p.txCode == null &&
+      (p.bankRef == null || p.bankRef!.isEmpty) &&
+      (p.balance == null || p.amount == null || p.direction == null);
+}
+
+// Times and dates change between two copies of one notification; everything else (amounts, codes) must match.
+final _timeOrDate = RegExp(
+  r'\b\d{1,2}[:h]\d{2}(?::\d{2})?\b|\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b',
+);
+
+/// What two copies of one notification share: app, direction, amount and the text without times / dates, folded
+/// (no diacritics, lower case, single spaces).
+String captureFingerprint(
+  CapturedNotification n, {
+  required int amount,
+  required NotifyDirection direction,
+}) {
+  final text = foldVietnamese(
+    '${n.title} ${n.text}'.replaceAll(_timeOrDate, ' '),
+  ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+  return '${n.package}|${direction.name}|$amount|$text';
+}
+
+/// Recently recorded notifications that had no unique code (local, this phone only): a re-post within
+/// [window] with the same fingerprint reuses the first command id. Bounded to the last [max] entries.
+class RecentCaptures {
+  RecentCaptures([FlutterSecureStorage? storage])
+    : _s = storage ?? const FlutterSecureStorage();
+  final FlutterSecureStorage _s;
+  static const _key = 'notify_recent_fingerprints';
+  static const window = Duration(minutes: 10);
+  static const max = 100;
+
+  Future<List<Map<String, dynamic>>> _read() async {
+    try {
+      final raw = await _s.read(key: _key);
+      if (raw == null || raw.isEmpty) return [];
+      return [
+        for (final e in jsonDecode(raw) as List)
+          Map<String, dynamic>.from(e as Map),
+      ];
+    } on Object {
+      return [];
+    }
+  }
+
+  /// The command id of an earlier copy posted within [window] of [at], if any.
+  Future<String?> find(String fingerprint, DateTime at) async {
+    for (final e in (await _read()).reversed) {
+      final t = DateTime.tryParse('${e['at']}');
+      if (e['fp'] == fingerprint &&
+          t != null &&
+          at.difference(t).abs() <= window) {
+        return '${e['id']}';
+      }
+    }
+    return null;
+  }
+
+  Future<void> remember(
+    String fingerprint,
+    String commandId,
+    DateTime at,
+  ) async {
+    try {
+      final list = (await _read())
+        ..removeWhere((e) {
+          final t = DateTime.tryParse('${e['at']}');
+          return t == null || at.difference(t) > const Duration(days: 1);
+        })
+        ..add({
+          'fp': fingerprint,
+          'id': commandId,
+          'at': at.toUtc().toIso8601String(),
+        });
+      final kept = list.length > max ? list.sublist(list.length - max) : list;
+      await _s.write(key: _key, value: jsonEncode(kept));
+    } on Object {
+      // Best effort: the server still merges re-posts (migration 018).
+    }
+  }
 }
 
 /// Sends TX_CREATE for one captured notification. A matching keyword picks the category (as CSV import does);
@@ -328,6 +430,7 @@ Future<bool> recordNotification(
   String? categoryId,
   String? note,
   String source = 'NOTIFICATION',
+  RecentCaptures? recent,
 }) async {
   final p = n.parsed;
   final income = direction == NotifyDirection.inflow;
@@ -349,15 +452,32 @@ Future<bool> recordNotification(
   final when = n.postTime.millisecondsSinceEpoch > 0
       ? n.postTime
       : DateTime.now();
-  final r = await api.command('TX_CREATE', {
-    'kind': kind,
-    'account_id': accountId,
-    'amount': amount.toString(),
-    'effective_at': when.toUtc().toIso8601String(),
-    'category_id': ?catId,
-    if (text.isNotEmpty)
-      'note': text.length > 1000 ? text.substring(0, 1000) : text,
-    'source': source,
-  }, commandId: notifyCommandId(n));
+  // A re-post of a notification without any unique code reuses the first copy's command id.
+  var commandId = notifyCommandId(n, accountId: accountId);
+  final store = recent ?? RecentCaptures();
+  String? fingerprint;
+  if (needsFingerprint(n)) {
+    fingerprint = captureFingerprint(n, amount: amount, direction: direction);
+    final earlier = await store.find(fingerprint, when);
+    if (earlier != null) commandId = earlier;
+  }
+  final Map<String, dynamic> r;
+  try {
+    r = await api.command('TX_CREATE', {
+      'kind': kind,
+      'account_id': accountId,
+      'amount': amount.toString(),
+      'effective_at': when.toUtc().toIso8601String(),
+      'category_id': ?catId,
+      if (text.isNotEmpty)
+        'note': text.length > 1000 ? text.substring(0, 1000) : text,
+      'source': source,
+    }, commandId: commandId);
+  } on ApiException catch (e) {
+    // Same payment already recorded from another copy (its time / text differed): nothing to do.
+    if (e.code == 'DUPLICATE_KEY_MISMATCH') return false;
+    rethrow;
+  }
+  if (fingerprint != null) await store.remember(fingerprint, commandId, when);
   return r['status'] != 'REPLAYED';
 }

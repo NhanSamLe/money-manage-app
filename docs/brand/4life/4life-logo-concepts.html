@@ -1,0 +1,111 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  body{margin:0;background:#F4F6F8;font-family:"Segoe UI",system-ui,sans-serif;color:#0F1B2D}
+  .wrap{display:flex;gap:36px;padding:40px 48px}
+  .card{background:#fff;border-radius:28px;padding:28px 28px 22px;width:400px;box-shadow:0 6px 24px rgba(15,27,45,.08)}
+  .card h2{margin:0 0 4px;font-size:22px}
+  .card p{margin:0 0 18px;color:#5B6B7D;font-size:14.5px;line-height:1.45;min-height:84px}
+  .row{display:flex;align-items:center;gap:18px}
+  .dark{background:#0E1621;border-radius:20px;padding:16px;display:flex;align-items:center;gap:16px;margin-top:16px}
+  .word{font-weight:800;font-size:40px;letter-spacing:-1px}
+  .word b{font-weight:900}
+  .dark .word{color:#fff}
+  .tag{font-size:12.5px;color:#7A8899;margin-top:2px;font-weight:600;letter-spacing:.3px}
+  .dark .tag{color:#8FA3B8}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- A: four-leaf clover, one leaf per pillar -->
+    <path id="leaf" d="M256 252 C 214 214 170 162 196 118 C 214 88 248 96 256 122 C 264 96 298 88 316 118 C 342 162 298 214 256 252 Z"/>
+    <symbol id="iconA" viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="116" fill="#FFF7EC"/>
+      <g transform="translate(0 6)">
+        <use href="#leaf" fill="#4F7CFF"/>
+        <use href="#leaf" fill="#12A27A" transform="rotate(90 256 256)"/>
+        <use href="#leaf" fill="#FFB020" transform="rotate(180 256 256)"/>
+        <use href="#leaf" fill="#FF6B6B" transform="rotate(270 256 256)"/>
+        <path d="M256 262 C 262 320 290 372 336 410" stroke="#12A27A" stroke-width="16" fill="none" stroke-linecap="round" opacity=".0"/>
+        <circle cx="256" cy="256" r="62" fill="#fff"/>
+        <text x="256" y="292" text-anchor="middle" font-family="Segoe UI, Arial" font-weight="900" font-size="104" fill="#0F1B2D">4</text>
+      </g>
+    </symbol>
+
+    <!-- B: the 4 is a clock hand inside a day ring of four coloured quarters -->
+    <linearGradient id="bgB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E2A47"/><stop offset="1" stop-color="#0B5E57"/>
+    </linearGradient>
+    <symbol id="iconB" viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="116" fill="url(#bgB)"/>
+      <g fill="none" stroke-width="30" stroke-linecap="round">
+        <path d="M256 86 A170 170 0 0 1 418 214" stroke="#4F7CFF"/>
+        <path d="M424 262 A170 170 0 0 1 300 420" stroke="#12C08E"/>
+        <path d="M252 426 A170 170 0 0 1 92 300" stroke="#FFB020"/>
+        <path d="M88 252 A170 170 0 0 1 208 92" stroke="#FF6B6B"/>
+      </g>
+      <g fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M292 146 L 176 296 L 340 296"/>
+        <path d="M292 146 L 292 372"/>
+      </g>
+      <circle cx="292" cy="146" r="26" fill="#FFD166"/>
+    </symbol>
+
+    <!-- C: the 4 as one continuous life path that ends in a sprouting leaf -->
+    <linearGradient id="pathC" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4F7CFF"/><stop offset=".55" stop-color="#7C5CFF"/><stop offset="1" stop-color="#12A27A"/>
+    </linearGradient>
+    <symbol id="iconC" viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="116" fill="#FFFFFF"/>
+      <rect x="10" y="10" width="492" height="492" rx="108" fill="none" stroke="#E7ECF2" stroke-width="4"/>
+      <path d="M300 404 L 300 112 L 150 304 L 344 304" fill="none" stroke="url(#pathC)" stroke-width="50"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="300" cy="412" r="30" fill="#4F7CFF"/>
+      <circle cx="300" cy="412" r="12" fill="#fff"/>
+      <path d="M344 304 C 372 250 420 236 440 244 C 446 286 410 326 356 316 Z" fill="#12A27A"/>
+      <path d="M352 306 C 380 286 404 270 428 254" stroke="#BFF0DC" stroke-width="7" fill="none" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <div class="card">
+    <h2>A · Cỏ bốn lá</h2>
+    <p>Bốn lá là bốn trụ cột: <b style="color:#4F7CFF">Thời gian</b>, <b style="color:#FF6B6B">Sức khỏe</b>,
+      <b style="color:#FFB020">Học tập</b>, <b style="color:#12A27A">Tài chính</b>. Cỏ bốn lá cũng là biểu tượng may mắn;
+      chữ 4 nằm ở tâm.</p>
+    <div class="row">
+      <svg width="132" height="132"><use href="#iconA"/></svg>
+      <svg width="64" height="64"><use href="#iconA"/></svg>
+      <svg width="36" height="36"><use href="#iconA"/></svg>
+    </div>
+    <div class="dark"><svg width="56" height="56"><use href="#iconA"/></svg>
+      <div><div class="word"><b>4</b>Life</div><div class="tag">SỐNG CÂN BẰNG MỖI NGÀY</div></div></div>
+  </div>
+
+  <div class="card">
+    <h2>B · Kim đồng hồ số 4</h2>
+    <p>Chữ 4 chính là kim đồng hồ chỉ giờ trong một vòng ngày chia bốn màu, đầu kim là mặt trời.
+      Gợi đúng "quản lý thời gian và nhịp sống".</p>
+    <div class="row">
+      <svg width="132" height="132"><use href="#iconB"/></svg>
+      <svg width="64" height="64"><use href="#iconB"/></svg>
+      <svg width="36" height="36"><use href="#iconB"/></svg>
+    </div>
+    <div class="dark"><svg width="56" height="56"><use href="#iconB"/></svg>
+      <div><div class="word"><b>4</b>Life</div><div class="tag">THỜI GIAN · THÓI QUEN · CUỘC SỐNG</div></div></div>
+  </div>
+
+  <div class="card">
+    <h2>C · Hành trình nảy mầm</h2>
+    <p>Chữ 4 là một con đường liền mạch: bắt đầu từ chấm "bạn ở đây", đi qua các khúc rẽ và kết thúc bằng
+      một chồi lá: mỗi ngày tốt lên một chút.</p>
+    <div class="row">
+      <svg width="132" height="132"><use href="#iconC"/></svg>
+      <svg width="64" height="64"><use href="#iconC"/></svg>
+      <svg width="36" height="36"><use href="#iconC"/></svg>
+    </div>
+    <div class="dark"><svg width="56" height="56"><use href="#iconC"/></svg>
+      <div><div class="word"><b>4</b>Life</div><div class="tag">MỖI NGÀY TỐT HƠN</div></div></div>
+  </div>
+</div>
+</body></html>

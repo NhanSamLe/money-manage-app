@@ -248,6 +248,20 @@ class _FormState extends ConsumerState<_Form> {
               value: _s.budgetAlerts,
               onChanged: (v) => _changed(() => _s.budgetAlerts = v),
             ),
+            LabeledSwitch(
+              label: 'Nhắc khi chi nhanh hơn dự kiến',
+              help:
+                  'Tối đa 1 lần mỗi ngày, ban ngày: "Còn 12 ngày, mỗi ngày nên khoảng 120.000đ". '
+                  'Danh mục tháng nào cũng vượt sẽ được đề xuất mức thực tế thay vì nhắc mãi.',
+              value: _s.budgetPacing,
+              onChanged: (v) => _changed(() => _s.budgetPacing = v),
+            ),
+            LabeledSwitch(
+              label: 'Tự đặt ngân sách tháng mới',
+              help: 'Đầu tháng, MoMa đặt lại các ngân sách tháng trước với hạn mức điều chỉnh theo thói quen chi tiêu thật.',
+              value: _s.budgetAuto,
+              onChanged: (v) => _changed(() => _s.budgetAuto = v),
+            ),
           ],
         ),
         const SizedBox(height: 20),

@@ -10,6 +10,7 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/ui/actions.dart';
 import '../../core/ui/header.dart';
+import '../../core/ui/offline.dart';
 import '../../core/widgets.dart';
 import '../../core/account_presets.dart';
 import '../../core/models.dart';
@@ -167,6 +168,9 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final list = ref.watch(bankAccountsProvider);
+    // Offline: the list and balances come from the saved copy; linking and syncing need the network.
+    final net = ref.watch(netStateProvider);
+    final offline = net.offline;
     return Scaffold(
       body: MomaPage(
         title: 'Kết nối ngân hàng',
@@ -218,6 +222,37 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                     ],
                   ),
                 ),
+                if (offline) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    key: const ValueKey('bank-offline-hint'),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: pal.warnBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Symbols.cloud_off_rounded,
+                          color: pal.warnInk,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Đang offline · số dư ${updatedLabel(net.dataAt)}. Kết nối và đồng bộ cần mạng; MoMa tự làm mới khi có mạng.',
+                            style: TextStyle(
+                              color: pal.warnInk,
+                              fontSize: 12.5,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 for (final a in accounts)
                   Container(
@@ -306,11 +341,13 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                                 fill: 1,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Đã kết nối với MoMa',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: pal.ink,
+                              Flexible(
+                                child: Text(
+                                  'Đã kết nối với MoMa',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: pal.ink,
+                                  ),
                                 ),
                               ),
                             ],
@@ -318,7 +355,7 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                         else
                           ActionButtons(
                             primaryLabel: 'Kết nối với MoMa',
-                            onPrimary: () => _link(a),
+                            onPrimary: offline ? null : () => _link(a),
                             busy: _busyId == a.id,
                           ),
                       ],
@@ -326,7 +363,7 @@ class _BankConnectPageState extends ConsumerState<BankConnectPage> {
                   ),
                 const SizedBox(height: 4),
                 OutlinedButton.icon(
-                  onPressed: _syncing ? null : _sync,
+                  onPressed: _syncing || offline ? null : _sync,
                   icon: _syncing
                       ? const SizedBox(
                           width: 18,

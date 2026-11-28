@@ -1,0 +1,21 @@
+# Daily data lifecycle for MoMa (D-028, free tiers only): retention/compaction batches until done, monthly stats,
+# weekly capacity snapshot (+ 60/80% warning) and a few pages of the R2 orphan sweep. Heavy work runs here (free
+# GitHub Actions minutes) instead of the 10 ms Worker cron, which only does one small batch at night as a fallback.
+# Runs at 20:30 UTC = 03:30 Vietnam time (DeepSeek/DB off-peak). Needs repository secret MOMA_CRON_SECRET.
+name: moma-maintenance
+on:
+  schedule:
+    - cron: "30 20 * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run lifecycle + capacity
+        env:
+          CRON_SECRET: ${{ secrets.MOMA_CRON_SECRET }}
+        run: |
+          curl -fsS --max-time 120 -X POST -H "x-cron-secret: $CRON_SECRET" \
+            https://moma-api.superaicore.indevs.in/v1/internal/maintenance

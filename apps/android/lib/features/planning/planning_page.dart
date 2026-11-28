@@ -5,9 +5,10 @@ import 'budgets_view.dart';
 import 'debts_view.dart';
 import 'goals_view.dart';
 import 'recurring_view.dart';
+import '../plans/plans_view.dart';
 import '../../app/theme/palette.dart';
 
-/// "Kế hoạch": debts, savings goals, monthly budgets and recurring items.
+/// "Kế hoạch": debts, savings goals, monthly budgets, recurring items and estimates (events + big life plans).
 class PlanningPage extends StatelessWidget {
   const PlanningPage({super.key, this.initialTab = 0});
   final int initialTab;
@@ -15,7 +16,7 @@ class PlanningPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       initialIndex: initialTab,
       child: Column(
         children: [
@@ -44,6 +45,7 @@ class PlanningPage extends StatelessWidget {
                 Tab(height: 44, text: 'Tiết kiệm'),
                 Tab(height: 44, text: 'Ngân sách'),
                 Tab(height: 44, text: 'Định kỳ'),
+                Tab(height: 44, text: 'Dự toán'),
               ],
             ),
           ),
@@ -54,6 +56,7 @@ class PlanningPage extends StatelessWidget {
                 GoalsView(),
                 BudgetsView(),
                 RecurringView(),
+                PlansView(),
               ],
             ),
           ),

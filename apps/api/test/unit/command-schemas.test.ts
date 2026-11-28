@@ -9,7 +9,9 @@ const valid = (c: unknown) => implementedCommand.safeParse(c).success;
 describe("command schemas", () => {
   it("every implemented command is part of the published catalogue", () => {
     for (const t of IMPLEMENTED_TYPES) expect(KNOWN_TYPES.has(t), t).toBe(true);
-    expect(IMPLEMENTED_TYPES.size).toBe(22);
+    // 22 + RECURRING_SPLIT_UPSERT, SPLIT_APPLY, SPLIT_UNDO, SPLIT_DISMISS (migration 016). Every one is also an
+    // assistant tool (agent-tools.test.ts fails when a command has no tool).
+    expect(IMPLEMENTED_TYPES.size).toBe(26);
   });
 
   it("debt fixes: update / undo a payment / cancel (migration 014)", () => {

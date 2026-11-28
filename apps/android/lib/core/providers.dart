@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/widgets/widget_sync.dart';
 import 'models.dart';
 import 'network/api_client.dart';
+import 'outbox.dart';
 import 'storage/local_store.dart';
 
 final storeProvider = Provider<LocalStore>((_) => LocalStore());
@@ -15,9 +16,11 @@ final apiProvider = Provider<ApiClient>(
 List<Map<String, dynamic>> _list(dynamic data) =>
     (data as List<dynamic>).cast<Map<String, dynamic>>();
 
+/// Accounts with balances that already include money in/out saved offline (still in the outbox).
 final accountsProvider = FutureProvider.autoDispose<List<Account>>((ref) async {
+  final box = ref.watch(outboxProvider);
   final data = await ref.watch(apiProvider).get('/accounts');
-  return _list(data).map(Account.fromJson).toList();
+  return withPendingBalances(_list(data).map(Account.fromJson).toList(), box);
 });
 
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>((
@@ -68,13 +71,27 @@ const _pageSize = 50;
 
 /// Cursor paging, newest first. Keeps what is already loaded when "load more" fails.
 class TransactionsNotifier extends AsyncNotifier<TxList> {
+  /// Transactions saved offline come first ("Chờ đồng bộ"); with no connection and nothing cached, they are
+  /// still shown on their own instead of an error.
   @override
-  Future<TxList> build() => _fetch(const []);
+  Future<TxList> build() async {
+    final pending = pendingTransactions(ref.watch(outboxProvider));
+    try {
+      final page = await _fetch(const []);
+      return TxList([...pending, ...page.items], hasMore: page.hasMore);
+    } on ApiException catch (e) {
+      if (e.code == 'OFFLINE' && pending.isNotEmpty) {
+        return TxList(pending, hasMore: false);
+      }
+      rethrow;
+    }
+  }
 
   Future<TxList> _fetch(List<MomaTx> existing) async {
     final query = <String, String>{'limit': '$_pageSize'};
-    if (existing.isNotEmpty) {
-      final last = existing.last;
+    final server = existing.where((t) => !t.pending);
+    if (server.isNotEmpty) {
+      final last = server.last;
       query['cursor'] = base64Url
           .encode(
             utf8.encode(jsonEncode({'at': last.rawEffectiveAt, 'id': last.id})),

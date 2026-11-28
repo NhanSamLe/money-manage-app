@@ -15,6 +15,9 @@ import '../../core/sheets.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import '../../app/theme/palette.dart';
+import '../splits/recurring_split_sheet.dart';
+import '../splits/split_api.dart';
+import '../splits/split_models.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -26,6 +29,8 @@ class RecurringView extends ConsumerWidget {
     final items = ref.watch(recurringProvider);
     return RefreshIndicator(
       onRefresh: () async {
+        ref.invalidate(recurringRulesProvider);
+        ref.invalidate(ruleSuggestionsProvider);
         ref.invalidate(recurringProvider);
         await ref.read(recurringProvider.future);
       },
@@ -43,11 +48,29 @@ class RecurringView extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Text(
-                  'MoMa không tự ghi giao dịch định kỳ. Đến hạn, bạn xác nhận từng khoản.',
+                  'Với quy tắc tự động, MoMa tự nhận khoản tiền ra khớp số tiền và khoảng ngày, ghi đúng danh mục '
+                  'và tự ghi nợ cho người cùng trả. Chưa chắc thì hỏi bạn một chạm; khoản thường thì bạn xác nhận khi đến hạn.',
                   style: TextStyle(color: context.pal.ink),
                 ),
               ),
             ),
+            for (final s
+                in ref.watch(ruleSuggestionsProvider).value ??
+                    const <RuleSuggestion>[])
+              Card(
+                child: ListTile(
+                  leading: const Icon(Symbols.auto_awesome_rounded),
+                  title: Text(s.text),
+                  subtitle: (s.label ?? '').isEmpty ? null : Text(s.label!),
+                  trailing: TextButton(
+                    onPressed: () => showFormSheet<void>(
+                      context,
+                      (_) => RecurringSplitSheet(suggestion: s),
+                    ),
+                    child: const Text('Tạo'),
+                  ),
+                ),
+              ),
             if (list.isEmpty)
               const EmptyState(
                 embedded: true,
@@ -56,6 +79,15 @@ class RecurringView extends ConsumerWidget {
                 hint: 'Thêm tiền nhà, hóa đơn, lương... để được nhắc đúng hạn.',
               ),
             for (final r in list) _RecurringCard(item: r),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () => showFormSheet<void>(
+                context,
+                (_) => const RecurringSplitSheet(),
+              ),
+              icon: const Icon(Symbols.auto_mode_rounded),
+              label: const Text('Thêm quy tắc tự động (tiền nhà, điện…)'),
+            ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () =>
@@ -77,6 +109,12 @@ class _RecurringCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isIncome = item.kind == 'INCOME';
+    final rule =
+        (ref.watch(recurringRulesProvider).value ?? const <RecurringRule>[])
+            .where((r) => r.item.id == item.id)
+            .firstOrNull;
+    final split = rule?.split;
+    final last = rule?.last;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -104,9 +142,38 @@ class _RecurringCard extends ConsumerWidget {
               ],
             ),
             Text(
-              item.intervalLabel,
+              rule?.windowLabel ?? item.intervalLabel,
               style: TextStyle(color: context.pal.muted),
             ),
+            if (split != null && split.participants.isNotEmpty)
+              Text(
+                'Chia với ${split.participants.map((p) => p.name).join(', ')} · '
+                '${split.autoApply ? 'tự ghi nợ' : 'hỏi trước khi ghi'}',
+                style: TextStyle(color: context.pal.muted, fontSize: 13),
+              ),
+            if (last != null)
+              Text(
+                last['state'] == 'PROPOSED'
+                    ? 'Có khoản chờ bạn xác nhận'
+                    : 'Lần khớp gần nhất: ${dateLabel(DateTime.tryParse('${last['created_at']}')?.toLocal() ?? DateTime.now())}',
+                style: TextStyle(color: context.pal.accentInk, fontSize: 13),
+              ),
+            if (item.kind == 'EXPENSE')
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => showFormSheet<void>(
+                    context,
+                    (_) => RecurringSplitSheet(rule: rule),
+                  ),
+                  icon: const Icon(Symbols.auto_mode_rounded, size: 18),
+                  label: Text(
+                    split == null
+                        ? 'Bật tự nhận & chia tiền'
+                        : 'Sửa quy tắc tự động',
+                  ),
+                ),
+              ),
             for (final o in item.expected)
               ListTile(
                 contentPadding: EdgeInsets.zero,

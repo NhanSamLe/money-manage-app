@@ -5,6 +5,37 @@ theo [Semantic Versioning](https://semver.org/lang/vi/): trước bản hoàn ch
 năng mới, PATCH khi chỉ sửa lỗi), bản hoàn chỉnh đầu tiên là `1.0.0` (quyết định D-016). Số build `+N` luôn tăng.
 Bản cài: [GitHub Releases](https://github.com/NhanSamLe/money-manage-app/releases).
 
+## [1.2.0] — 2026-11-29
+
+Trợ lý tài chính tự động và người bạn đồng hành. Cần chạy `supabase/pending/apply-1.2.0-tu-013-den-022.sql` (hoặc
+`apply-1.2.0-tu-015-den-022.sql` nếu đã chạy 013 và 014) trong Supabase SQL Editor **trước** khi cập nhật app.
+
+### Added
+- **Trợ lý dùng được 100% lệnh tài chính** (D-023): tìm trước khi làm, việc nhẹ tự làm kèm Hoàn tác, việc nặng xác nhận
+  một chạm; đọc ảnh hóa đơn trong chat, gắn vào giao dịch đã có thay vì ghi trùng, hỏi chia khi là hóa đơn nhóm.
+- **Thói quen**: "Sáng nay bạn ăn gì? [Bánh mì 20k] [Cà phê 25k]" trên thông báo, trang chủ, Trợ lý, ô ghi nhanh; nhắc
+  khoản quen chưa ghi; ghi nhớ nhóm hay chia tiền, kiểu làm tròn.
+- **AI tự phân loại** (migration 015, D-020): luật đã học → lịch sử → từ điển cửa hàng → AI; màn **Chọn loại nhanh** một
+  chạm cho khoản chưa rõ; học từ mỗi lần sửa.
+- **Định kỳ tự ghi và tự chia nợ** (016, D-022): tiền nhà/điện… khớp khoảng ngày và số tiền thì tự ghi, tự tạo nợ cho
+  từng người (làm tròn tùy chọn); ảnh hóa đơn trong giao dịch được AI đọc để cập nhật loại, quán, món và đề xuất chia.
+- **Chống trùng** (018, D-024): thông báo bị đăng lại không ghi đôi; trả MoMo/Grab bằng VCB gộp thành một khoản ở ngân
+  hàng; gợi ý "Có thể trùng" khi chưa chắc; sửa lỗi hiểu nhầm "MOMO … THANH TOAN" thành nạp ví.
+- **Đòi nợ có QR và tự gạch nợ** (019, D-025): mã nợ trong QR, nhận tiền khớp là tự ghi trả nợ; tin nhắc lịch sự gửi qua
+  Zalo; "Trả ngay" cho khoản mình nợ.
+- **Mục tiêu tự chạy**: đề xuất trích tiền khi lương về, dồn tiền dư cuối tháng, mốc tiến độ.
+- **Ngân sách tự đề xuất và nhịp chi theo ngày** (020, D-026); **ghi nhanh ngoài app**: ô Cài đặt nhanh, thanh thông
+  báo ghi nhanh, lối tắt "Chọn loại".
+- **Kế hoạch & Dự toán** (021, D-027): dự toán buổi đi chơi/tiệc theo lịch sử thật (gồm Grab đi về), thực tế vs dự toán;
+  kế hoạch mua nhà/xe/du lịch với các phương án "nếu thì".
+- **Offline** (D-021): đọc dữ liệu, ảnh, QR, ngân hàng khi mất mạng; giao dịch chờ đồng bộ hiện ngay; tự đồng bộ.
+- **Dung lượng & chi phí** (022, D-028): dọn dữ liệu theo vòng đời (giữ sự thật cốt lõi và điều đã học), số liệu tháng
+  cô đặc, dự báo số năm gói miễn phí còn đủ, chi phí AI theo tính năng.
+
+### Changed
+- Tắt chế độ "suy nghĩ" của DeepSeek cho mọi lần gọi, câu lệnh sắp xếp để tận dụng bộ nhớ đệm: chi phí AI ước tính
+  ~0,5 USD/tháng cho một người dùng.
+
 ## [1.1.0] — 2026-11-28
 
 Cần chạy `supabase/pending/apply-013.sql` và `apply-014.sql` (Supabase SQL Editor) trước khi dùng các tính năng mới.

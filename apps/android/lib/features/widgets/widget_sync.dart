@@ -12,7 +12,10 @@ import '../../core/models.dart';
 import '../../core/network/api_client.dart';
 import '../../core/planning_models.dart';
 import '../../core/providers.dart';
+import '../../core/storage/offline_cache.dart';
 import '../banks/qr_share.dart' show vietQrAccountNumber, renderReceiveCard;
+import '../budgets/budget_plan.dart' show Pacing;
+import 'routine_quick.dart';
 
 /// Pushes the numbers shown by the home-screen widgets to the native side (channel "moma/widgets").
 /// Widgets never fetch by themselves; they render what was pushed last, so they also work offline.
@@ -62,6 +65,8 @@ class WidgetSync {
       _auth = Supabase.instance.client.auth.onAuthStateChange.listen((s) {
         if (s.event == AuthChangeEvent.signedOut) {
           unawaited(clear());
+          // Any sign-out (also a revoked session): drop the offline copies too.
+          unawaited(OfflineCache.instance.clear());
         } else if (s.event == AuthChangeEvent.signedIn) {
           unawaited(refreshWithApi(api));
         }
@@ -97,6 +102,8 @@ class WidgetSync {
       _try<dynamic>(() => api.get('/categories')),
       _try<dynamic>(() => api.get('/accounts')),
       _try<dynamic>(() => api.get('/banks/sepay/accounts')),
+      _try<dynamic>(() => api.get('/budgets/pacing')),
+      _try<QuickRoutine?>(() => fetchQuickRoutine(api)),
     ]);
     final data = <String, Object?>{};
     final summaryJson = results[0];
@@ -215,7 +222,28 @@ class WidgetSync {
         }
       }
     }
+    // "Hôm nay còn tiêu được ~X" (D-026) for the spending widget and the quick bar notification.
+    if (results[6] is Map) {
+      final pace = Pacing.fromJson((results[6] as Map).cast<String, dynamic>());
+      data['safe_today'] = pace.isEmpty ? null : pace.safeToday;
+      data['safe_day'] = pace.isEmpty ? null : day;
+    }
+    // The assistant's routine for the current slot ("Bánh mì 20k") as one-tap actions outside the app.
+    final routine = results[7] as QuickRoutine?;
+    data.addAll({
+      'routine_slot': routine?.slot,
+      'routine_q': routine?.question,
+      'routine_opts': routine == null
+          ? null
+          : jsonEncode([for (final o in routine.options.take(3)) o.toJson()]),
+      'routine_until': routine == null
+          ? null
+          : routineSlotEnd(routine.slot, now).millisecondsSinceEpoch,
+    });
     if (data.isEmpty) return;
+    // Offline the reads above came from the saved copy: keep what the widgets show (with its real update time)
+    // instead of stamping old numbers as fresh. They refresh with the next online sync.
+    if (NetStatus.offline) return;
     await channel.invokeMethod<void>('save', {
       'data': data,
       'qrPng': png,
@@ -296,6 +324,47 @@ class WidgetSync {
     } catch (_) {
       return false;
     }
+  }
+
+  /// "Thanh ghi nhanh" persistent notification (D-026): on/off (default off).
+  static Future<bool> quickBar() async {
+    if (!supported) return false;
+    try {
+      return await channel.invokeMethod<bool>('getQuickBar') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Turns the quick bar on/off. Returns false when Android notifications are off for MoMa (bar can't show).
+  static Future<bool> setQuickBar(bool value) async {
+    if (!supported) return false;
+    try {
+      return await channel.invokeMethod<bool>('setQuickBar', {
+            'value': value,
+          }) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Asks Android 13+ to add the "Ghi chi nhanh" Quick Settings tile. False = add it by hand.
+  static Future<bool> requestQuickTile() async {
+    if (!supported) return false;
+    try {
+      return await channel.invokeMethod<bool>('requestTile') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens Android's notification settings for MoMa.
+  static Future<void> openNotificationSettings() async {
+    if (!supported) return;
+    try {
+      await channel.invokeMethod<void>('openNotificationSettings');
+    } catch (_) {}
   }
 
   /// Asks the launcher to add a widget (kind: quick | spend | qr | ai).

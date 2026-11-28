@@ -26,7 +26,11 @@ declare
     'pf_account_link', 'pf_connection', 'pf_device_source', 'pf_import_row', 'pf_import', 'pf_attachment',
     'pf_reconciliation', 'pf_balance_snapshot', 'pf_review', 'pf_reminder', 'pf_reminder_skip', 'pf_push_log',
     'pf_insight', 'pf_ai_memory', 'pf_ai_proposal', 'pf_rule', 'pf_job', 'pf_change', 'pf_command', 'pf_audit',
-    'pf_notification', 'pf_transfer_pair', 'pf_tx_attachment',
+    'pf_notification', 'pf_same_payment', 'pf_transfer_pair', 'pf_tx_attachment', 'pf_tx_classification',
+    -- migration 022: distilled stats, capacity history and the lifecycle watermark restart with the data
+    'pf_month_stat', 'pf_audit_month', 'pf_capacity_snapshot', 'pf_lifecycle_state',
+    'pf_debt_settle', 'pf_debt_collect', 'pf_contact_bank', 'pf_goal_proposal', 'pf_goal_milestone',
+    'pf_split_application', 'pf_recurring_split', 'pf_event_plan', 'pf_life_plan',
     'pf_tx', 'pf_journal', 'pf_debt', 'pf_contact', 'pf_goal', 'pf_budget', 'pf_recurring',
     'pf_account', 'pf_category', 'pf_ledger_account'];
 begin

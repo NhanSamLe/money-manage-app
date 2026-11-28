@@ -13,9 +13,14 @@ import '../../core/ui/header.dart';
 import '../../core/ui/motion.dart';
 import '../../core/widgets.dart';
 import '../../core/ui/money_pattern.dart';
+import '../assistant/routine_chips.dart' show RoutineChips;
 import '../reminders/today_meals_card.dart';
 import '../transactions/transactions_page.dart';
 import '../transfers/transfer_suggestions.dart';
+import '../classify/classify_page.dart' show UnclearBanner, unclearProvider;
+import '../budgets/budget_plan.dart'
+    show budgetPacingProvider, budgetProposalsProvider;
+import '../budgets/budget_widgets.dart' show BudgetPacingCard;
 
 /// "Trang chủ" (design): green hero header, net-worth card, income / expense / savings, savings rate,
 /// quick actions, accounts and the latest transactions.
@@ -58,6 +63,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           ref.invalidate(accountsProvider);
           ref.invalidate(transactionsProvider);
           ref.invalidate(profileProvider);
+          ref.invalidate(unclearProvider);
+          ref.invalidate(budgetPacingProvider);
+          ref.invalidate(budgetProposalsProvider);
           await ref.read(summaryProvider.future);
         },
         child: summary.when(
@@ -79,6 +87,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   const SizedBox(height: 12),
                 ],
                 const TransferSuggestionsCard(),
+                // Money the classifier could not place: "N khoản cần chọn loại" -> one-tap screen.
+                const UnclearBanner(margin: EdgeInsets.only(bottom: 12)),
                 _NetWorthCard(
                   summary: s,
                   hidden: _hidden,
@@ -122,6 +132,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   onTap: () => ref.read(shellTabProvider.notifier).select(3),
                 ),
                 const SizedBox(height: 12),
+                // "Hôm nay còn tiêu được ~X" + categories running fast, or MoMa's budget proposal (D-026).
+                BudgetPacingCard(hidden: _hidden, mask: _mask),
+                // "Sáng nay bạn ăn gì? [Bánh mì 20k] [Cà phê 25k]": one tap records the usual answer.
+                const RoutineChips(margin: EdgeInsets.only(bottom: 12)),
                 const TodayMealsCard(),
                 const SizedBox(height: 18),
                 _Title('Thao tác nhanh'),

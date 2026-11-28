@@ -2,31 +2,61 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app/theme/moma_theme.dart';
 import 'network/api_client.dart';
+import 'storage/offline_cache.dart';
 import '../app/theme/palette.dart';
 import 'ui/moma_switch.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
 /// Shared Loading / Failure / Empty presentation for async read models (preserves a retry path).
-class ErrorView extends StatelessWidget {
+/// No connection is not an error (D-021): reads normally come from the saved copy, so this only shows when
+/// nothing was saved yet, in a calm tone, and it reloads by itself as soon as the connection is back.
+class ErrorView extends StatefulWidget {
   const ErrorView({super.key, required this.error, required this.onRetry});
   final Object error;
   final VoidCallback onRetry;
 
   @override
+  State<ErrorView> createState() => _ErrorViewState();
+}
+
+class _ErrorViewState extends State<ErrorView> {
+  bool get _offline =>
+      widget.error is ApiException &&
+      (widget.error as ApiException).code == 'OFFLINE';
+
+  @override
+  void initState() {
+    super.initState();
+    NetStatus.notifier.addListener(_onNet);
+  }
+
+  @override
+  void dispose() {
+    NetStatus.notifier.removeListener(_onNet);
+    super.dispose();
+  }
+
+  void _onNet() {
+    if (_offline && !NetStatus.offline && mounted) widget.onRetry();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final offline =
-        error is ApiException && (error as ApiException).code == 'OFFLINE';
-    final msg = error is ApiException
-        ? (error as ApiException).message
+    final offline = _offline;
+    final error = widget.error;
+    final msg = offline
+        ? 'Phần này chưa được lưu trên máy. MoMa sẽ tự tải khi có mạng.'
+        : error is ApiException
+        ? error.message
         : 'Có lỗi khi tải dữ liệu. Bạn thử lại sau ít phút nhé.';
     return EmptyState(
-      icon: offline ? Symbols.wifi_off_rounded : Symbols.error_rounded,
+      icon: offline ? Symbols.cloud_off_rounded : Symbols.error_rounded,
       tone: offline ? const Color(0xFFE0A100) : MomaColors.expense,
-      title: offline ? 'Không có kết nối mạng' : 'Không tải được dữ liệu',
+      title: offline ? 'Đang offline' : 'Không tải được dữ liệu',
       hint: msg,
       actionLabel: 'Thử lại',
-      onAction: onRetry,
+      onAction: widget.onRetry,
     );
   }
 }

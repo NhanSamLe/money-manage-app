@@ -7,6 +7,7 @@ import '../../core/sheets.dart';
 import '../../app/theme/moma_theme.dart';
 import '../../core/providers.dart';
 import '../../core/ui/nav.dart';
+import '../../core/ui/offline.dart';
 import '../assistant/assistant_page.dart';
 import '../dashboard/dashboard_page.dart';
 import '../dashboard/reports_page.dart';
@@ -67,10 +68,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(shellTabProvider);
+    // Offline sync loop: sends the outbox and queued pictures as soon as the connection is back.
+    ref.watch(offlineSyncProvider);
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: Column(
         children: [
+          const OfflineBanner(),
           const _OutboxBanner(),
           Expanded(
             child: IndexedStack(index: index, children: _pages),

@@ -17,12 +17,23 @@ import '../../core/network/api_client.dart';
 import '../../core/outbox.dart';
 import '../../core/providers.dart';
 import 'widget_sync.dart';
+import 'routine_quick.dart';
+import '../../core/storage/offline_cache.dart' show NetStatus;
 import '../lock/lock_screen.dart';
 
 /// Root of the translucent quick-entry sheet started from the home-screen widget.
 class QuickEntryOverlayApp extends StatelessWidget {
-  const QuickEntryOverlayApp({super.key, required this.income});
+  const QuickEntryOverlayApp({
+    super.key,
+    required this.income,
+    this.routineSlot,
+    this.routineKey,
+  });
   final bool income;
+
+  /// Set when started from a quick bar action ("Bánh mì 20k"): record that learned option right away.
+  final String? routineSlot;
+  final String? routineKey;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +43,11 @@ class QuickEntryOverlayApp extends StatelessWidget {
       theme: buildMomaTheme(),
       darkTheme: buildMomaTheme(Brightness.dark),
       color: Colors.transparent,
-      home: QuickEntryOverlay(income: income),
+      home: QuickEntryOverlay(
+        income: income,
+        routineSlot: routineSlot,
+        routineKey: routineKey,
+      ),
     );
   }
 }
@@ -47,8 +62,15 @@ Future<void> _close() async {
 
 /// Compact bottom card: amount, top categories, account, note, "Lưu". Offline saves go to the outbox.
 class QuickEntryOverlay extends ConsumerStatefulWidget {
-  const QuickEntryOverlay({super.key, required this.income});
+  const QuickEntryOverlay({
+    super.key,
+    required this.income,
+    this.routineSlot,
+    this.routineKey,
+  });
   final bool income;
+  final String? routineSlot;
+  final String? routineKey;
   @override
   ConsumerState<QuickEntryOverlay> createState() => _QuickEntryOverlayState();
 }
@@ -69,6 +91,10 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
   String? _doneText;
   String? _error;
   final bool _signedIn = Supabase.instance.client.auth.currentSession != null;
+
+  /// The assistant's learned answers for the current part of the day ("Sáng nay bạn ăn gì?").
+  QuickRoutine? _routine;
+  String? _routineBusy;
 
   /// Flips once the theme's Google Fonts have loaded: chips measured with the fallback font keep a too-narrow
   /// size ("Khoản ch"), so the type chips are rebuilt (new key) after the real font arrives.
@@ -165,6 +191,64 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
       // Offline: keep the cached lists.
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+    await _loadRoutine(api);
+  }
+
+  /// Routine chips: the saved copy first (works offline, instant), then the live answer.
+  Future<void> _loadRoutine(ApiClient api) async {
+    final stored = await storedQuickRoutine(
+      slot: await WidgetSync.read('routine_slot'),
+      question: await WidgetSync.read('routine_q'),
+      options: await WidgetSync.read('routine_opts'),
+      until: await WidgetSync.read('routine_until'),
+    );
+    if (stored != null && mounted) setState(() => _routine = stored);
+    final key = widget.routineKey;
+    if (key != null) {
+      final o = stored?.options.where((x) => x.key == key).firstOrNull;
+      if (o != null) {
+        await _recordRoutine(stored!.slot, o);
+        return;
+      }
+    }
+    final live = await fetchQuickRoutine(api);
+    if (!mounted) return;
+    if (live != null) setState(() => _routine = live);
+    if (key != null) {
+      final r = live ?? stored;
+      final o = r?.options.where((x) => x.key == key).firstOrNull;
+      if (o != null) {
+        await _recordRoutine(r!.slot, o);
+      } else {
+        setState(() => _error = 'Món quen này đã hết giờ, hãy ghi bằng tay.');
+      }
+    }
+  }
+
+  Future<void> _recordRoutine(String slot, QuickRoutineOption o) async {
+    final owner = Supabase.instance.client.auth.currentUser?.id;
+    if (owner == null) return;
+    setState(() {
+      _routineBusy = o.key;
+      _error = null;
+    });
+    final api = ref.read(apiProvider);
+    try {
+      final message = await recordQuickRoutine(
+        api,
+        ref.read(outboxProvider.notifier),
+        owner: owner,
+        slot: slot,
+        option: o,
+      );
+      await _finish(message, NetStatus.offline ? null : api);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Không ghi được. Thử lại.');
+    } finally {
+      if (mounted) setState(() => _routineBusy = null);
     }
   }
 
@@ -340,6 +424,42 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
     ],
   );
 
+  /// "Sáng nay bạn ăn gì?  [Bánh mì 20k] [Cà phê sữa 25k]": one tap records, no typing.
+  Widget _routineRow(QuickRoutine r) => Padding(
+    padding: const EdgeInsets.only(top: 2, bottom: 6),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          r.question,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final o in r.options)
+              ActionChip(
+                key: ValueKey('routine-${o.key}'),
+                avatar: _routineBusy == o.key
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Symbols.add_rounded, size: 16),
+                label: Text(o.chip),
+                onPressed: _routineBusy == null && !_busy
+                    ? () => _recordRoutine(r.slot, o)
+                    : null,
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+
   Widget _form(ColorScheme scheme) {
     final cats = _topCategories;
     return Column(
@@ -385,9 +505,10 @@ class _QuickEntryOverlayState extends ConsumerState<QuickEntryOverlay> {
             ),
           ],
         ),
+        if (_routine != null && !_income) _routineRow(_routine!),
         TextField(
           controller: _amount,
-          autofocus: true,
+          autofocus: widget.routineKey == null,
           onChanged: (_) {
             if (_error != null) setState(() => _error = null);
           },

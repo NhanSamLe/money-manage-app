@@ -1,3 +1,5 @@
+import '../collect/collect.dart' show RemindActionCard;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -23,7 +25,10 @@ import '../voice/tts_service.dart';
 import '../voice/voice_controller.dart';
 import '../voice/voice_prefs.dart';
 import '../voice/voice_widgets.dart';
+import '../transactions/tx_attachments.dart'
+    show sniffImageType, txAttachmentsProvider, uploadQueueProvider;
 import 'memory_page.dart';
+import 'routine_chips.dart';
 
 /// The finance assistant ("Trợ lý tài chính"), the owner's finance assistant: an agent, not a chat. One sentence becomes concrete steps (record,
 /// transfer, lend, repay, budget, cancel, answer). Low-risk steps run by themselves when "Tự động ghi" is on;
@@ -41,17 +46,48 @@ class _Step {
   String? txId;
   bool undone = false;
 
+  /// Command result (ids used by later steps' `$sN.field` and by Hoàn tác's `$result.field`).
+  Map<String, dynamic>? result;
+  bool photoAttached = false;
+
+  String get id => '${json['id'] ?? ''}';
   String get type => '${json['type']}';
-  bool get isCommand => type == 'COMMAND';
+  bool get isCommand => type == 'COMMAND' || type == 'CALL';
   bool get low => json['risk'] == 'low';
-  bool get undoable => json['undoable'] == true;
+  Map<String, dynamic>? get undoSpec =>
+      (json['undo'] as Map?)?.cast<String, dynamic>();
+  bool get undoable => undoSpec != null || json['undoable'] == true;
+  bool get attachPhoto => json['attach_photo'] == true;
   String get title => '${json['title'] ?? ''}';
   List<String> get lines => [
     for (final l in (json['lines'] as List? ?? const [])) '$l',
   ];
   String get commandType =>
-      '${(json['command'] as Map?)?['command_type'] ?? ''}';
+      '${(json['command'] as Map?)?['command_type'] ?? (type == 'CALL' ? 'CALL' : '')}';
 }
+
+/// Fills `"$sN.field"` placeholders (results of earlier steps of the same turn) inside a JSON payload.
+String fillStepRefs(
+  String payloadJson,
+  Map<String, Map<String, dynamic>> results,
+) => payloadJson.replaceAllMapped(
+  RegExp(r'"\$(s\d{1,2}[a-z]?)\.([a-z_]+)"'),
+  (m) => jsonEncode(results[m[1]]?[m[2]]),
+);
+
+/// Undo ops with `$result.field` filled from the executed command's result.
+List<Map<String, dynamic>> fillUndoOps(
+  List<dynamic> ops,
+  Map<String, dynamic> result,
+) => [
+  for (final op in ops)
+    {
+      for (final e in (op as Map).cast<String, dynamic>().entries)
+        e.key: e.value is String && (e.value as String).startsWith(r'$result.')
+            ? result[(e.value as String).substring(8)]
+            : e.value,
+    },
+];
 
 class _Turn {
   _Turn.user(this.text, {this.image})
@@ -143,6 +179,10 @@ String _spoken(_Turn t) => [
 class _AssistantPageState extends ConsumerState<AssistantPage>
     with WidgetsBindingObserver {
   final _input = TextEditingController();
+  final _focus = FocusNode();
+
+  /// Bill photo sent in this conversation, attached to the transaction it ends up in (then cleared).
+  Uint8List? _pendingPhoto;
   final _scroll = ScrollController();
 
   /// Waiting for the agent's plan (drives the staged loading bubble).
@@ -191,6 +231,7 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
     _tts.onDone = null;
     _tts.stop();
     _input.dispose();
+    _focus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -329,8 +370,8 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
     );
     if (last.isUser || last.plan.isEmpty) return null;
     String status(_Step s) {
-      if (s.type == 'ASK') return 'ASKED';
-      if (s.type == 'ANSWER') return 'DONE';
+      if (s.type == 'ASK' || s.type == 'CHOICES') return 'ASKED';
+      if (s.type == 'ANSWER' || s.type == 'REMIND') return 'DONE';
       return switch (s.status) {
         _St.done => 'DONE',
         _St.pending || _St.running || _St.failed => 'PENDING',
@@ -338,14 +379,21 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
       };
     }
 
+    // One plan step may become several cards (a bill split) or a question (CHOICES); a pending bill split is
+    // always "waiting for the owner's answer".
     final steps = <Map<String, dynamic>>[];
-    for (var i = 0; i < last.plan.length && i < last.steps.length; i++) {
+    for (var i = 0; i < last.plan.length; i++) {
+      final p = last.plan[i];
+      final step = i < last.steps.length ? last.steps[i] : null;
       steps.add({
-        'do': '${last.plan[i]['do']}',
-        'status': status(last.steps[i]),
-        'data': last.plan[i],
+        'do': '${p['do']}',
+        'status': p['do'] == 'SPLIT_PENDING'
+            ? 'ASKED'
+            : (step == null ? 'DONE' : status(step)),
+        'data': p,
       });
     }
+    if (steps.length > 12) steps.removeRange(0, steps.length - 12);
     final ask = last.steps
         .where((s) => s.type == 'ASK')
         .map((s) => '${s.json['question']}')
@@ -469,6 +517,7 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
         return;
       }
       final bytes = await file.readAsBytes();
+      _pendingPhoto = bytes;
       if (!mounted) return;
       setState(() => _reading = false);
       await _send(_photoRequest(ocr), bytes);
@@ -505,7 +554,30 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
     ref.read(_chatProvider.notifier).touch();
     final api = ref.read(apiProvider);
     try {
-      var payload = jsonEncode((s.json['command'] as Map)['payload']);
+      if (s.type == 'CALL') {
+        final call = (s.json['call'] as Map).cast<String, dynamic>();
+        final path = '${call['path']}';
+        s.result = call['method'] == 'DELETE'
+            ? ((await api.delete(path)) as Map?)?.cast<String, dynamic>()
+            : ((await api.post(
+                path,
+                (call['body'] as Map?) ?? const {},
+              )) as Map?)?.cast<String, dynamic>();
+        s.status = _St.done;
+        ref.read(_chatProvider.notifier).touch();
+        return;
+      }
+      // Results of the earlier steps of the same answer fill `$sN.field` (e.g. the bill's tx id for the split).
+      final results = <String, Map<String, dynamic>>{
+        for (final t in ref.read(_chatProvider))
+          if (t.steps.contains(s))
+            for (final o in t.steps)
+              if (o.result != null) o.id: o.result!,
+      };
+      var payload = fillStepRefs(
+        jsonEncode((s.json['command'] as Map)['payload']),
+        results,
+      );
       final pre = s.json['pre'] as Map?;
       if (pre != null) {
         final r = await api.command(
@@ -523,10 +595,14 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
         jsonDecode(payload) as Map<String, dynamic>,
         commandId: s.commandId,
       );
-      s.txId = res['tx_id'] as String?;
+      s.result = res;
+      s.txId =
+          res['tx_id'] as String? ??
+          (jsonDecode(payload) as Map<String, dynamic>)['tx_id'] as String?;
       s.status = _St.done;
       refreshAll(ref);
       ref.invalidate(profileProvider);
+      if (s.attachPhoto) await _attachPhoto(s);
     } on ApiException catch (e) {
       s.status = _St.failed;
       s.error = e.message;
@@ -534,20 +610,78 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
     ref.read(_chatProvider.notifier).touch();
   }
 
-  Future<void> _undo(_Step s) async {
-    if (s.txId == null || s.undone) return;
+  /// The bill photo of this conversation goes to the transaction it was recorded in (queued when offline).
+  Future<void> _attachPhoto(_Step s) async {
+    final photo = _pendingPhoto;
+    final txId = s.txId;
+    if (photo == null || txId == null || s.photoAttached) return;
+    final type = sniffImageType(photo) ?? 'image/jpeg';
     try {
-      await ref.read(apiProvider).command('TX_REVERSE', {
-        'tx_id': s.txId,
-        'reason': 'Hoàn tác từ Trợ lý AI',
-        'expected_version': 1,
-      }, commandId: ApiClient.newId());
+      await ref
+          .read(apiProvider)
+          .postBytes(
+            '/transactions/$txId/attachments',
+            photo,
+            contentType: type,
+          );
+      ref.invalidate(txAttachmentsProvider(txId));
+    } on ApiException catch (e) {
+      // e.g. 10 pictures already: the record itself is fine, only offline is worth queueing.
+      if (e.code != 'OFFLINE') return;
+      await ref.read(uploadQueueProvider.notifier).add(txId, photo, type);
+    }
+    s.photoAttached = true;
+    _pendingPhoto = null;
+  }
+
+  Future<void> _undo(_Step s) async {
+    if (s.undone) return;
+    try {
+      final spec = s.undoSpec;
+      if (spec != null && s.result != null) {
+        // The server reads the current versions, so Hoàn tác works even after the item changed since.
+        await ref.read(apiProvider).post('/ai/undo', {
+          'step_command_id': s.commandId,
+          'ops': fillUndoOps(spec['ops'] as List, s.result!),
+          if (spec['habit'] != null) 'habit': spec['habit'],
+        });
+      } else if (s.txId != null) {
+        await ref.read(apiProvider).command('TX_REVERSE', {
+          'tx_id': s.txId,
+          'reason': 'Hoàn tác từ Trợ lý AI',
+          'expected_version': 1,
+        }, commandId: ApiClient.newId());
+      } else {
+        return;
+      }
       s.undone = true;
       refreshAll(ref);
       ref.read(_chatProvider.notifier).touch();
     } on ApiException catch (e) {
       if (mounted) await showErrorDialog(context, e.message);
     }
+  }
+
+  /// A quick answer of a CHOICES card: a ready action runs at once, a text is sent as the next message,
+  /// an empty text pre-fills the input for the owner to finish ("Chia với …").
+  Future<void> _choose(_Turn turn, Map<String, dynamic> option) async {
+    final action = (option['action'] as Map?)?.cast<String, dynamic>();
+    if (action != null) {
+      final step = _Step(action);
+      turn.steps.add(step);
+      ref.read(_chatProvider.notifier).touch();
+      await _run(step);
+      return;
+    }
+    final text = '${option['text'] ?? ''}';
+    if (text.isNotEmpty) {
+      await _send(text);
+      return;
+    }
+    final prefill = '${option['prefill'] ?? ''}';
+    _input.text = prefill;
+    _input.selection = TextSelection.collapsed(offset: prefill.length);
+    _focus.requestFocus();
   }
 
   @override
@@ -579,6 +713,8 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
       child: Column(
         children: [
           const _Header(),
+          // "Sáng nay bạn ăn gì?" one-tap answers learned from the owner's routine (hidden when nothing to ask).
+          const RoutineChips(),
           Expanded(
             child: turns.isEmpty
                 ? _Welcome(onPick: (t) => _send(t))
@@ -609,6 +745,7 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
                                   s.status = _St.skipped;
                                   ref.read(_chatProvider.notifier).touch();
                                 },
+                                onChoose: (o) => _choose(t, o),
                               ),
                       if (_waiting) const _Thinking(),
                     ],
@@ -715,6 +852,7 @@ class _AssistantPageState extends ConsumerState<AssistantPage>
                       Expanded(
                         child: TextField(
                           controller: _input,
+                          focusNode: _focus,
                           maxLength: _maxRequestChars,
                           minLines: 1,
                           maxLines: 4,
@@ -1249,8 +1387,12 @@ class _AgentTurn extends StatelessWidget {
     required this.onUndo,
     required this.onRunAll,
     required this.onSkip,
+    required this.onChoose,
   });
   final _Turn turn;
+
+  /// A quick answer of a CHOICES card was tapped.
+  final Future<void> Function(Map<String, dynamic>) onChoose;
 
   /// This reply is being read aloud ("Đọc" shows "Dừng").
   final bool speaking;
@@ -1356,6 +1498,10 @@ class _AgentTurn extends StatelessWidget {
                     )
                   else if (s.type == 'ANSWER')
                     _AnswerCard(json: s.json)
+                  else if (s.type == 'CHOICES')
+                    ChoicesCard(json: s.json, onChoose: onChoose)
+                  else if (s.type == 'REMIND')
+                    RemindActionCard(json: s.json)
                   else
                     _ActionCard(
                       step: s,
@@ -1433,6 +1579,9 @@ IconData _iconFor(String commandType) => switch (commandType) {
   'BUDGET_UPSERT' => Symbols.pie_chart_rounded,
   'RECURRING_UPSERT' => Symbols.event_repeat_rounded,
   'ACCOUNT_CREATE' => Symbols.account_balance_wallet_rounded,
+  'SPLIT_APPLY' || 'RECURRING_SPLIT_UPSERT' => Symbols.call_split_rounded,
+  'TX_ANNOTATE' => Symbols.edit_note_rounded,
+  'CALL' => Symbols.psychology_rounded,
   _ => Symbols.bolt_rounded,
 };
 
@@ -1644,6 +1793,31 @@ class _AnswerCard extends StatelessWidget {
               null,
             ));
           }
+        case 'PLANS':
+          title = 'Kế hoạch & dự toán';
+          final m = data as Map;
+          for (final e in (m['events'] as List? ?? const [])) {
+            final ev = e as Map;
+            rows.add((
+              '${ev['title']}',
+              ev['actual'] != null
+                  ? 'Thực tế ${formatVnd((ev['actual'] as num).round())} / ~${formatVnd((ev['estimate'] as num).round())}'
+                  : '~${formatVnd((ev['estimate'] as num).round())}',
+              null,
+            ));
+          }
+          for (final l in (m['life'] as List? ?? const [])) {
+            final lp = l as Map;
+            final ym = lp['reach_month'] as String?;
+            rows.add((
+              '${lp['name']}',
+              ym == null
+                  ? 'Chưa đủ tích lũy'
+                  : '~T${int.parse(ym.substring(5))}/${ym.substring(0, 4)}',
+              null,
+            ));
+          }
+          if (rows.isEmpty) rows.add(('Chưa có kế hoạch nào', '', null));
         case 'GOALS':
           title = 'Mục tiêu tiết kiệm';
           for (final g

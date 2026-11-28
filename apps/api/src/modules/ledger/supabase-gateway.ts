@@ -36,8 +36,16 @@ export class SupabaseFinanceGateway implements FinanceGateway {
       p_command: command,
     });
   }
-  aiReserve(ownerId: string, estimateMicro: number, capMicro: number, provider: string, model: string) {
-    return this.rpc<{ id: string }>("pf_ai_reserve", { p_owner: ownerId, p_estimate: estimateMicro, p_cap: capMicro, p_provider: provider, p_model: model });
+  async aiReserve(ownerId: string, estimateMicro: number, capMicro: number, provider: string, model: string, feature?: string) {
+    const args = { p_owner: ownerId, p_estimate: estimateMicro, p_cap: capMicro, p_provider: provider, p_model: model };
+    if (!feature) return this.rpc<{ id: string }>("pf_ai_reserve", args);
+    try {
+      return await this.rpc<{ id: string }>("pf_ai_reserve", { ...args, p_feature: feature });
+    } catch (e) {
+      // Migration 022 (feature column) not applied yet: record the call untagged rather than not at all.
+      if (e instanceof DomainError && e.code === "DB_ERROR") return this.rpc<{ id: string }>("pf_ai_reserve", args);
+      throw e;
+    }
   }
   aiSettle(ownerId: string, reservationId: string, actualMicro: number) {
     return this.rpc("pf_ai_settle", { p_owner: ownerId, p_id: reservationId, p_actual: actualMicro });

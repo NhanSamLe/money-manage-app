@@ -13,6 +13,23 @@ import '../../core/ui/header.dart';
 import '../../core/widgets.dart';
 import 'inbox.dart';
 import '../notify_capture/capture_state.dart' show captureNoticesProvider;
+import '../classify/classify_page.dart' show unclearProvider;
+import '../splits/split_api.dart' show pendingSplitsProvider;
+import '../collect/collect.dart'
+    show
+        GoalProposal,
+        Settlement,
+        collectSuggestionsProvider,
+        goalProposalsProvider,
+        openReminder,
+        showCollectSuggestionsSheet;
+import '../splits/split_models.dart' show SplitApplication;
+import '../transfers/duplicates.dart'
+    show
+        SamePayment,
+        duplicateSuggestionsProvider,
+        samePaymentTitle,
+        showDuplicateSuggestionsSheet;
 
 /// A reminder or alert derived from the owner's own data (no server push needed): overdue debts, budgets about to
 /// be exceeded, recurring items that are due, and offline commands that still need attention.
@@ -43,6 +60,96 @@ final noticesProvider = Provider.autoDispose<AsyncValue<List<Notice>>>((ref) {
   final recurring = ref.watch(recurringProvider);
   final outbox = ref.watch(outboxProvider);
   final out = <Notice>[...ref.watch(captureNoticesProvider)];
+  // Money the classifier could not place: one notice, opens "Chọn loại nhanh" (id changes with the count).
+  final unclear = ref.watch(unclearProvider).value;
+  if (unclear != null && unclear.total > 0) {
+    final first = unclear.items.isEmpty ? null : unclear.items.first;
+    out.insert(
+      0,
+      Notice(
+        id: 'classify-${unclear.total}-${first?.id ?? ''}',
+        icon: Symbols.help_rounded,
+        color: const Color(0xFFE0A100),
+        title: unclear.total == 1
+            ? '1 khoản chưa rõ loại'
+            : '${unclear.total} khoản chưa rõ loại',
+        text: first == null
+            ? 'Chạm để chọn loại nhanh.'
+            : '${first.isIncome ? '+' : '-'}${formatVnd(first.amount)} ở ${first.institution.isNotEmpty ? first.institution : first.accountName}. Chạm để chọn loại, một chạm là xong.',
+        route: '/classify',
+      ),
+    );
+  }
+  // One payment seen twice (bank + MoMo, a re-posted notification...): Gộp / Không trùng in a sheet.
+  for (final s
+      in ref.watch(duplicateSuggestionsProvider).value ??
+          const <SamePayment>[]) {
+    out.insert(
+      0,
+      Notice(
+        id: 'dup-${s.id}',
+        icon: Symbols.call_merge_rounded,
+        color: const Color(0xFFE0A100),
+        title: samePaymentTitle(s),
+        text: 'Có thể là một lần trả tiền được báo 2 lần. Chạm để Gộp hoặc giữ cả hai.',
+        route: '/tx/${s.keep!.txId}',
+        onOpen: showDuplicateSuggestionsSheet,
+      ),
+    );
+  }
+  // Money that may be a repayment (name / amount, not certain): one sheet, one tap per item (migration 019).
+  final settles =
+      ref.watch(collectSuggestionsProvider).value ?? const <Settlement>[];
+  if (settles.isNotEmpty) {
+    out.insert(
+      0,
+      Notice(
+        id: 'collect-${settles.length}-${settles.first.id}',
+        icon: Symbols.handshake_rounded,
+        color: MomaColors.income,
+        title: settles.length == 1
+            ? settles.first.question
+            : '${settles.length} khoản có thể là tiền trả nợ',
+        text: 'Chạm để xác nhận đúng người, MoMa sẽ gạch nợ giúp bạn.',
+        route: '/planning?tab=0',
+        onOpen: showCollectSuggestionsSheet,
+      ),
+    );
+  }
+  // "Trích X vào mục tiêu?" after a salary / an under-spent month.
+  for (final p
+      in ref.watch(goalProposalsProvider).value ?? const <GoalProposal>[]) {
+    out.insert(
+      0,
+      Notice(
+        id: 'goal-prop-${p.id}',
+        icon: Symbols.savings_rounded,
+        color: const Color(0xFF2F80ED),
+        title: p.title,
+        text: '${p.why}. Chạm để trích một chạm.',
+        route: '/planning?tab=1',
+      ),
+    );
+  }
+  // Split proposals (recurring rule not sure enough, group bill photo): one tap on the transaction page.
+  for (final s
+      in ref.watch(pendingSplitsProvider).value ?? const <SplitApplication>[]) {
+    out.insert(
+      0,
+      Notice(
+        id: 'split-${s.id}',
+        icon: Symbols.call_split_rounded,
+        color: const Color(0xFF2F80ED),
+        title: s.recurringName != null
+            ? 'Có phải ${s.recurringName}? ${formatVnd(s.total)}'
+            : 'Chia ${formatVnd(s.total)}?',
+        text: s.shares.isEmpty
+            ? 'Hóa đơn ăn chung. Chạm để chọn người chia hoặc bỏ qua.'
+            : '${s.shares.map((x) => '${x.name} ${formatVnd(x.amount)}').join(', ')}. Chạm để xác nhận.',
+        route: '/tx/${s.txId}',
+      ),
+    );
+  }
   final today = DateTime.now();
   final todayKey =
       '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
@@ -59,8 +166,10 @@ final noticesProvider = Provider.autoDispose<AsyncValue<List<Notice>>>((ref) {
               ? 'Khoản phải thu quá hạn'
               : 'Khoản phải trả quá hạn',
           text:
-              '$person ${d.direction == 'RECEIVABLE' ? 'còn nợ bạn' : 'bạn còn nợ'} ${formatVnd(d.remaining)}${d.dueDate == null ? '' : ', hạn ${d.dueDate}'}.',
+              '$person ${d.direction == 'RECEIVABLE' ? 'còn nợ bạn' : 'bạn còn nợ'} ${formatVnd(d.remaining)}${d.dueDate == null ? '' : ', hạn ${d.dueDate}'}. '
+              '${d.direction == 'RECEIVABLE' ? 'Chạm để nhắc kèm mã QR.' : 'Chạm để trả ngay.'}',
           route: '/planning?tab=0',
+          onOpen: (c) => openReminder(c, d.id),
         ),
       );
     }
@@ -192,6 +301,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               ref.invalidate(debtsProvider);
               ref.invalidate(budgetsProvider);
               ref.invalidate(recurringProvider);
+              ref.invalidate(unclearProvider);
+              ref.invalidate(duplicateSuggestionsProvider);
             },
           ),
           data: (items) {

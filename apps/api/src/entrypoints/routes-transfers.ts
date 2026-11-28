@@ -57,6 +57,29 @@ export function registerTransferRoutes(app: Hono<any>, getDeps: (env: any) => Tr
     const id = parseOr(UUID, c.req.param("txId"));
     return ok(c, await tgOf(getDeps(c.env)).pairForTx(ownerOf(c), id));
   });
+
+  // ---- one payment seen twice (migration 018): e.g. VCB debit + MoMo "thanh toán thành công" for the same purchase.
+  // Possible duplicates the owner should confirm (both still posted).
+  app.get("/v1/duplicates/suggestions", auth, async (c) => ok(c, await tgOf(getDeps(c.env)).duplicateSuggestions(ownerOf(c))));
+
+  // accept=true: merged into one transaction (CONFIRMED). accept=false: REJECTED, never suggested again.
+  app.post("/v1/duplicates/:id/decide", auth, async (c) => {
+    const id = parseOr(UUID, c.req.param("id"));
+    const { accept } = parseOr(z.object({ accept: z.boolean() }).strict(), await c.req.json().catch(() => null));
+    return ok(c, await tgOf(getDeps(c.env)).duplicateDecide(ownerOf(c), id, accept));
+  });
+
+  // Splits a merge back into the two original transactions.
+  app.post("/v1/duplicates/:id/undo", auth, async (c) => {
+    const id = parseOr(UUID, c.req.param("id"));
+    return ok(c, await tgOf(getDeps(c.env)).duplicateUndo(ownerOf(c), id));
+  });
+
+  // The merge a transaction took part in (kept or merged-away side), or null.
+  app.get("/v1/transactions/:id/duplicate", auth, async (c) => {
+    const id = parseOr(UUID, c.req.param("id"));
+    return ok(c, await tgOf(getDeps(c.env)).duplicateForTx(ownerOf(c), id));
+  });
 }
 
 // ---------------------------------------------------------------- hooks

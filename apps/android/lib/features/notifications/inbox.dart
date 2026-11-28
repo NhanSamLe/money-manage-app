@@ -51,6 +51,7 @@ class InboxItem {
     'reminder' => Symbols.restaurant_rounded,
     'insight' => Symbols.insights_rounded,
     'budget' => Symbols.pie_chart_rounded,
+    'classify' => Symbols.help_rounded,
     _ => Symbols.notifications_rounded,
   };
 
@@ -60,6 +61,7 @@ class InboxItem {
     'reminder' => const Color(0xFFE0A100),
     'insight' => const Color(0xFF2F80ED),
     'budget' => MomaColors.expense,
+    'classify' => const Color(0xFFE0A100),
     _ => MomaColors.emerald,
   };
 }

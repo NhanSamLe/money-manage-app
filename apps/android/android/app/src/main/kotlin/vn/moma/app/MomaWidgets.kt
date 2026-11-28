@@ -113,6 +113,8 @@ object MomaWidgets {
             val p = cls.getDeclaredConstructor().newInstance()
             for (id in ids) p.push(ctx, mgr, id)
         }
+        // The quick bar notification shows the same numbers / routine options.
+        QuickBar.refresh(ctx)
     }
 
     fun providerFor(kind: String): Class<out MomaWidgetBase>? = when (kind) {
@@ -161,6 +163,19 @@ object MomaWidgets {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
         return PendingIntent.getActivity(ctx, ("qe$kind").hashCode(), intent, flags())
+    }
+
+    /** Quick bar routine action ("Bánh mì 20k"): the quick-entry sheet records that learned option right away. */
+    fun quickEntryRoutine(ctx: Context, slot: String, key: String): PendingIntent {
+        val intent = Intent(ctx, QuickEntryActivity::class.java).apply {
+            action = "vn.moma.app.QUICK_ENTRY.routine.$slot.$key"
+            putExtra(QuickEntryActivity.EXTRA_KIND, "expense")
+            putExtra(QuickEntryActivity.EXTRA_SLOT, slot)
+            putExtra(QuickEntryActivity.EXTRA_ROUTINE, key)
+            putExtra("background_mode", "transparent")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+        return PendingIntent.getActivity(ctx, ("qr$slot$key").hashCode(), intent, flags())
     }
 
     fun qrOverlay(ctx: Context): PendingIntent {
@@ -307,6 +322,27 @@ object WidgetBridge {
                             }
                         }
                         result.success(opened)
+                    }
+                    "getQuickBar" -> result.success(QuickBar.enabled(app))
+                    "setQuickBar" -> result.success(QuickBar.setEnabled(app, call.argument<Boolean>("value") == true))
+                    "requestTile" -> result.success(QuickBar.requestTile(app))
+                    "openNotificationSettings" -> {
+                        val intent = if (Build.VERSION.SDK_INT >= 26) {
+                            Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, app.packageName)
+                        } else {
+                            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                .setData(android.net.Uri.fromParts("package", app.packageName, null))
+                        }
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        result.success(
+                            try {
+                                app.startActivity(intent)
+                                true
+                            } catch (_: Exception) {
+                                false
+                            },
+                        )
                     }
                     "openApp" -> {
                         val path = (call.argument<String>("path") ?: "home").trimStart('/')

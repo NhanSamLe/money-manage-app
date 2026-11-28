@@ -155,6 +155,83 @@ const recurringUpsert = command(
 
 const occurrenceMatch = command("OCCURRENCE_MATCH", z.object({ occurrence_id: uuid, tx_id: uuid, expected_version: version }).strict());
 
+// ---- Recurring rules with bill splitting (migration 016, D-022)
+
+const splitParticipant = z
+  .object({
+    contact_id: uuid,
+    /** EQUAL: same share as the others in the equal group (the owner included when owner_share); FIXED: VND; PERCENT: 0-100. */
+    mode: z.enum(["EQUAL", "FIXED", "PERCENT"]),
+    value: z.number().min(0).max(1e13).optional(),
+  })
+  .strict();
+
+/** Create/update a monthly expense rule ("tiền nhà 1.600.000đ, ngày 5-10, chia 3 với Nam và Lan") that MoMa matches and splits automatically. */
+const recurringSplitUpsert = command(
+  "RECURRING_SPLIT_UPSERT",
+  z
+    .object({
+      name: z.string().min(1).max(120),
+      account_id: uuid,
+      amount: posMoney,
+      category_id: uuid,
+      /** First expected payment date (YYYY-MM-DD); normally day window_start of the next month. */
+      next_date: localDate,
+      enabled: z.boolean(),
+      interval: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]).optional(),
+      recurring_id: uuid.optional(),
+      expected_version: version.optional(),
+      /** Days of the month the payment usually happens (5-10). */
+      window_start: z.number().int().min(1).max(31),
+      window_end: z.number().int().min(1).max(31),
+      /** Accepted amount difference in % (default 10). */
+      tolerance_pct: z.number().int().min(0).max(50).optional(),
+      /** Words seen in the bank content for this payment (landlord's name, "TIEN NHA"...). */
+      payee_keywords: z.array(z.string().min(1).max(40)).max(10).optional(),
+      /** Others' shares rounded up to this step (default 5000). */
+      rounding: z.union([z.literal(0), z.literal(1000), z.literal(5000), z.literal(10000)]).optional(),
+      /** The owner is one of the equal shares (default true). */
+      owner_share: z.boolean().optional(),
+      /** Confident matches are applied without asking (default true); otherwise always a proposal. */
+      auto_apply: z.boolean().optional(),
+      participants: z.array(splitParticipant).max(20).optional(),
+    })
+    .strict()
+    .refine((p) => p.window_end >= p.window_start, "window_end >= window_start")
+    .refine((p) => p.recurring_id === undefined || p.expected_version !== undefined, "expected_version required when updating"),
+);
+
+/** Split one expense: each share becomes a debt the person owes the owner (category/occurrence optional). Confirms a proposal when application_id is given. */
+const splitApply = command(
+  "SPLIT_APPLY",
+  z
+    .object({
+      tx_id: uuid,
+      shares: z
+        .array(
+          z
+            .object({ contact_id: uuid.optional(), name: z.string().min(1).max(80).optional(), amount: posMoney })
+            .strict()
+            .refine((s) => s.contact_id !== undefined || s.name !== undefined, "contact_id or name"),
+        )
+        .max(20),
+      category_id: uuid.optional(),
+      merchant: z.string().min(1).max(120).optional(),
+      recurring_id: uuid.optional(),
+      occurrence_id: uuid.optional(),
+      application_id: uuid.optional(),
+      source: z.enum(["RECURRING", "BILL", "MANUAL", "AI"]).optional(),
+      note: z.string().max(300).optional(),
+    })
+    .strict(),
+);
+
+/** Undo an applied split: its debts are cancelled (reversal journals) and the recurring occurrence is expected again. */
+const splitUndo = command("SPLIT_UNDO", z.object({ application_id: uuid }).strict());
+
+/** "Không chia": drop a split proposal; the same rule is not proposed again for that bill. */
+const splitDismiss = command("SPLIT_DISMISS", z.object({ application_id: uuid }).strict());
+
 const accountUpdate = command(
   "ACCOUNT_UPDATE",
   z
@@ -240,6 +317,10 @@ export const implementedCommand = z.discriminatedUnion("command_type", [
   categoryUpsert,
   recurringUpsert,
   occurrenceMatch,
+  recurringSplitUpsert,
+  splitApply,
+  splitUndo,
+  splitDismiss,
   accountUpdate,
   txAnnotate,
   txCorrect,
@@ -256,4 +337,5 @@ export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   "DEBT_REPAY", "DEBT_UPDATE", "DEBT_WRITE_OFF", "DEBT_PAYMENT_REVERSE", "DEBT_CANCEL", "GOAL_CREATE", "GOAL_ALLOCATE", "GOAL_RELEASE", "GOAL_UPDATE", "BUDGET_UPSERT", "CATEGORY_UPSERT",
   "RULE_UPSERT", "RECURRING_UPSERT", "OCCURRENCE_MATCH", "DEVICE_REVOKE", "DEVICE_SOURCE_SET", "AI_ACCEPT", "AI_DISMISS", "REMINDER_UPSERT",
   "PROFILE_UPDATE", "TAG_UPSERT", "TX_TAG_SET", "ADJUSTMENT_CREATE", "SPLIT_BILL_CREATE",
+  "RECURRING_SPLIT_UPSERT", "SPLIT_APPLY", "SPLIT_UNDO", "SPLIT_DISMISS",
 ]);

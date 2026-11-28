@@ -291,7 +291,8 @@ describe("AI assistant (provider faked, database real)", () => {
     expect(saved.status).toBe(200);
     const u = (await h.db.query("select state, spent_micro_usd::int as spent from pf_ai_usage order by created_at desc limit 1")).rows[0];
     expect(u.state).toBe("SETTLED");
-    expect(u.spent).toBe(Math.ceil(600 * 0.3 + 200 * 1.2));
+    // Billed at the real price of the call time (peak or off-peak, migration 022 / D-028); never more than the old flat peak price.
+    expect([Math.ceil(600 * 0.3 + 200 * 1.2), Math.ceil(600 * 0.15 + 200 * 0.6)]).toContain(u.spent);
   });
 
   it("never guesses: unknown ids become a question", async () => {

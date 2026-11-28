@@ -24,6 +24,9 @@ import { DomainError } from "../shared/errors";
 import type { MemoryGateway } from "../modules/ai/memory-gateway";
 import { REFLECT_FROM_MIN, runReflection } from "./routes-memory";
 import { runTransferSweep } from "./routes-transfers";
+import { SWEEP_BATCH, runClassifySweep } from "./routes-classify";
+import { runBudgetCron } from "./routes-budgets";
+import { personalizeMealPush, routineMissedPush } from "./routes-agent";
 import type { TransferGateway } from "../modules/transfers/gateway";
 
 // Smart reminders + spending insights: HTTP routes (registered from http.ts) and the cron entry (scheduled()).
@@ -182,7 +185,7 @@ async function aiWording<T>(
   if (!d.ai) return null;
   try {
     const { messages, bytes } = build();
-    const { id: reservation } = await d.gw.aiReserve(owner, estimateMicro(bytes, INSIGHT_MAX_OUTPUT_TOKENS), MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    const { id: reservation } = await d.gw.aiReserve(owner, estimateMicro(bytes, INSIGHT_MAX_OUTPUT_TOKENS), MONTHLY_CAP_MICRO, "deepseek", MODEL, "insight");
     let out;
     try {
       out = await d.ai({ ...buildRequestBody(messages, INSIGHT_MAX_OUTPUT_TOKENS), temperature: 0.3 });
@@ -242,18 +245,32 @@ export async function runScheduled(d: InsightDeps, now: Date): Promise<string[]>
             });
           }
         } else {
+          // Meal reminders become "Sáng nay bạn ăn gì?" with the owner's usual answers as one-tap buttons (routes-agent.ts).
+          const m = p.type === "meal" ? await personalizeMealPush(d.gw, owner, p, now) : p;
           await send({
             ownerId: owner,
-            title: p.title,
-            body: p.body,
-            data: p.data,
+            title: m.title,
+            body: m.body,
+            data: m.data,
             androidGroup: p.type === "budget" ? "moma_budget" : "moma_reminder",
-            ...(p.type === "meal" ? { buttons: p.buttons } : {}),
+            ...(m.type === "meal" ? { buttons: m.buttons } : {}),
           });
         }
         done.push(p.key);
       } catch (e) {
         logFailure(p.type, e, p.key);
+      }
+    }
+    // Morning nudge about daily items not recorded yesterday ("gửi xe, cà phê như mọi ngày?"), once per day.
+    if (pushOn && settings.daily_review.enabled) {
+      try {
+        const m = await routineMissedPush(d.gw, owner, now);
+        if (m && (await rg.pushClaim(owner, m.key))) {
+          await send({ ownerId: owner, title: m.title, body: m.body, data: m.data, androidGroup: "moma_reminder", buttons: m.buttons });
+          done.push(m.key);
+        }
+      } catch (e) {
+        logFailure("routine_missed", e);
       }
     }
     // Nightly reflection of the assistant's memory: once per local day after 23:00, claimed like a push (no push).
@@ -270,6 +287,10 @@ export async function runScheduled(d: InsightDeps, now: Date): Promise<string[]>
     }
     // Own-account transfers whose two legs arrived out of order or while the hook failed (idempotent, never throws).
     await runTransferSweep(d, owner);
+    // Captured money still without a category: classify a bounded batch and push once about what stays unclear.
+    await runClassifySweep(d, owner, SWEEP_BATCH, now);
+    // Self-adjusting budgets: monthly auto-apply + pacing nudges (routes-budgets.ts, never throws).
+    for (const k of await runBudgetCron(d, owner, now)) done.push(k);
   } catch (e) {
     logFailure("run", e);
   }

@@ -178,7 +178,7 @@ async function aiNotes(d: MemoryDeps, owner: string, facts: string[]) {
   if (!d.ai) return null;
   try {
     const { messages, bytes } = buildReflectionMessages(facts);
-    const { id: reservation } = await d.gw.aiReserve(owner, estimateMicro(bytes, REFLECT_MAX_OUTPUT_TOKENS), MONTHLY_CAP_MICRO, "deepseek", MODEL);
+    const { id: reservation } = await d.gw.aiReserve(owner, estimateMicro(bytes, REFLECT_MAX_OUTPUT_TOKENS), MONTHLY_CAP_MICRO, "deepseek", MODEL, "reflect");
     let out;
     try {
       out = await d.ai({ ...buildRequestBody(messages, REFLECT_MAX_OUTPUT_TOKENS), temperature: 0.2 });

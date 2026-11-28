@@ -36,4 +36,17 @@
             android:targetClass="vn.moma.app.MainActivity"
             android:targetPackage="vn.moma.app" />
     </shortcut>
+    <!-- D-026: money the classifier could not place -> "Chọn loại nhanh" (one tap per item). -->
+    <shortcut
+        android:shortcutId="classify"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_classify"
+        android:shortcutShortLabel="@string/shortcut_classify_short"
+        android:shortcutLongLabel="@string/shortcut_classify_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="moma://app/classify"
+            android:targetClass="vn.moma.app.MainActivity"
+            android:targetPackage="vn.moma.app" />
+    </shortcut>
 </shortcuts>

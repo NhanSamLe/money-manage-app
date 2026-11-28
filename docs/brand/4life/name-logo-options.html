@@ -1,0 +1,133 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  body{margin:0;background:#F2F4F7;font-family:"Segoe UI",system-ui,sans-serif;color:#0F1B2D}
+  .grid{display:grid;grid-template-columns:repeat(3,440px);gap:28px;padding:36px 44px 20px}
+  .card{background:#fff;border-radius:26px;padding:24px 26px 20px;box-shadow:0 6px 22px rgba(15,27,45,.07)}
+  .top{display:flex;gap:20px;align-items:center}
+  .name{font-size:34px;font-weight:900;letter-spacing:-1px;line-height:1}
+  .sub{font-size:13px;color:#6B7A8C;font-weight:700;letter-spacing:.4px;margin-top:6px}
+  .desc{font-size:14px;color:#4B5B6E;line-height:1.45;margin-top:14px;min-height:60px}
+  .sizes{display:flex;gap:14px;align-items:center;margin-top:12px}
+  .num{display:inline-block;background:#0F1B2D;color:#fff;border-radius:8px;padding:1px 9px;font-size:13px;font-weight:800;margin-right:6px}
+  .eco{margin:8px 44px 36px;background:#0E1621;border-radius:26px;padding:24px 30px;color:#fff;display:flex;align-items:center;gap:28px}
+  .eco .t{font-size:30px;font-weight:900;letter-spacing:-.5px}
+  .eco .s{font-size:13px;color:#8FA3B8;font-weight:700;letter-spacing:.4px}
+  .pill{display:flex;align-items:center;gap:12px;background:#17222F;border-radius:18px;padding:10px 16px}
+  .pill b{font-size:18px}.pill span{display:block;font-size:12px;color:#8FA3B8}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <!-- MoMa (existing style, recreated for side-by-side) -->
+  <linearGradient id="gMo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1E5A47"/><stop offset="1" stop-color="#1F8A6A"/></linearGradient>
+  <symbol id="moma" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#gMo)"/>
+    <path d="M132 352 C 132 230 156 176 196 176 C 236 176 252 236 256 300" stroke="#A8F0D2" stroke-width="56" fill="none" stroke-linecap="round"/>
+    <path d="M256 300 C 262 236 278 176 318 176 C 358 176 380 230 380 352" stroke="#4FD9A6" stroke-width="56" fill="none" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- 1. 4Life · clock 4 -->
+  <linearGradient id="gB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0E2A47"/><stop offset="1" stop-color="#0B5E57"/></linearGradient>
+  <symbol id="life4" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#gB)"/>
+    <g fill="none" stroke-width="30" stroke-linecap="round">
+      <path d="M256 86 A170 170 0 0 1 418 214" stroke="#4F7CFF"/>
+      <path d="M424 262 A170 170 0 0 1 300 420" stroke="#12C08E"/>
+      <path d="M252 426 A170 170 0 0 1 92 300" stroke="#FFB020"/>
+      <path d="M88 252 A170 170 0 0 1 208 92" stroke="#FF6B6B"/>
+    </g>
+    <g fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M292 146 L 176 296 L 340 296"/><path d="M292 146 L 292 372"/>
+    </g>
+    <circle cx="292" cy="146" r="26" fill="#FFD166"/>
+  </symbol>
+
+  <!-- 2. 4Life · clover -->
+  <path id="leaf" d="M256 252 C 206 212 156 156 186 108 C 206 78 246 86 256 116 C 266 86 306 78 326 108 C 356 156 306 212 256 252 Z"/>
+  <symbol id="clover" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="#FFF7EC"/>
+    <use href="#leaf" fill="#4F7CFF"/>
+    <use href="#leaf" fill="#12A27A" transform="rotate(90 256 256)"/>
+    <use href="#leaf" fill="#FFB020" transform="rotate(180 256 256)"/>
+    <use href="#leaf" fill="#FF6B6B" transform="rotate(270 256 256)"/>
+    <circle cx="256" cy="256" r="66" fill="#fff"/>
+    <text x="256" y="294" text-anchor="middle" font-family="Segoe UI, Arial" font-weight="900" font-size="112" fill="#0F1B2D">4</text>
+  </symbol>
+
+  <!-- 3. LiMa · sibling of MoMa: one stroke L that rises into a sunrise/leaf -->
+  <linearGradient id="gLi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B2A6B"/><stop offset="1" stop-color="#5B3FC4"/></linearGradient>
+  <symbol id="lima" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#gLi)"/>
+    <path d="M176 140 L 176 330 C 176 360 192 372 222 372 L 300 372" stroke="#C9BEFF" stroke-width="56" fill="none" stroke-linecap="round"/>
+    <path d="M300 372 C 352 372 380 330 380 280 C 380 238 352 214 322 214" stroke="#8E7BFF" stroke-width="56" fill="none" stroke-linecap="round"/>
+    <circle cx="330" cy="150" r="34" fill="#FFD166"/>
+  </symbol>
+
+  <!-- 4. Nhịp · rhythm line forming an N -->
+  <linearGradient id="gN" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7A59"/><stop offset="1" stop-color="#E0436B"/></linearGradient>
+  <symbol id="nhip" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#gN)"/>
+    <path d="M78 300 L 150 300 L 170 356 L 196 150 L 316 362 L 340 150 L 362 236 L 434 236" stroke="#fff" stroke-width="40" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="434" cy="236" r="22" fill="#FFE3A3"/>
+  </symbol>
+
+  <!-- 5. Mầm · sprout whose two leaves form an M -->
+  <linearGradient id="gM" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9FBF2"/><stop offset="1" stop-color="#C8F2DE"/></linearGradient>
+  <symbol id="mam" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#gM)"/>
+    <path d="M256 400 L 256 250" stroke="#0E7A5A" stroke-width="34" stroke-linecap="round"/>
+    <path d="M256 262 C 214 270 150 250 128 180 C 190 160 246 186 256 262 Z" fill="#19B37F"/>
+    <path d="M256 238 C 300 246 364 222 386 150 C 320 132 266 162 256 238 Z" fill="#0E8F65"/>
+    <path d="M176 404 L 336 404" stroke="#0E7A5A" stroke-width="26" stroke-linecap="round" opacity=".35"/>
+  </symbol>
+
+  <!-- 6. Kairo · K whose arm is a clock hand on a gold arc -->
+  <linearGradient id="gK" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#101828"/><stop offset="1" stop-color="#26324A"/></linearGradient>
+  <symbol id="kairo" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#gK)"/>
+    <path d="M110 300 A150 150 0 1 1 402 300" stroke="#F2C14E" stroke-width="22" fill="none" stroke-linecap="round" opacity=".9"/>
+    <path d="M196 150 L 196 380" stroke="#fff" stroke-width="44" stroke-linecap="round"/>
+    <path d="M196 270 L 316 160" stroke="#F2C14E" stroke-width="40" stroke-linecap="round"/>
+    <path d="M224 252 L 326 378" stroke="#fff" stroke-width="44" stroke-linecap="round"/>
+    <circle cx="196" cy="270" r="16" fill="#F2C14E"/>
+  </symbol>
+</defs></svg>
+
+<div class="grid">
+  <div class="card"><div class="top"><svg width="120" height="120"><use href="#life4"/></svg>
+    <div><div class="name">4Life</div><div class="sub"><span class="num">1</span>KIM ĐỒNG HỒ SỐ 4</div></div></div>
+    <div class="desc">Chữ 4 là kim đồng hồ trong vòng ngày 4 màu = 4 trụ cột (thời gian, sức khỏe, học tập, tài chính). Hiện đại, rõ ở cỡ nhỏ.</div>
+    <div class="sizes"><svg width="64" height="64"><use href="#life4"/></svg><svg width="40" height="40"><use href="#life4"/></svg><svg width="24" height="24"><use href="#life4"/></svg></div></div>
+
+  <div class="card"><div class="top"><svg width="120" height="120"><use href="#clover"/></svg>
+    <div><div class="name">4Life</div><div class="sub"><span class="num">2</span>CỎ BỐN LÁ</div></div></div>
+    <div class="desc">Cỏ bốn lá may mắn, mỗi lá một trụ cột; chữ 4 ở tâm. Thân thiện, ấm áp, dễ nhớ.</div>
+    <div class="sizes"><svg width="64" height="64"><use href="#clover"/></svg><svg width="40" height="40"><use href="#clover"/></svg><svg width="24" height="24"><use href="#clover"/></svg></div></div>
+
+  <div class="card"><div class="top"><svg width="120" height="120"><use href="#lima"/></svg>
+    <div><div class="name">LiMa</div><div class="sub"><span class="num">3</span>ANH EM VỚI MOMA</div></div></div>
+    <div class="desc">Cùng phong cách nét cọ hai tông của MoMa: chữ L một nét vươn lên ôm mặt trời. "MoMa lo tiền, LiMa lo đời".</div>
+    <div class="sizes"><svg width="64" height="64"><use href="#moma"/></svg><svg width="64" height="64"><use href="#lima"/></svg><span style="font-size:13px;color:#6B7A8C;font-weight:700">← cặp MoMa · LiMa</span></div></div>
+
+  <div class="card"><div class="top"><svg width="120" height="120"><use href="#nhip"/></svg>
+    <div><div class="name">Nhịp</div><div class="sub"><span class="num">4</span>NHỊP SỐNG</div></div></div>
+    <div class="desc">Đường nhịp đập vẽ thành chữ N: nhịp ngày, nhịp sống, sức khỏe. Tiếng Việt, gần gũi, năng lượng.</div>
+    <div class="sizes"><svg width="64" height="64"><use href="#nhip"/></svg><svg width="40" height="40"><use href="#nhip"/></svg><svg width="24" height="24"><use href="#nhip"/></svg></div></div>
+
+  <div class="card"><div class="top"><svg width="120" height="120"><use href="#mam"/></svg>
+    <div><div class="name">Mầm</div><div class="sub"><span class="num">5</span>MỖI NGÀY LỚN LÊN</div></div></div>
+    <div class="desc">Chồi non hai lá thành chữ M: phát triển bản thân từng ngày. Nhẹ nhàng, tích cực.</div>
+    <div class="sizes"><svg width="64" height="64"><use href="#mam"/></svg><svg width="40" height="40"><use href="#mam"/></svg><svg width="24" height="24"><use href="#mam"/></svg></div></div>
+
+  <div class="card"><div class="top"><svg width="120" height="120"><use href="#kairo"/></svg>
+    <div><div class="name">Kairo</div><div class="sub"><span class="num">6</span>ĐÚNG THỜI ĐIỂM</div></div></div>
+    <div class="desc">Chữ K có một nhánh là kim đồng hồ vàng trên cung thời gian: AI nhắc đúng lúc. Sang, tối giản.</div>
+    <div class="sizes"><svg width="64" height="64"><use href="#kairo"/></svg><svg width="40" height="40"><use href="#kairo"/></svg><svg width="24" height="24"><use href="#kairo"/></svg></div></div>
+</div>
+
+<div class="eco">
+  <svg width="72" height="72"><use href="#life4"/></svg>
+  <div><div class="t"><span class="num" style="background:#2F80ED">7</span>4Life · hệ sinh thái</div><div class="s">THƯƠNG HIỆU CHUNG, MỖI APP MỘT VAI</div></div>
+  <div class="pill"><svg width="48" height="48"><use href="#moma"/></svg><div><b>4Life · MoMa</b><span>Tài chính</span></div></div>
+  <div class="pill"><svg width="48" height="48"><use href="#lima"/></svg><div><b>4Life · LiMa</b><span>Thời gian & cuộc sống</span></div></div>
+</div>
+</body></html>

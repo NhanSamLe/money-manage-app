@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Assistant voice input (speech_to_text): audio goes to the phone's speech service, MoMa keeps none. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Restores the optional "Thanh ghi nhanh" notification after a reboot (D-026). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:label="MoMa"
         android:allowBackup="false"
@@ -90,6 +92,25 @@
         <receiver
             android:name=".WidgetActionReceiver"
             android:exported="false"/>
+        <!-- Quick Settings tile "Ghi chi nhanh" (opens the quick-entry sheet) and the quick bar boot hook (D-026). -->
+        <service
+            android:name=".QuickEntryTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_wg_add"
+            android:label="@string/tile_quick_entry"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <receiver
+            android:name=".QuickBarBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <!-- Translucent sheets started from widgets: quick entry (Flutter) and enlarged receive QR (native). -->
         <activity
             android:name=".QuickEntryActivity"

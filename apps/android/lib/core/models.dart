@@ -29,6 +29,17 @@ class Account {
   /// Null means the baseline is unknown: the UI must show "chưa biết", never 0.
   final int? balance;
   bool get isCard => kind == 'CREDIT_CARD';
+
+  /// Same account with [balance] replaced (offline: balance including transactions still in the outbox).
+  Account withBalance(int? balance) => Account(
+    id: id,
+    kind: kind,
+    institution: institution,
+    name: name,
+    last4: last4,
+    balance: balance,
+    version: version,
+  );
 }
 
 class Category {
@@ -75,8 +86,13 @@ class MomaTx {
     required this.debtLinked,
     this.source = 'MANUAL',
     this.debtId,
+    this.pending = false,
+    this.ai,
   });
   factory MomaTx.fromJson(Map<String, dynamic> j) => MomaTx(
+    ai: j['ai'] is Map
+        ? TxAi.fromJson((j['ai'] as Map).cast<String, dynamic>())
+        : null,
     rawEffectiveAt: j['effective_at'] as String,
     relatedTxId: j['related_tx_id'] as String?,
     debtLinked: (j['debt_linked'] as bool?) ?? false,
@@ -121,9 +137,56 @@ class MomaTx {
   /// Where the entry came from: MANUAL, BANK, AI, NOTIFICATION, IMPORT, RECURRING or SYSTEM (older servers: MANUAL).
   final String source;
 
+  /// Saved on this phone while offline and still waiting in the outbox (not on the server yet).
+  final bool pending;
+
+  /// Automatic categorization (migration 015; null on older servers or when never classified).
+  final TxAi? ai;
+
   bool get isVoid => status == 'VOID';
   bool get isIncome => kind == 'INCOME' || kind == 'UNKNOWN_CREDIT';
   bool get isExpense => kind == 'EXPENSE' || kind == 'UNKNOWN_DEBIT';
+  bool get isUnknown => kind == 'UNKNOWN_DEBIT' || kind == 'UNKNOWN_CREDIT';
+
+  /// The category was set by the classifier and the owner has not changed it ("AI đã phân loại · Sửa").
+  bool get aiApplied => ai?.status == 'APPLIED';
+
+  /// The classifier was not sure: the owner should pick (one tap).
+  bool get needsCategory => !isVoid && ai?.status == 'SUGGESTED';
+}
+
+/// What the classifier decided for one transaction (status APPLIED | SUGGESTED | CONFIRMED | CORRECTED).
+class TxAi {
+  const TxAi({
+    required this.status,
+    required this.method,
+    this.categoryId,
+    this.confidence = 0,
+    this.merchant,
+  });
+  factory TxAi.fromJson(Map<String, dynamic> j) => TxAi(
+    status: '${j['status'] ?? ''}',
+    method: '${j['method'] ?? ''}',
+    categoryId: j['category_id'] as String?,
+    confidence: (j['confidence'] is num)
+        ? (j['confidence'] as num).toDouble()
+        : double.tryParse('${j['confidence']}') ?? 0,
+    merchant: j['merchant'] as String?,
+  );
+  final String status;
+  final String method;
+  final String? categoryId;
+  final double confidence;
+  final String? merchant;
+
+  /// Short Vietnamese label of how it was decided.
+  String get methodLabel => switch (method) {
+    'MEMORY' => 'theo thói quen của bạn',
+    'HISTORY' => 'theo giao dịch trước',
+    'DICTIONARY' => 'theo tên cửa hàng',
+    'AI' => 'Trợ lý tài chính',
+    _ => '',
+  };
 }
 
 class CategorySpend {

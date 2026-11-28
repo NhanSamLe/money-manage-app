@@ -95,10 +95,14 @@ class SpendWidgetProvider : MomaWidgetBase() {
                 else -> "$pct% ngân sách ${MomaWidgets.vnd(budget)}"
             },
         )
+        // D-026: "safe to spend today" from the budget pacing (category budgets count even without an overall one).
+        val safeToday = sameDay && WidgetStore.str(ctx, "safe_day") == MomaWidgets.today() &&
+            WidgetStore.get(ctx, "safe_today") != null
         views.setTextViewText(
             R.id.s_left_sub,
             when {
                 !sameMonth -> open
+                safeToday -> "Hôm nay nên ≤ ${money(WidgetStore.num(ctx, "safe_today"))}"
                 budget <= 0 -> "Đặt trong Kế hoạch"
                 else -> "Còn ${MomaWidgets.daysLeftInMonth()} ngày trong tháng"
             },

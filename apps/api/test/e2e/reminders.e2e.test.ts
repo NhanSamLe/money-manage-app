@@ -96,6 +96,9 @@ describe("reminders", () => {
       weekly_review: { enabled: true, weekday: 7, time: "20:00" },
       monthly_review: { enabled: true, time: "20:00" },
       budget_alerts: { enabled: true },
+      // D-026: pacing nudges and the monthly budget auto-apply (both on by default).
+      budget_pacing: { enabled: true },
+      budget_auto: { enabled: true },
     });
     const put = await call("PUT", "/v1/reminders/settings", { ...d.json.data, meals: { ...d.json.data.meals, lunch: { enabled: true, time: "12:30" } } });
     expect(put.status).toBe(200);

@@ -110,7 +110,13 @@ Map<String, dynamic> _att(String id) => {
 };
 
 Widget _host(ApiClient api, {bool canAdd = true}) => ProviderScope(
-  overrides: [apiProvider.overrideWithValue(api)],
+  overrides: [
+    apiProvider.overrideWithValue(api),
+    // No on-device folders in these tests (offline cache/queue covered in offline_test.dart).
+    attachmentFilesProvider.overrideWithValue(
+      AttachmentFiles(cacheRoot: () async => null, queueRoot: () async => null),
+    ),
+  ],
   child: MaterialApp(
     theme: buildMomaTheme(),
     home: Scaffold(

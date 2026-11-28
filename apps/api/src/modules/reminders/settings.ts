@@ -13,6 +13,10 @@ export const ReminderSettings = z.object({
   weekly_review: timed.extend({ weekday: z.number().int().min(1).max(7) }),
   monthly_review: timed,
   budget_alerts: z.object({ enabled: z.boolean() }),
+  /** D-026: daily pacing nudge ("mỗi ngày nên ~X") + monthly realistic-limit suggestion. */
+  budget_pacing: z.object({ enabled: z.boolean() }),
+  /** D-026: a new month without budgets gets last month's categories with habit-adjusted limits. */
+  budget_auto: z.object({ enabled: z.boolean() }),
 });
 export type ReminderSettings = z.infer<typeof ReminderSettings>;
 
@@ -24,6 +28,8 @@ export const ReminderSettingsPatch = z.object({
   weekly_review: timed.extend({ weekday: z.number().int().min(1).max(7) }).partial().optional(),
   monthly_review: timed.partial().optional(),
   budget_alerts: z.object({ enabled: z.boolean() }).partial().optional(),
+  budget_pacing: z.object({ enabled: z.boolean() }).partial().optional(),
+  budget_auto: z.object({ enabled: z.boolean() }).partial().optional(),
 });
 export type ReminderSettingsPatch = z.infer<typeof ReminderSettingsPatch>;
 
@@ -38,6 +44,8 @@ export const DEFAULT_SETTINGS: ReminderSettings = {
   weekly_review: { enabled: true, weekday: 7, time: "20:00" },
   monthly_review: { enabled: true, time: "20:00" },
   budget_alerts: { enabled: true },
+  budget_pacing: { enabled: true },
+  budget_auto: { enabled: true },
 };
 
 function isObj(v: unknown): v is Record<string, unknown> {

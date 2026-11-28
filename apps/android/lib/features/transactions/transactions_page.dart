@@ -820,10 +820,21 @@ class TxTile extends StatelessWidget {
     final parts = <String>[
       time,
       if (account != null) account!.name,
-      if (tx.isVoid) 'Đã hủy' else if (tx.relatedTxId != null) 'Đã sửa',
+      if (tx.pending)
+        'Chờ đồng bộ'
+      else if (tx.isVoid)
+        'Đã hủy'
+      else if (tx.relatedTxId != null)
+        'Đã sửa',
     ];
     return InkWell(
-      onTap: () => context.push('/tx/${tx.id}', extra: tx),
+      // Saved offline: there is no server copy to open yet.
+      onTap: tx.pending
+          ? () => showSnack(
+              context,
+              'Giao dịch đang chờ đồng bộ, sẽ tự gửi khi có mạng.',
+            )
+          : () => context.push('/tx/${tx.id}', extra: tx),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(

@@ -52,6 +52,8 @@ class ReminderSettings {
     required this.weeklyWeekday,
     required this.monthlyReview,
     required this.budgetAlerts,
+    this.budgetPacing = true,
+    this.budgetAuto = true,
   });
   final Map<String, TimedReminder> meals;
   final TimedReminder cashCheck;
@@ -62,6 +64,12 @@ class ReminderSettings {
   int weeklyWeekday;
   final TimedReminder monthlyReview;
   bool budgetAlerts;
+
+  /// D-026: "mỗi ngày nên ~X" nudge when a category runs clearly ahead (server default on).
+  bool budgetPacing;
+
+  /// D-026: a new month gets last month's budgets with habit-adjusted limits (server default on).
+  bool budgetAuto;
 
   static const _defaults = {
     'breakfast': TimeOfDay(hour: 7, minute: 30),
@@ -101,6 +109,12 @@ class ReminderSettings {
       budgetAlerts: (j['budget_alerts'] is Map)
           ? (j['budget_alerts'] as Map)['enabled'] == true
           : false,
+      budgetPacing: (j['budget_pacing'] is Map)
+          ? (j['budget_pacing'] as Map)['enabled'] != false
+          : true,
+      budgetAuto: (j['budget_auto'] is Map)
+          ? (j['budget_auto'] as Map)['enabled'] != false
+          : true,
     );
   }
 
@@ -111,6 +125,8 @@ class ReminderSettings {
     'weekly_review': {...weeklyReview.toJson(), 'weekday': weeklyWeekday},
     'monthly_review': monthlyReview.toJson(),
     'budget_alerts': {'enabled': budgetAlerts},
+    'budget_pacing': {'enabled': budgetPacing},
+    'budget_auto': {'enabled': budgetAuto},
   };
 }
 

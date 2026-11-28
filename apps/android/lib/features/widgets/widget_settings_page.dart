@@ -19,7 +19,40 @@ class WidgetSettingsPage extends ConsumerStatefulWidget {
 
 class _WidgetSettingsPageState extends ConsumerState<WidgetSettingsPage> {
   bool? _hide;
+  bool? _quickBar;
   bool _canPin = false;
+
+  Future<void> _toggleQuickBar(bool v) async {
+    setState(() => _quickBar = v);
+    final shown = await WidgetSync.setQuickBar(v);
+    if (!mounted || !v || shown) return;
+    setState(() => _quickBar = false);
+    await WidgetSync.setQuickBar(false);
+    if (!mounted) return;
+    showSnack(context, 'Hãy bật thông báo cho MoMa để dùng thanh ghi nhanh.');
+    await WidgetSync.openNotificationSettings();
+  }
+
+  Future<void> _addTile() async {
+    final asked = await WidgetSync.requestQuickTile();
+    if (!mounted || asked) return;
+    await showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Thêm ô "Ghi chi nhanh"'),
+        content: const Text(
+          'Vuốt xuống thanh thông báo → bấm biểu tượng chỉnh sửa (bút chì hoặc ⋮ → Sửa) → tìm "Ghi chi nhanh" '
+          'của MoMa → kéo lên khu vực ô đang dùng.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: const Text('Đã hiểu'),
+          ),
+        ],
+      ),
+    );
+  }
 
   static const _widgets = [
     (
@@ -54,10 +87,12 @@ class _WidgetSettingsPageState extends ConsumerState<WidgetSettingsPage> {
     Future.microtask(() async {
       final hide = await WidgetSync.privacy();
       final canPin = await WidgetSync.canPin();
+      final bar = await WidgetSync.quickBar();
       if (mounted) {
         setState(() {
           _hide = hide;
           _canPin = canPin;
+          _quickBar = bar;
         });
       }
     });
@@ -148,6 +183,40 @@ class _WidgetSettingsPageState extends ConsumerState<WidgetSettingsPage> {
                         setState(() => _hide = v);
                         await WidgetSync.setPrivacy(v);
                       },
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'Ghi nhanh ngoài ứng dụng',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: SwitchListTile(
+                secondary: const Icon(Symbols.notifications_active_rounded),
+                title: const Text('Thanh ghi nhanh trên thông báo'),
+                subtitle: const Text(
+                  'Ghi chi, Ghi thu, Nhận tiền và món quen (vd Bánh mì 20k) ngay trên thanh thông báo, '
+                  'kèm số còn tiêu được hôm nay. Màn hình khóa không hiện số tiền.',
+                ),
+                value: _quickBar ?? false,
+                onChanged: _quickBar == null ? null : _toggleQuickBar,
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(Symbols.add_box_rounded),
+                title: const Text('Ô "Ghi chi nhanh" trong Cài đặt nhanh'),
+                subtitle: const Text(
+                  'Vuốt xuống từ đỉnh màn hình, chạm ô là mở khung ghi chi.',
+                ),
+                trailing: TextButton(
+                  onPressed: _addTile,
+                  child: const Text('Thêm'),
+                ),
               ),
             ),
             const SizedBox(height: 16),

@@ -49,12 +49,13 @@ describe("agent plan resolution", () => {
     expect(r.actions.every((a) => a.type === "ASK")).toBe(true);
   });
 
-  it("lending to a new person chains a contact first and is high risk", () => {
+  it("lending to a new person chains a contact first, runs by itself and can be undone (D-023)", () => {
     const r = run([{ do: "LEND", amount: "500000", who: "Hùng", contact: null, account: U(1), date: "2026-11-26" }]);
     const a = r.actions[0]!;
     expect(a.type).toBe("COMMAND");
     if (a.type === "COMMAND") {
-      expect(a.risk).toBe("high");
+      expect(a.risk).toBe("low");
+      expect(a.undo?.ops).toEqual([{ op: "CANCEL_DEBT", debt_id: "$result.debt_id" }]);
       expect(a.pre?.command_type).toBe("CONTACT_CREATE");
       expect(a.command.payload["contact_id"]).toBe("$contact_id");
     }

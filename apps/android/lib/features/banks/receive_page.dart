@@ -12,6 +12,7 @@ import '../../core/ui/actions.dart';
 import '../../core/ui/header.dart';
 import '../../core/ui/labeled_field.dart';
 import '../../core/ui/select_field.dart';
+import '../../core/vietqr.dart';
 import '../../core/widgets.dart';
 import 'bank_connect_page.dart';
 import 'qr_share.dart';
@@ -45,21 +46,35 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       _busy = true;
       _externalId = externalId;
     });
+    final amount = parseVndInput(_amount.text);
+    final note = _note.text.trim();
     try {
-      final amount = parseVndInput(_amount.text);
-      final r =
-          await ref
-                  .read(apiProvider)
-                  .get(
-                    '/banks/sepay/qr',
-                    query: {
-                      'external_id': externalId,
-                      if (amount != null && amount > 0) 'amount': '$amount',
-                      if (_note.text.trim().isNotEmpty)
-                        'note': _note.text.trim(),
-                    },
-                  )
-              as Map<String, dynamic>;
+      final api = ref.read(apiProvider);
+      Map<String, dynamic> r;
+      try {
+        r = await api.get(
+          '/banks/sepay/qr',
+          query: {
+            'external_id': externalId,
+            if (amount != null && amount > 0) 'amount': '$amount',
+            if (note.isNotEmpty) 'note': note,
+          },
+        ) as Map<String, dynamic>;
+      } on ApiException catch (e) {
+        if (e.code != 'OFFLINE') rethrow;
+        // Offline: rebuild the QR on the phone from the saved plain QR of this account (same VietQR format).
+        final base = await api.get(
+          '/banks/sepay/qr',
+          query: {'external_id': externalId},
+        ) as Map<String, dynamic>;
+        final payload = vietQrWithAmount(
+          '${base['payload']}',
+          amount: amount,
+          note: note.isEmpty ? null : note,
+        );
+        if (payload == null) rethrow;
+        r = {...base, 'payload': payload};
+      }
       if (mounted) {
         setState(() {
           _payload = '${r['payload']}';
@@ -67,7 +82,14 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
         });
       }
     } on ApiException catch (e) {
-      if (mounted) await showErrorDialog(context, e.message);
+      if (mounted) {
+        await showErrorDialog(
+          context,
+          e.code == 'OFFLINE'
+              ? 'Đang offline và máy chưa lưu mã QR của tài khoản này. Mở lại khi có mạng một lần, sau đó dùng được cả lúc offline.'
+              : e.message,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

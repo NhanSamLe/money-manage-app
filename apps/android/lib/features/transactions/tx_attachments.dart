@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/theme/moma_theme.dart';
@@ -10,6 +15,7 @@ import '../../app/theme/palette.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/sheets.dart';
+import '../../core/ui/offline.dart';
 import '../../core/widgets.dart';
 
 /// One receipt / transfer screenshot attached to a transaction (migration 013). The picture itself lives in
@@ -59,14 +65,324 @@ final txAttachmentsProvider = FutureProvider.autoDispose
       ];
     });
 
-/// Picture bytes, kept for the session (an id never changes content), so scrolling back costs nothing.
+/// On-device files for attachments: a disk cache of viewed pictures (an id never changes content, so a cached
+/// copy is always valid) and the queue of pictures taken offline. Missing storage (tests) just disables both.
+class AttachmentFiles {
+  AttachmentFiles({
+    Future<Directory?> Function()? cacheRoot,
+    Future<Directory?> Function()? queueRoot,
+  }) : _cacheRoot = cacheRoot ?? _defaultCache,
+       _queueRoot = queueRoot ?? _defaultQueue;
+
+  final Future<Directory?> Function() _cacheRoot;
+  final Future<Directory?> Function() _queueRoot;
+
+  static final instance = AttachmentFiles();
+
+  static Future<Directory?> _defaultCache() async {
+    try {
+      return Directory(
+        p.join((await getApplicationCacheDirectory()).path, 'attachments'),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<Directory?> _defaultQueue() async {
+    try {
+      return Directory(
+        p.join((await getApplicationSupportDirectory()).path, 'upload_queue'),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Directory?> _dir(Future<Directory?> Function() root) async {
+    final d = await root();
+    if (d == null) return null;
+    try {
+      if (!d.existsSync()) d.createSync(recursive: true);
+      return d;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Directory?> cacheDir() => _dir(_cacheRoot);
+  Future<Directory?> queueDir() => _dir(_queueRoot);
+
+  Future<Uint8List?> readCached(String id) async {
+    final d = await cacheDir();
+    if (d == null) return null;
+    final f = File(p.join(d.path, id));
+    try {
+      return f.existsSync() ? f.readAsBytesSync() : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> writeCached(String id, List<int> bytes) async {
+    final d = await cacheDir();
+    if (d == null) return;
+    try {
+      File(p.join(d.path, id)).writeAsBytesSync(bytes, flush: true);
+    } catch (_) {}
+  }
+
+  Future<void> removeCached(String id) async {
+    final d = await cacheDir();
+    if (d == null) return;
+    try {
+      final f = File(p.join(d.path, id));
+      if (f.existsSync()) f.deleteSync();
+    } catch (_) {}
+  }
+
+  /// Size of cached pictures + queued uploads.
+  Future<int> sizeBytes() async {
+    var n = 0;
+    for (final d in [await cacheDir(), await queueDir()]) {
+      if (d == null) continue;
+      try {
+        for (final f in d.listSync().whereType<File>()) {
+          n += f.lengthSync();
+        }
+      } catch (_) {}
+    }
+    return n;
+  }
+
+  /// Drops cached pictures (they come back from the server when viewed). [queue]: also the upload queue.
+  Future<void> clear({bool queue = false}) async {
+    for (final d in [await cacheDir(), if (queue) await queueDir()]) {
+      if (d == null) continue;
+      try {
+        for (final f in d.listSync().whereType<File>()) {
+          f.deleteSync();
+        }
+      } catch (_) {}
+    }
+  }
+}
+
+final attachmentFilesProvider = Provider<AttachmentFiles>(
+  (_) => AttachmentFiles.instance,
+);
+
+/// Picture bytes: disk cache first, then the server (saved for next time, so it also opens offline).
+/// Re-runs when the connection comes back, so a picture that could not load offline appears by itself.
 final attachmentBytesProvider = FutureProvider.family<Uint8List, String>((
   ref,
   id,
 ) async {
-  final bytes = await ref.watch(apiProvider).getBytes('/attachments/$id');
-  return Uint8List.fromList(bytes);
+  ref.watch(netStateProvider.select((s) => s.offline));
+  final files = ref.watch(attachmentFilesProvider);
+  final cached = await files.readCached(id);
+  if (cached != null) return cached;
+  final bytes = Uint8List.fromList(
+    await ref.watch(apiProvider).getBytes('/attachments/$id'),
+  );
+  await files.writeCached(id, bytes);
+  return bytes;
 });
+
+/// A picture chosen while offline, kept on the phone until it can be uploaded.
+class PendingUpload {
+  const PendingUpload({
+    required this.id,
+    required this.txId,
+    required this.contentType,
+    required this.createdAt,
+    this.path,
+    this.bytes,
+    this.error,
+  });
+
+  factory PendingUpload.fromJson(Map<String, dynamic> j) => PendingUpload(
+    id: '${j['id']}',
+    txId: '${j['tx_id']}',
+    contentType: '${j['content_type']}',
+    createdAt: DateTime.tryParse('${j['at']}') ?? DateTime.now(),
+    path: j['path'] as String?,
+    error: j['error'] as String?,
+  );
+
+  final String id;
+  final String txId;
+  final String contentType;
+  final DateTime createdAt;
+
+  /// File in the app's private storage (null only when storage is unavailable; then [bytes] holds the picture).
+  final String? path;
+  final Uint8List? bytes;
+
+  /// Set when the server refused the picture for good (shown on its tile, never retried silently).
+  final String? error;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'tx_id': txId,
+    'content_type': contentType,
+    'at': createdAt.toIso8601String(),
+    'path': path,
+    'error': error,
+  };
+
+  PendingUpload withError(String message) => PendingUpload(
+    id: id,
+    txId: txId,
+    contentType: contentType,
+    createdAt: createdAt,
+    path: path,
+    bytes: bytes,
+    error: message,
+  );
+
+  Future<Uint8List?> read() async {
+    if (bytes != null) return bytes;
+    final f = path;
+    if (f == null) return null;
+    try {
+      return File(f).readAsBytesSync();
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// Pictures waiting to be uploaded ("Chờ tải lên"); sent by the offline sync loop as soon as there is a network.
+class UploadQueue extends Notifier<List<PendingUpload>> {
+  bool _loaded = false;
+  bool _flushing = false;
+
+  @override
+  List<PendingUpload> build() {
+    Future.microtask(_load);
+    return const [];
+  }
+
+  AttachmentFiles get _files => ref.read(attachmentFilesProvider);
+
+  Future<File?> _index() async {
+    final d = await _files.queueDir();
+    return d == null ? null : File(p.join(d.path, 'index.json'));
+  }
+
+  Future<void> _load() async {
+    if (_loaded) return;
+    _loaded = true;
+    final f = await _index();
+    if (f == null || !f.existsSync()) return;
+    try {
+      final list = jsonDecode(f.readAsStringSync()) as List;
+      final saved = [
+        for (final e in list)
+          PendingUpload.fromJson((e as Map).cast<String, dynamic>()),
+      ];
+      state = [
+        ...saved,
+        ...state.where((x) => !saved.any((s) => s.id == x.id)),
+      ];
+    } catch (_) {}
+  }
+
+  Future<void> _save() async {
+    final f = await _index();
+    if (f == null) return;
+    try {
+      f.writeAsStringSync(
+        jsonEncode([for (final u in state) u.toJson()]),
+        flush: true,
+      );
+    } catch (_) {}
+  }
+
+  /// Keeps [bytes] for [txId] until the next successful upload.
+  Future<void> add(String txId, Uint8List bytes, String contentType) async {
+    await _load();
+    final id = ApiClient.newId();
+    final d = await _files.queueDir();
+    String? path;
+    if (d != null) {
+      try {
+        final ext = contentType == 'image/png'
+            ? 'png'
+            : (contentType == 'image/webp' ? 'webp' : 'jpg');
+        final f = File(p.join(d.path, '$id.$ext'));
+        f.writeAsBytesSync(bytes, flush: true);
+        path = f.path;
+      } catch (_) {}
+    }
+    state = [
+      ...state,
+      PendingUpload(
+        id: id,
+        txId: txId,
+        contentType: contentType,
+        createdAt: DateTime.now(),
+        path: path,
+        bytes: path == null ? bytes : null,
+      ),
+    ];
+    await _save();
+  }
+
+  Future<void> remove(String id) async {
+    final u = state.where((x) => x.id == id).firstOrNull;
+    state = state.where((x) => x.id != id).toList();
+    final f = u?.path;
+    if (f != null) {
+      try {
+        File(f).deleteSync();
+      } catch (_) {}
+    }
+    await _save();
+  }
+
+  /// Uploads waiting pictures oldest first; stops at the first "still offline". Returns how many were sent.
+  Future<int> flush() async {
+    await _load();
+    if (_flushing) return 0;
+    _flushing = true;
+    var sent = 0;
+    try {
+      final api = ref.read(apiProvider);
+      for (final u in [...state.where((x) => x.error == null)]) {
+        final bytes = await u.read();
+        if (bytes == null) {
+          await remove(u.id);
+          continue;
+        }
+        try {
+          await api.postBytes(
+            '/transactions/${u.txId}/attachments',
+            bytes,
+            contentType: u.contentType,
+          );
+          await remove(u.id);
+          ref.invalidate(txAttachmentsProvider(u.txId));
+          sent++;
+        } on ApiException catch (e) {
+          if (e.retryable) break;
+          state = [
+            for (final x in state) x.id == u.id ? x.withError(e.message) : x,
+          ];
+          await _save();
+        }
+      }
+    } finally {
+      _flushing = false;
+    }
+    return sent;
+  }
+}
+
+final uploadQueueProvider = NotifierProvider<UploadQueue, List<PendingUpload>>(
+  UploadQueue.new,
+);
 
 /// Image type from the first bytes (what the server checks too).
 String? sniffImageType(List<int> b) {
@@ -101,9 +417,14 @@ class TxAttachmentsSection extends ConsumerStatefulWidget {
     super.key,
     required this.txId,
     this.canAdd = true,
+    this.onUploaded,
   });
   final String txId;
   final bool canAdd;
+
+  /// Called after each picture reaches the server (id from the API, the bytes still on the phone):
+  /// the detail page reads the bill and updates category / note / split (bill analysis, migration 016).
+  final void Function(String? attachmentId, Uint8List bytes)? onUploaded;
 
   @override
   ConsumerState<TxAttachmentsSection> createState() =>
@@ -172,8 +493,10 @@ class _TxAttachmentsSectionState extends ConsumerState<TxAttachmentsSection> {
 
   Future<void> _upload(List<XFile> files) async {
     final api = ref.read(apiProvider);
+    final queue = ref.read(uploadQueueProvider.notifier);
     setState(() => _uploading += files.length);
     var done = 0;
+    var queued = 0;
     String? error;
     for (final f in files) {
       try {
@@ -181,13 +504,27 @@ class _TxAttachmentsSectionState extends ConsumerState<TxAttachmentsSection> {
         final type = sniffImageType(bytes);
         if (type == null) {
           error = 'Ảnh không đúng định dạng (chỉ nhận JPEG, PNG, WebP).';
+        } else if (queued > 0) {
+          // Already offline for an earlier picture: keep the rest on the phone too.
+          await queue.add(widget.txId, bytes, type);
+          queued++;
         } else {
-          await api.postBytes(
-            '/transactions/${widget.txId}/attachments',
-            bytes,
-            contentType: type,
-          );
-          done++;
+          try {
+            final r = await api.postBytes(
+              '/transactions/${widget.txId}/attachments',
+              bytes,
+              contentType: type,
+            );
+            done++;
+            widget.onUploaded?.call(
+              r is Map ? r['id'] as String? : null,
+              bytes,
+            );
+          } on ApiException catch (e) {
+            if (e.code != 'OFFLINE') rethrow;
+            await queue.add(widget.txId, bytes, type);
+            queued++;
+          }
         }
       } on ApiException catch (e) {
         error = e.message;
@@ -197,9 +534,14 @@ class _TxAttachmentsSectionState extends ConsumerState<TxAttachmentsSection> {
         if (mounted) setState(() => _uploading--);
       }
     }
-    ref.invalidate(txAttachmentsProvider(widget.txId));
+    if (done > 0) ref.invalidate(txAttachmentsProvider(widget.txId));
     if (!mounted) return;
-    if (error != null) {
+    if (queued > 0 && error == null) {
+      showSnack(
+        context,
+        'Đang offline: đã giữ $queued ảnh trên máy, sẽ tự tải lên khi có mạng.',
+      );
+    } else if (error != null) {
       await showErrorDialog(
         context,
         done > 0 ? 'Đã lưu $done ảnh. Ảnh còn lại lỗi: $error' : error,
@@ -224,7 +566,18 @@ class _TxAttachmentsSectionState extends ConsumerState<TxAttachmentsSection> {
     final pal = context.pal;
     final async = ref.watch(txAttachmentsProvider(widget.txId));
     final items = async.value ?? const <TxAttachment>[];
-    final canAdd = widget.canAdd && items.length + _uploading < kMaxAttachments;
+    final waiting = [
+      for (final u in ref.watch(uploadQueueProvider))
+        if (u.txId == widget.txId) u,
+    ];
+    final offlineEmpty =
+        async.hasError &&
+        items.isEmpty &&
+        async.error is ApiException &&
+        (async.error as ApiException).code == 'OFFLINE';
+    final canAdd =
+        widget.canAdd &&
+        items.length + _uploading + waiting.length < kMaxAttachments;
     return Container(
       margin: const EdgeInsets.only(top: 14),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -265,7 +618,7 @@ class _TxAttachmentsSectionState extends ConsumerState<TxAttachmentsSection> {
             style: TextStyle(fontSize: 12.5, color: pal.muted, height: 1.4),
           ),
           const SizedBox(height: 12),
-          if (async.hasError && items.isEmpty)
+          if (async.hasError && items.isEmpty && !offlineEmpty)
             Row(
               children: [
                 Expanded(
@@ -293,11 +646,23 @@ class _TxAttachmentsSectionState extends ConsumerState<TxAttachmentsSection> {
               children: [
                 for (final (i, a) in items.indexed)
                   _Thumb(attachment: a, onTap: () => _open(items, i)),
+                for (final u in waiting) _WaitingTile(upload: u),
                 for (var i = 0; i < _uploading; i++) const _UploadingTile(),
                 if (canAdd && !async.isLoading)
-                  _AddTile(onTap: () => _add(items.length + _uploading)),
+                  _AddTile(
+                    onTap: () =>
+                        _add(items.length + _uploading + waiting.length),
+                  ),
                 if (async.isLoading && items.isEmpty) const _UploadingTile(),
               ],
+            ),
+          if (offlineEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Ảnh đã lưu sẽ hiện khi có mạng.',
+                style: TextStyle(color: pal.muted, fontSize: 12.5),
+              ),
             ),
         ],
       ),
@@ -336,7 +701,127 @@ class _Thumb extends ConsumerWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           ),
-          error: (_, _) => Icon(Symbols.cloud_off_rounded, color: pal.muted),
+          error: (e, _) => _ImagePlaceholder(error: e, compact: true),
+        ),
+      ),
+    );
+  }
+}
+
+/// Calm stand-in for a picture that cannot be shown: offline → "Ảnh sẽ hiện khi có mạng", otherwise a neutral icon.
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder({required this.error, this.compact = false});
+  final Object error;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final offline =
+        error is ApiException && (error as ApiException).code == 'OFFLINE';
+    final color = compact ? pal.muted : Colors.white70;
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(compact ? 6 : 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              offline ? Symbols.cloud_off_rounded : Symbols.image_rounded,
+              color: color,
+              size: compact ? 22 : 40,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              offline
+                  ? 'Ảnh sẽ hiện khi có mạng'
+                  : (error is ApiException
+                        ? (error as ApiException).message
+                        : 'Không tải được ảnh.'),
+              textAlign: TextAlign.center,
+              maxLines: compact ? 3 : 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: color, fontSize: compact ? 11 : 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A picture kept on the phone until it can be uploaded ("Chờ tải lên"); a refused one says why and can be dropped.
+class _WaitingTile extends ConsumerWidget {
+  const _WaitingTile({required this.upload});
+  final PendingUpload upload;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pal = context.pal;
+    final failed = upload.error != null;
+    return Material(
+      color: pal.surfaceAlt,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () async {
+          final drop = await showDialog<bool>(
+            context: context,
+            builder: (c) => AlertDialog(
+              title: Text(failed ? 'Không tải lên được' : 'Chờ tải lên'),
+              content: Text(
+                failed ? upload.error! : 'Ảnh đang được giữ trên máy và sẽ tự tải lên khi có mạng.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(c, true),
+                  child: const Text('Bỏ ảnh này'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text('Đóng'),
+                ),
+              ],
+            ),
+          );
+          if (drop == true) {
+            await ref.read(uploadQueueProvider.notifier).remove(upload.id);
+          }
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            FutureBuilder<Uint8List?>(
+              future: upload.read(),
+              builder: (_, s) => s.data == null
+                  ? const SizedBox.shrink()
+                  : Opacity(
+                      opacity: 0.55,
+                      child: Image.memory(
+                        s.data!,
+                        fit: BoxFit.cover,
+                        cacheWidth: 360,
+                      ),
+                    ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: double.infinity,
+                color: failed ? pal.dangerBg : pal.warnBg,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  failed ? 'Lỗi tải lên' : 'Chờ tải lên',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: failed ? MomaColors.expense : pal.warnInk,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -463,6 +948,7 @@ class _AttachmentViewerState extends ConsumerState<AttachmentViewer> {
     setState(() => _busy = true);
     try {
       await ref.read(apiProvider).delete('/attachments/${_current.id}');
+      await ref.read(attachmentFilesProvider).removeCached(_current.id);
       _changed = true;
       if (!mounted) return;
       if (_items.length == 1) {
@@ -540,16 +1026,7 @@ class _FullImage extends ConsumerWidget {
       ),
       loading: () =>
           const Center(child: CircularProgressIndicator(color: Colors.white)),
-      error: (e, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            e is ApiException ? e.message : 'Không tải được ảnh.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
-          ),
-        ),
-      ),
+      error: (e, _) => _ImagePlaceholder(error: e),
     );
   }
 }

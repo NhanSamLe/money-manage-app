@@ -1,0 +1,98 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  body{margin:0;background:#F6F7FB;font-family:"Segoe UI",system-ui,sans-serif;color:#1B2335}
+  .grid{display:grid;grid-template-columns:repeat(2,640px);gap:26px;padding:32px 40px}
+  .card{background:#fff;border-radius:28px;padding:22px 26px;box-shadow:0 8px 28px rgba(80,60,160,.08);display:flex;gap:22px;align-items:center}
+  .n{font-size:12.5px;font-weight:800;color:#8A93A6;letter-spacing:.5px}
+  .t{font-size:26px;font-weight:900;margin-top:2px}
+  .d{font-size:14px;color:#55607A;line-height:1.45;margin-top:8px}
+  .sizes{display:flex;gap:12px;align-items:center;margin-top:12px}
+  .lock{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .w{font-size:30px;font-weight:900;letter-spacing:-.6px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <radialGradient id="gloss" cx="0.25" cy="0.18" r="0.75">
+    <stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".18"/></filter>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+
+  <!-- 1 Bình minh: amber → coral → pink → violet -->
+  <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFC24B"/><stop offset=".38" stop-color="#FF7A6B"/><stop offset=".7" stop-color="#FF4FA0"/><stop offset="1" stop-color="#9B5CFF"/>
+  </linearGradient>
+  <symbol id="l1" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#g1)"/><rect width="512" height="512" rx="116" fill="url(#gloss)"/>
+    <g filter="url(#soft)">
+      <path d="M176 128 L 176 330 C 176 362 192 376 226 376 L 300 376 C 340 376 366 356 384 318" stroke="#fff" stroke-width="58" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <circle cx="392" cy="150" r="40" fill="#FFF6C7" filter="url(#glow)"/>
+  </symbol>
+
+  <!-- 2 Bầu trời: aqua → periwinkle → violet, white L + sparkle -->
+  <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3FE0FF"/><stop offset=".5" stop-color="#6A86FF"/><stop offset="1" stop-color="#B05CFF"/>
+  </linearGradient>
+  <symbol id="l2" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#g2)"/><rect width="512" height="512" rx="116" fill="url(#gloss)"/>
+    <g filter="url(#soft)">
+      <path d="M186 132 L 186 340 C 186 360 198 372 218 372 L 344 372" stroke="#fff" stroke-width="60" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <path d="M356 118 C 362 160 370 168 410 174 C 370 180 362 188 356 230 C 350 188 342 180 302 174 C 342 168 350 160 356 118 Z" fill="#FFF3B0" filter="url(#glow)"/>
+    <circle cx="420" cy="252" r="12" fill="#fff" opacity=".9"/>
+  </symbol>
+
+  <!-- 3 Chồi xanh: lime → mint → aqua, white L + leaf -->
+  <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#D4F95B"/><stop offset=".45" stop-color="#3EDDA0"/><stop offset="1" stop-color="#14B8E8"/>
+  </linearGradient>
+  <symbol id="l3" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="url(#g3)"/><rect width="512" height="512" rx="116" fill="url(#gloss)"/>
+    <g filter="url(#soft)">
+      <path d="M176 136 C 176 250 168 360 252 366 L 350 366" stroke="#fff" stroke-width="58" fill="none" stroke-linecap="round"/>
+      <path d="M296 300 C 300 226 346 176 414 168 C 418 244 372 298 296 300 Z" fill="#fff"/>
+    </g>
+    <path d="M304 292 C 330 254 360 224 398 190" stroke="#3EDDA0" stroke-width="9" fill="none" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- 4 Bốn trụ cột: white tile, L painted in 4 bright pillar colours -->
+  <linearGradient id="v4" gradientUnits="userSpaceOnUse" x1="0" y1="110" x2="0" y2="360"><stop offset="0" stop-color="#3FB6FF"/><stop offset="1" stop-color="#7B61FF"/></linearGradient>
+  <linearGradient id="h4" gradientUnits="userSpaceOnUse" x1="170" y1="0" x2="370" y2="0"><stop offset="0" stop-color="#FF4F8B"/><stop offset="1" stop-color="#FFB72B"/></linearGradient>
+  <symbol id="l4" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="116" fill="#FFFFFF"/>
+    <rect x="6" y="6" width="500" height="500" rx="110" fill="none" stroke="#EEF0F6" stroke-width="6"/>
+    <path d="M182 128 L 182 330" stroke="url(#v4)" stroke-width="64" fill="none" stroke-linecap="round"/>
+    <path d="M182 372 L 340 372" stroke="url(#h4)" stroke-width="64" fill="none" stroke-linecap="round"/>
+    <circle cx="182" cy="372" r="32" fill="#22C98A"/>
+    <circle cx="372" cy="170" r="42" fill="#FFC93C"/>
+    <circle cx="372" cy="170" r="20" fill="#FFE89A"/>
+  </symbol>
+</defs></svg>
+
+<div class="grid">
+  <div class="card"><svg width="150" height="150"><use href="#l1"/></svg>
+    <div><div class="n">LIMA · 1</div><div class="t">Bình minh</div>
+      <div class="d">Dải màu vàng → san hô → hồng → tím như trời sáng sớm. Nét L trắng vút lên như đường tăng trưởng, mặt trời phát sáng.</div>
+      <div class="sizes"><svg width="56" height="56"><use href="#l1"/></svg><svg width="36" height="36"><use href="#l1"/></svg><svg width="22" height="22"><use href="#l1"/></svg></div>
+      <div class="lock"><svg width="40" height="40"><use href="#l1"/></svg><div class="w" style="background:linear-gradient(90deg,#FF7A6B,#FF4FA0,#9B5CFF);-webkit-background-clip:text;color:transparent">LiMa</div></div></div></div>
+
+  <div class="card"><svg width="150" height="150"><use href="#l2"/></svg>
+    <div><div class="n">LIMA · 2</div><div class="t">Bầu trời</div>
+      <div class="d">Xanh ngọc → xanh tím → tím, kèm ngôi sao lấp lánh: trong trẻo, tươi mới, cảm giác "ngày mới đầy hứng khởi".</div>
+      <div class="sizes"><svg width="56" height="56"><use href="#l2"/></svg><svg width="36" height="36"><use href="#l2"/></svg><svg width="22" height="22"><use href="#l2"/></svg></div>
+      <div class="lock"><svg width="40" height="40"><use href="#l2"/></svg><div class="w" style="background:linear-gradient(90deg,#3FC9FF,#6A86FF,#B05CFF);-webkit-background-clip:text;color:transparent">LiMa</div></div></div></div>
+
+  <div class="card"><svg width="150" height="150"><use href="#l3"/></svg>
+    <div><div class="n">LIMA · 3</div><div class="t">Chồi xanh</div>
+      <div class="d">Xanh chanh → bạc hà → xanh biển, nét L mềm kèm chiếc lá trắng: sống khỏe, tươi trẻ. Họ hàng màu xanh với MoMa nhưng sáng hơn hẳn.</div>
+      <div class="sizes"><svg width="56" height="56"><use href="#l3"/></svg><svg width="36" height="36"><use href="#l3"/></svg><svg width="22" height="22"><use href="#l3"/></svg></div>
+      <div class="lock"><svg width="40" height="40"><use href="#l3"/></svg><div class="w" style="background:linear-gradient(90deg,#9BD62E,#22C98A,#14B8E8);-webkit-background-clip:text;color:transparent">LiMa</div></div></div></div>
+
+  <div class="card"><svg width="150" height="150"><use href="#l4"/></svg>
+    <div><div class="n">LIMA · 4</div><div class="t">Bốn trụ cột</div>
+      <div class="d">Nền trắng sạch, chữ L tô 4 màu rực: xanh (thời gian), hồng-cam (sức khỏe, học tập), chấm xanh lá (tài chính) và mặt trời vàng.</div>
+      <div class="sizes"><svg width="56" height="56"><use href="#l4"/></svg><svg width="36" height="36"><use href="#l4"/></svg><svg width="22" height="22"><use href="#l4"/></svg></div>
+      <div class="lock"><svg width="40" height="40"><use href="#l4"/></svg><div class="w" style="background:linear-gradient(90deg,#3FB6FF,#7B61FF,#FF4F8B,#FFB72B);-webkit-background-clip:text;color:transparent">LiMa</div></div></div></div>
+</div>
+</body></html>

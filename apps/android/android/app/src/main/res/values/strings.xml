@@ -81,4 +81,16 @@
     <string name="wg_hide">Ẩn số tài khoản</string>
     <string name="share_label">Ghi vào MoMa</string>
     <string name="wg_act_voice">Nói với Trợ lý</string>
+    <!-- D-026 quick-entry surfaces outside the app -->
+    <string name="tile_quick_entry">Ghi chi nhanh</string>
+    <string name="tile_quick_entry_sub">MoMa</string>
+    <string name="quickbar_channel">Thanh ghi nhanh</string>
+    <string name="quickbar_channel_desc">Thông báo cố định với nút Ghi chi, Ghi thu, Nhận tiền và món quen.</string>
+    <string name="quickbar_title_idle">MoMa · Ghi nhanh</string>
+    <string name="quickbar_text_idle">Chạm để ghi một khoản chi</string>
+    <string name="quickbar_expense">Ghi chi</string>
+    <string name="quickbar_income">Ghi thu</string>
+    <string name="quickbar_receive">Nhận tiền</string>
+    <string name="shortcut_classify_short">Chọn loại</string>
+    <string name="shortcut_classify_long">Chọn loại cho khoản chưa rõ</string>
 </resources>

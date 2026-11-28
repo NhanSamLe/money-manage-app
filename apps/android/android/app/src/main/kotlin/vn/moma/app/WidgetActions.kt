@@ -81,8 +81,13 @@ class QuickEntryActivity : FlutterActivity() {
     // Entry points live in the root library (lib/main.dart): URI lookup fails in release builds.
     override fun getDartEntrypointLibraryUri(): String? = null
 
-    override fun getDartEntrypointArgs(): List<String> =
-        listOf(intent?.getStringExtra(EXTRA_KIND) ?: "expense")
+    override fun getDartEntrypointArgs(): List<String> {
+        val kind = intent?.getStringExtra(EXTRA_KIND) ?: "expense"
+        val slot = intent?.getStringExtra(EXTRA_SLOT)
+        val routine = intent?.getStringExtra(EXTRA_ROUTINE)
+        // Quick bar routine action: [kind, slot, key] -> the sheet records that learned option right away.
+        return if (!slot.isNullOrEmpty() && !routine.isNullOrEmpty()) listOf(kind, slot, routine) else listOf(kind)
+    }
 
     override fun shouldHandleDeeplinking(): Boolean = false
 
@@ -116,6 +121,8 @@ class QuickEntryActivity : FlutterActivity() {
 
     companion object {
         const val EXTRA_KIND = "kind"
+        const val EXTRA_SLOT = "routine_slot"
+        const val EXTRA_ROUTINE = "routine_key"
     }
 }
 

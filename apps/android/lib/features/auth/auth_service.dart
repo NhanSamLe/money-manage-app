@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/storage/offline_cache.dart';
+import '../transactions/tx_attachments.dart' show AttachmentFiles;
 
 /// Auth glue between Supabase Auth (credentials live there) and the MoMa API (owner + device binding).
 class AuthService {
@@ -63,5 +65,15 @@ class AuthService {
     await _api.post('/devices/register', {'device_id': id, 'label': 'Android'});
   }
 
-  Future<void> signOut() => _auth.signOut();
+  /// Signs out and forgets every copy kept for offline use (cached reads, viewed pictures, queued pictures).
+  Future<void> signOut() async {
+    await _auth.signOut();
+    await clearOfflineData();
+  }
+}
+
+/// Wipes the offline cache and picture files (sign-out, or "Xóa bộ nhớ đệm" with [queue] false).
+Future<void> clearOfflineData({bool queue = true}) async {
+  await OfflineCache.instance.clear();
+  await AttachmentFiles.instance.clear(queue: queue);
 }

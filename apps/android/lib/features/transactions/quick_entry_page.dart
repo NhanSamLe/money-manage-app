@@ -20,7 +20,10 @@ import '../../core/widgets.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
+import 'dart:async';
+
 import '../../core/ui/moma_switch.dart';
+import '../classify/classify_page.dart' show suggestCategory;
 import '../../app/theme/palette.dart';
 
 enum _Kind { expense, income, transfer }
@@ -48,8 +51,67 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
   /// One id per form instance: a retry after a lost response replays instead of double-posting.
   final String _commandId = ApiClient.newId();
 
+  // Category suggested from the note while typing (debounced); cleared as soon as the owner picks one.
+  Timer? _suggestTimer;
+  bool _aiPicked = false;
+  String? _aiReason;
+  int _suggestSeq = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _note.addListener(_noteChanged);
+  }
+
+  void _noteChanged() {
+    _suggestTimer?.cancel();
+    final text = _note.text.trim();
+    if (_kind == _Kind.transfer || text.length < 3) return;
+    if (_categoryId != null && !_aiPicked) return; // the owner already chose
+    _suggestTimer = Timer(
+      const Duration(milliseconds: 700),
+      () => _suggest(text),
+    );
+  }
+
+  Future<void> _suggest(String text) async {
+    final seq = ++_suggestSeq;
+    final income = _kind == _Kind.income;
+    final type = income ? 'INCOME' : 'EXPENSE';
+    final cats = ref.read(categoriesProvider).value ?? <Category>[];
+    String? id;
+    String? reason;
+    final s = await suggestCategory(
+      ref.read(apiProvider),
+      text,
+      income: income,
+      amount: parseVndInput(_amount.text),
+    );
+    if (s != null && cats.any((c) => c.id == s.categoryId && c.type == type)) {
+      id = s.categoryId;
+      reason = s.reason;
+    } else {
+      // Offline or nothing found on the server: the same local keywords as quick text.
+      final q = parseQuickText(text);
+      id = cats
+          .where((c) => c.name == q.categoryName && c.type == type)
+          .firstOrNull
+          ?.id;
+      reason = id == null ? null : 'Từ khóa trong ghi chú';
+    }
+    if (!mounted || seq != _suggestSeq || id == null) return;
+    if (_categoryId != null && !_aiPicked) return;
+    setState(() {
+      _categoryId = id;
+      _aiPicked = true;
+      _aiReason = reason;
+    });
+  }
+
   @override
   void dispose() {
+    _suggestTimer?.cancel();
+    _note.removeListener(_noteChanged);
     _amount.dispose();
     _note.dispose();
     _quick.dispose();
@@ -208,6 +270,8 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                 onSelectionChanged: (s) => setState(() {
                   _kind = s.first;
                   _categoryId = null;
+                  _aiPicked = false;
+                  _aiReason = null;
                 }),
               ),
               const SizedBox(height: 20),
@@ -280,11 +344,26 @@ class _QuickEntryPageState extends ConsumerState<QuickEntryPage> {
                           avatar: Icon(categoryIcon(c.icon), size: 18),
                           label: Text(c.name),
                           selected: _categoryId == c.id,
-                          onSelected: (_) => setState(() => _categoryId = c.id),
+                          onSelected: (_) => setState(() {
+                            _categoryId = c.id;
+                            _aiPicked = false;
+                            _aiReason = null;
+                          }),
                         ),
                     ],
                   ),
                 ),
+                if (_aiPicked && _aiReason != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Đã chọn sẵn: ${_aiReason!}. Chạm loại khác nếu chưa đúng.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: context.pal.muted,
+                      ),
+                    ),
+                  ),
               ],
               const SizedBox(height: 16),
               LabeledField(

@@ -37,6 +37,9 @@ class Push {
   /// Ticks after a meal was skipped from a notification, so on-screen "today" state can reload.
   static final remindersChanged = ValueNotifier<int>(0);
 
+  /// Bumped after a routine answer was recorded from a push button (lists refresh on it).
+  static final routineRecorded = ValueNotifier<int>(0);
+
   /// API used by notification actions. Replaceable in tests.
   @visibleForTesting
   static ApiClient Function() apiFactory = () => ApiClient(LocalStore());
@@ -84,6 +87,32 @@ class Push {
     Map<String, dynamic> data,
   ) async {
     try {
+      // "Sáng nay bạn ăn gì? [Bánh mì 20k]": rt_<slot>_<option-key> records that answer at once;
+      // "Hôm qua bạn chưa ghi gửi xe? [Ghi]": rtm_<date> records the missed daily items; rtm_no does nothing.
+      if (actionId != null && actionId.startsWith('rt_')) {
+        final rest = actionId.substring(3);
+        final cut = rest.indexOf('_');
+        if (cut > 0) {
+          final r = (data['routine'] as Map?)?.cast<String, dynamic>();
+          await apiFactory().post('/ai/routine/record', {
+            'slot': rest.substring(0, cut),
+            'keys': [rest.substring(cut + 1)],
+            'date': ?r?['date'] as String?,
+          });
+          routineRecorded.value++;
+        }
+        return;
+      }
+      if (actionId == 'rtm_no') return;
+      if (actionId != null && actionId.startsWith('rtm_')) {
+        await apiFactory().post('/ai/routine/record', {
+          'slot': 'missed',
+          'keys': ['all'],
+          'date': actionId.substring(4),
+        });
+        routineRecorded.value++;
+        return;
+      }
       if (actionId != null && actionId.startsWith('skip_')) {
         final kind = actionId.substring(5);
         await apiFactory().post('/reminders/skip', {

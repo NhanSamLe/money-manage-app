@@ -155,7 +155,8 @@ describe("SePay webhook -> push (gateway faked)", () => {
     const pending: Promise<unknown>[] = [];
     const ctx = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException: () => undefined, props: {} } as unknown as ExecutionContext;
     expect((await hook(app, ctx)).status).toBe(200);
-    expect(pending).toHaveLength(1);
+    // The push and the background categorization (routes-classify) both run after the response.
+    expect(pending.length).toBeGreaterThanOrEqual(1);
     await Promise.all(pending);
     expect(push.calls).toHaveLength(1);
   });

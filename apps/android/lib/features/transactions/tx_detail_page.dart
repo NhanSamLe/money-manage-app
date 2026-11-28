@@ -19,8 +19,12 @@ import '../../core/widgets.dart';
 import 'transactions_page.dart' show txKindLabel;
 import 'tx_sheets.dart' show TxEditSheet;
 import '../transfers/transfer_pair_section.dart';
+import '../transfers/duplicates.dart' show DuplicateSection;
 import 'tx_attachments.dart';
+import '../splits/split_card.dart' show TxSplitCard, runBillAnalysis;
+import '../classify/classify_page.dart' show unclearProvider;
 import '../planning/debts_view.dart' show openDebt;
+import '../collect/collect.dart' show TxSettlementSection;
 
 /// How a transaction entered the ledger (server column `source`, migration 009).
 String txSourceLabel(MomaTx tx) => switch (tx.source) {
@@ -96,6 +100,48 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
 
   Future<void> _edit(MomaTx tx) =>
       showFormSheet<void>(context, (_) => TxEditSheet(tx: tx));
+
+  /// One-tap category (same transaction, server keeps history): classifies "chưa phân loại" money or corrects the
+  /// AI's choice; the server learns "this merchant -> this category" for next time.
+  Future<void> _classify(MomaTx tx, String categoryId) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiProvider).command('TX_ANNOTATE', {
+        'tx_id': tx.id,
+        'expected_version': tx.version,
+        'category_id': categoryId,
+      }, commandId: ApiClient.newId());
+      if (!mounted) return;
+      refreshAll(ref);
+      ref.invalidate(unclearProvider);
+      showSnack(context, 'Đã lưu loại. MoMa sẽ nhớ cho lần sau.');
+    } on ApiException catch (e) {
+      if (mounted) await showErrorDialog(context, e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickCategory(MomaTx tx) async {
+    final type = tx.isIncome ? 'INCOME' : 'EXPENSE';
+    final cats = (ref.read(categoriesProvider).value ?? const <Category>[])
+        .where((c) => c.type == type)
+        .toList();
+    final id = await showChoiceSheet<String>(
+      context,
+      title: 'Chọn loại',
+      selected: tx.categoryId,
+      options: [
+        for (final c in cats)
+          ChoiceOption(
+            value: c.id,
+            label: c.name,
+            leading: CategoryAvatar(iconKey: c.icon, size: 34),
+          ),
+      ],
+    );
+    if (id != null && id != tx.categoryId && mounted) await _classify(tx, id);
+  }
 
   Future<void> _reverse(MomaTx tx) async {
     final reason = await _askReason();
@@ -233,9 +279,31 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
                   color: tx.isVoid ? MomaColors.expense : MomaColors.emerald,
                 ),
               ],
+              if (!tx.isVoid && tx.aiApplied) ...[
+                const SizedBox(height: 10),
+                InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: _busy ? null : () => _pickCategory(tx),
+                  child: _Badge(
+                    text:
+                        'AI đã phân loại${tx.ai!.methodLabel.isEmpty ? '' : ' (${tx.ai!.methodLabel})'} · Sửa',
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
+        if (!tx.isVoid && tx.isUnknown && !tx.debtLinked) ...[
+          const SizedBox(height: 14),
+          _QuickCategoryCard(
+            tx: tx,
+            categories: categories.cast<Category>(),
+            busy: _busy,
+            onPick: (id) => _classify(tx, id),
+            onMore: () => _pickCategory(tx),
+          ),
+        ],
         const SizedBox(height: 14),
         Container(
           decoration: BoxDecoration(
@@ -313,8 +381,19 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
           ),
         ),
         if (isTransfer && !tx.isVoid) TransferPairSection(txId: tx.id),
+        // Money MoMa booked as a repayment (or the repayment it became): who paid, Hoàn tác.
+        TxSettlementSection(txId: tx.id),
+        // One payment seen twice and merged (migration 018): "Đã gộp khoản trùng từ MoMo · Tách ra".
+        if (!isTransfer) DuplicateSection(txId: tx.id),
         // Receipts / transfer screenshots kept as evidence (also allowed on cancelled rows, to view old proof).
-        TxAttachmentsSection(txId: tx.id, canAdd: !tx.isVoid),
+        // Each new picture is read at once: category / note / amount check / split proposal (bill analysis).
+        TxAttachmentsSection(
+          txId: tx.id,
+          canAdd: !tx.isVoid,
+          onUploaded: (_, bytes) => runBillAnalysis(context, ref, tx, bytes),
+        ),
+        // Split of this expense (applied with undo / one-tap proposal / "Chia tiền với người khác").
+        if (!tx.debtLinked) TxSplitCard(tx: tx),
         if (tx.debtLinked) ...[
           const SizedBox(height: 12),
           Text(
@@ -343,6 +422,77 @@ class _TxDetailPageState extends ConsumerState<TxDetailPage> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "Khoản này là gì?" on unclassified money: the suggestion first, then the owner's categories, one tap saves.
+class _QuickCategoryCard extends StatelessWidget {
+  const _QuickCategoryCard({
+    required this.tx,
+    required this.categories,
+    required this.busy,
+    required this.onPick,
+    required this.onMore,
+  });
+  final MomaTx tx;
+  final List<Category> categories;
+  final bool busy;
+  final ValueChanged<String> onPick;
+  final VoidCallback onMore;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final type = tx.isIncome ? 'INCOME' : 'EXPENSE';
+    final pool = categories.where((c) => c.type == type).toList();
+    final suggested = tx.ai?.categoryId;
+    pool.sort(
+      (a, b) => (b.id == suggested ? 1 : 0) - (a.id == suggested ? 1 : 0),
+    );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(
+        color: pal.warnBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tx.isIncome ? 'Khoản tiền vào này là gì?' : 'Khoản chi này là gì?',
+            style: TextStyle(fontWeight: FontWeight.w800, color: pal.warnInk),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Chạm một loại để lưu. MoMa nhớ để lần sau tự phân loại.',
+            style: TextStyle(fontSize: 12.5, color: pal.warnInk),
+          ),
+          const SizedBox(height: 10),
+          if (busy)
+            const Center(child: CircularProgressIndicator())
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in pool.take(6))
+                  ActionChip(
+                    avatar: Icon(categoryStyle(c.icon).icon, size: 18),
+                    label: Text(
+                      c.id == suggested ? '${c.name} (gợi ý)' : c.name,
+                    ),
+                    onPressed: () => onPick(c.id),
+                  ),
+                ActionChip(
+                  avatar: const Icon(Symbols.more_horiz_rounded, size: 18),
+                  label: const Text('Khác…'),
+                  onPressed: onMore,
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

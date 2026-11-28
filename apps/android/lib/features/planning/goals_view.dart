@@ -14,6 +14,7 @@ import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
 import '../goals/goal_insights.dart';
 import '../goals/goal_widgets.dart';
+import '../collect/collect.dart' show GoalAutoSection;
 import '../../core/ui/moma_switch.dart';
 import '../../app/theme/palette.dart';
 
@@ -73,6 +74,8 @@ class _GoalsViewState extends ConsumerState<GoalsView> {
                 )
               else ...[
                 GoalsSummaryCard(board: b),
+                // One-tap proposals (salary / month-end) and each goal's plan (migration 019).
+                const GoalAutoSection(),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(

@@ -16,6 +16,8 @@ import '../notify_capture/notify_capture_page.dart';
 import '../profile/avatar.dart';
 import '../update/update_sheet.dart';
 import '../widgets/widget_settings_page.dart';
+import 'capacity_page.dart';
+import 'offline_data_page.dart';
 
 /// Settings only contain things a person uses the app for (plans, data, appearance, help). Server, API and
 /// provider configuration is deliberately not user-editable: this is a finance app, not an admin console.
@@ -188,6 +190,26 @@ class SettingsPage extends ConsumerWidget {
                 title: 'Tiện ích màn hình chính',
                 subtitle: 'Thêm tiện ích, ẩn số tiền trên tiện ích',
                 onTap: () => openWidgetSettings(context),
+              ),
+              _Item(
+                icon: Symbols.cloud_download_rounded,
+                color: const Color(0xFF2F80ED),
+                title: 'Dữ liệu ngoại tuyến',
+                subtitle: 'Dùng khi không có mạng, tự đồng bộ lại',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OfflineDataPage(),
+                  ),
+                ),
+              ),
+              _Item(
+                icon: Symbols.database_rounded,
+                color: const Color(0xFF8B5CF6),
+                title: 'Dung lượng & chi phí',
+                subtitle: 'Dữ liệu, ảnh và chi phí AI tháng này',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CapacityPage()),
+                ),
               ),
               _Item(
                 icon: Symbols.brightness_6_rounded,

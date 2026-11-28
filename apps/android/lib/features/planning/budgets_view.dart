@@ -13,6 +13,9 @@ import '../../core/providers.dart';
 import '../../core/sheets.dart';
 import '../../core/ui/select_field.dart';
 import '../../core/widgets.dart';
+import '../budgets/budget_plan.dart'
+    show budgetPacingProvider, budgetProposalsProvider;
+import '../budgets/budget_widgets.dart' show BudgetProposalBanner;
 import '../../app/theme/palette.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
@@ -31,6 +34,8 @@ class BudgetsView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(budgetsProvider);
+        ref.invalidate(budgetProposalsProvider);
+        ref.invalidate(budgetPacingProvider);
         await ref.read(budgetsProvider.future);
       },
       child: budgets.when(
@@ -46,12 +51,14 @@ class BudgetsView extends ConsumerWidget {
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
+            // MoMa's habit-based proposals (D-026): one tap "Áp dụng", re-proposed when habits shift.
+            const BudgetProposalBanner(),
             if (list.isEmpty)
               const EmptyState(
                 embedded: true,
                 icon: Symbols.pie_chart_outline_rounded,
                 title: 'Chưa có ngân sách',
-                hint: 'Đặt hạn mức chi tiêu cho tháng này.',
+                hint: 'MoMa sẽ đề xuất hạn mức theo thói quen chi tiêu của bạn, hoặc bạn tự đặt.',
               ),
             for (final b in list) _BudgetCard(budget: b),
             const SizedBox(height: 8),
