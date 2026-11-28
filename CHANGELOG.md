@@ -21,6 +21,9 @@ Bản hoàn chỉnh đầu tiên.
 - **Hộp thông báo trong app** (migration 012): mọi thông báo đẩy đã gửi được lưu lại, có trạng thái đã đọc và mở đúng màn hình.
 - Trang giới thiệu (`website/`, GitHub Pages), README mới với ảnh chụp màn hình dữ liệu mẫu, `docs/architecture.md`.
 
+- **Sao chép ảnh mã QR** như app ngân hàng: chạm vào mã (trong app hoặc trên tiện ích) để chép nguyên thẻ QR (logo,
+  ngân hàng, chủ tài khoản, số tài khoản, số tiền nếu có) rồi dán thẳng vào Zalo/Messenger.
+
 ### Changed
 - Tiện ích QR nhận tiền có nút sao chép số tài khoản; số tài khoản hiển thị dạng che (`•••• 1234`) cho tới khi bấm xem.
 

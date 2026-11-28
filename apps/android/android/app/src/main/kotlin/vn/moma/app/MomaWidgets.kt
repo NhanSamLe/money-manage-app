@@ -30,9 +30,13 @@ object WidgetStore {
     private const val PREFS = "moma_widgets"
     private const val QR_FILE = "widget_qr.png"
 
+    /** Bank-style receive card (logo, bank, QR, holder, account) rendered by the app; what "copy image" puts on the clipboard. */
+    private const val CARD_FILE = "widget_qr_card.png"
+
     fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun save(ctx: Context, data: Map<String, Any?>, qrPng: ByteArray?) {
+    fun save(ctx: Context, data: Map<String, Any?>, qrPng: ByteArray?, cardPng: ByteArray? = null) {
+        if (cardPng != null) File(ctx.filesDir, CARD_FILE).writeBytes(cardPng)
         val e = prefs(ctx).edit()
         for ((k, v) in data) {
             when (v) {
@@ -53,12 +57,15 @@ object WidgetStore {
         val privacy = privacy(ctx)
         prefs(ctx).edit().clear().putBoolean("privacy", privacy).apply()
         File(ctx.filesDir, QR_FILE).delete()
+        File(ctx.filesDir, CARD_FILE).delete()
     }
 
     fun privacy(ctx: Context) = prefs(ctx).getBoolean("privacy", false)
 
+    /** The full receive card when the app has rendered one, else the bare QR. */
     fun qrPngBytes(ctx: Context): ByteArray? = try {
-        File(ctx.filesDir, QR_FILE).takeIf { it.exists() }?.readBytes()
+        (File(ctx.filesDir, CARD_FILE).takeIf { it.exists() } ?: File(ctx.filesDir, QR_FILE).takeIf { it.exists() })
+            ?.readBytes()
     } catch (_: Exception) {
         null
     }
@@ -243,7 +250,7 @@ object WidgetBridge {
                     "save" -> {
                         @Suppress("UNCHECKED_CAST")
                         val data = (call.argument<Map<String, Any?>>("data") ?: emptyMap())
-                        WidgetStore.save(app, data, call.argument<ByteArray>("qrPng"))
+                        WidgetStore.save(app, data, call.argument<ByteArray>("qrPng"), call.argument<ByteArray>("cardPng"))
                         MomaWidgets.updateAll(app)
                         result.success(true)
                     }

@@ -172,6 +172,144 @@ class ReceiveQrCard extends StatelessWidget {
   }
 }
 
+/// Draws the same bank-style receive card as [ReceiveQrCard] without a widget tree (used by the home-screen widget,
+/// which has no screen to capture): white card, bank logo + name, QR with the logo in the middle, holder, full
+/// account number, optional amount and note, and the scan hint. Returns PNG bytes.
+Future<Uint8List?> renderReceiveCard({
+  required String payload,
+  required String bank,
+  required String holder,
+  required String accountNumber,
+  int? amount,
+  String? note,
+}) async {
+  const w = 720.0;
+  const pad = 56.0;
+  const qrSize = 520.0;
+  const ink = Color(0xFF0F2A22);
+  final brand = brandFor(institution: bank);
+  ui.Image? logo;
+  if (brand != null) {
+    try {
+      final data = await rootBundle.load(brand.asset);
+      final codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: 192,
+      );
+      logo = (await codec.getNextFrame()).image;
+    } catch (_) {}
+  }
+
+  TextPainter text(
+    String s, {
+    double size = 30,
+    FontWeight weight = FontWeight.w600,
+    Color color = ink,
+    double spacing = 0,
+  }) => TextPainter(
+    text: TextSpan(
+      text: s,
+      style: TextStyle(
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: spacing,
+      ),
+    ),
+    textAlign: TextAlign.center,
+    textDirection: TextDirection.ltr,
+    maxLines: 2,
+  )..layout(maxWidth: w - pad * 2);
+
+  final title = text(bank, size: 36, weight: FontWeight.w800);
+  final who = text(holder.toUpperCase(), size: 32, weight: FontWeight.w800);
+  final number = text(accountNumber, size: 34, spacing: 2);
+  final money = amount != null && amount > 0
+      ? text(
+          formatVnd(amount),
+          size: 44,
+          weight: FontWeight.w800,
+          color: MomaColors.income,
+        )
+      : null;
+  final memo = note != null && note.trim().isNotEmpty
+      ? text(note.trim(), size: 26, color: const Color(0xFF5B6B65))
+      : null;
+  final hint = text(
+    'Quét mã bằng ứng dụng ngân hàng hoặc ví bất kỳ',
+    size: 22,
+    weight: FontWeight.w500,
+    color: const Color(0xFF8A9A94),
+  );
+
+  const logoSize = 64.0;
+  var h = pad + logoSize + 28 + qrSize + 28 + who.height + 6 + number.height;
+  if (money != null) h += 14 + money.height;
+  if (memo != null) h += 8 + memo.height;
+  h += 22 + hint.height + pad;
+
+  final rec = ui.PictureRecorder();
+  final c = Canvas(rec, Rect.fromLTWH(0, 0, w, h));
+  // Opaque white edge to edge: pasted into chat apps it never shows transparent corners.
+  c.drawRect(
+    Rect.fromLTWH(0, 0, w, h),
+    Paint()..color = Colors.white,
+  );
+
+  // Header: logo + bank name, centred together.
+  var y = pad;
+  final headW = (logo != null ? logoSize + 16 : 0) + title.width;
+  var x = (w - headW) / 2;
+  if (logo != null) {
+    final dst = Rect.fromLTWH(x, y, logoSize, logoSize);
+    c.save();
+    c.clipRRect(RRect.fromRectAndRadius(dst, const Radius.circular(16)));
+    paintImage(canvas: c, rect: dst, image: logo, fit: BoxFit.contain);
+    c.restore();
+    x += logoSize + 16;
+  }
+  title.paint(c, Offset(x, y + (logoSize - title.height) / 2));
+  y += logoSize + 28;
+
+  // QR with the bank logo in the middle (level H keeps it scannable).
+  c.save();
+  c.translate((w - qrSize) / 2, y);
+  QrPainter(
+    data: payload,
+    version: QrVersions.auto,
+    errorCorrectionLevel: QrErrorCorrectLevel.H,
+    gapless: true,
+    eyeStyle: const QrEyeStyle(
+      eyeShape: QrEyeShape.square,
+      color: MomaColors.forest,
+    ),
+    dataModuleStyle: const QrDataModuleStyle(
+      dataModuleShape: QrDataModuleShape.square,
+      color: ink,
+    ),
+    embeddedImage: logo,
+    embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(104, 104)),
+  ).paint(c, const Size(qrSize, qrSize));
+  c.restore();
+  y += qrSize + 28;
+
+  void center(TextPainter p, double gap) {
+    y += gap;
+    p.paint(c, Offset((w - p.width) / 2, y));
+    y += p.height;
+  }
+
+  center(who, 0);
+  center(number, 6);
+  if (money != null) center(money, 14);
+  if (memo != null) center(memo, 8);
+  center(hint, 22);
+
+  final img = await rec.endRecording().toImage(w.toInt(), h.ceil());
+  final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+  return bytes?.buffer.asUint8List();
+}
+
 /// PNG bytes of the card behind [key].
 Future<Uint8List?> captureQrPng(GlobalKey key) async {
   final obj = key.currentContext?.findRenderObject();

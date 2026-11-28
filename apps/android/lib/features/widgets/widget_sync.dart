@@ -12,7 +12,7 @@ import '../../core/models.dart';
 import '../../core/network/api_client.dart';
 import '../../core/planning_models.dart';
 import '../../core/providers.dart';
-import '../banks/qr_share.dart' show vietQrAccountNumber;
+import '../banks/qr_share.dart' show vietQrAccountNumber, renderReceiveCard;
 
 /// Pushes the numbers shown by the home-screen widgets to the native side (channel "moma/widgets").
 /// Widgets never fetch by themselves; they render what was pushed last, so they also work offline.
@@ -175,6 +175,7 @@ class WidgetSync {
     }
 
     Uint8List? png;
+    Uint8List? card;
     if (results[5] != null) {
       final linked = _list(results[5]).where((a) => a['linked'] == true);
       if (linked.isEmpty) {
@@ -189,6 +190,16 @@ class WidgetSync {
         );
         if (qr is Map && qr['payload'] != null) {
           png = await _try<Uint8List?>(() => _renderQr('${qr['payload']}'));
+          card = await _try<Uint8List?>(
+            () => renderReceiveCard(
+              payload: '${qr['payload']}',
+              bank: '${qr['bank'] ?? a['bank'] ?? ''}',
+              holder: '${qr['holder'] ?? a['holder'] ?? ''}',
+              accountNumber:
+                  vietQrAccountNumber('${qr['payload']}') ??
+                  '${a['number'] ?? ''}',
+            ),
+          );
           data.addAll({
             'qr_bank': '${qr['bank'] ?? a['bank'] ?? ''}',
             'qr_masked': '${qr['number_masked'] ?? a['number_masked'] ?? ''}',
@@ -205,7 +216,11 @@ class WidgetSync {
       }
     }
     if (data.isEmpty) return;
-    await channel.invokeMethod<void>('save', {'data': data, 'qrPng': png});
+    await channel.invokeMethod<void>('save', {
+      'data': data,
+      'qrPng': png,
+      'cardPng': card,
+    });
   }
 
   static String _title(MomaTx t, Map<String, String> catName) {
