@@ -5,9 +5,9 @@ theo [Semantic Versioning](https://semver.org/lang/vi/): trước bản hoàn ch
 năng mới, PATCH khi chỉ sửa lỗi), bản hoàn chỉnh đầu tiên là `1.0.0` (quyết định D-016). Số build `+N` luôn tăng.
 Bản cài: [GitHub Releases](https://github.com/NhanSamLe/money-manage-app/releases).
 
-## [Unreleased] — hướng tới 1.0.0
+## [1.0.0] — 2026-11-28
 
-Đang phát triển trên nhánh chính, chưa phát hành.
+Bản hoàn chỉnh đầu tiên.
 
 ### Added
 - **Ghép chuyển khoản nội bộ** (migration 010, D-018): tiền ra ở một tài khoản và tiền vào ở tài khoản khác của chủ sở hữu
