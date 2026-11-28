@@ -39,7 +39,7 @@ Future<void> checkForUpdateManually(BuildContext context) async {
         context,
         title: 'Bạn đang dùng bản mới nhất',
         message:
-            'MoMa ${status.installed.version} (${status.installed.buildNumber}) là phiên bản mới nhất.',
+            'MoMa ${status.installed.version} là phiên bản mới nhất.',
       );
       return;
     }
