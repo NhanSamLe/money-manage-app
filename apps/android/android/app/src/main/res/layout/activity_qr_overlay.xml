@@ -54,9 +54,18 @@
                 android:id="@+id/qo_qr"
                 android:layout_width="240dp"
                 android:layout_height="240dp"
-                android:contentDescription="@string/wg_qr_title"
+                android:contentDescription="@string/wg_qr_tap_copy"
                 android:scaleType="fitCenter" />
         </FrameLayout>
+
+        <TextView
+            android:id="@+id/qo_tap_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/wg_qr_tap_copy"
+            android:textColor="@color/wg_sheet_muted"
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/qo_bank"

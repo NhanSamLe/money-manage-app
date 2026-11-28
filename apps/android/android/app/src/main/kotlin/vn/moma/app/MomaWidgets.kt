@@ -57,6 +57,12 @@ object WidgetStore {
 
     fun privacy(ctx: Context) = prefs(ctx).getBoolean("privacy", false)
 
+    fun qrPngBytes(ctx: Context): ByteArray? = try {
+        File(ctx.filesDir, QR_FILE).takeIf { it.exists() }?.readBytes()
+    } catch (_: Exception) {
+        null
+    }
+
     fun qrBitmap(ctx: Context): Bitmap? {
         val f = File(ctx.filesDir, QR_FILE)
         if (!f.exists()) return null
@@ -246,6 +252,10 @@ object WidgetBridge {
                         val key = call.argument<String>("key") ?: ""
                         WidgetStore.save(app, mapOf(key to call.argument<Any?>("value")), null)
                         result.success(true)
+                    }
+                    "copyImage" -> {
+                        val png = call.argument<ByteArray>("png")
+                        result.success(png != null && CopyActivity.copyImageToClipboard(app, png))
                     }
                     "getPrivacy" -> result.success(WidgetStore.privacy(app))
                     "setPrivacy" -> {

@@ -131,6 +131,13 @@ class QrOverlayActivity : Activity() {
         val primary = findViewById<TextView>(R.id.qo_primary)
         if (bmp != null) {
             findViewById<ImageView>(R.id.qo_qr).setImageBitmap(bmp)
+            // Like bank apps: tapping the code copies the QR picture itself.
+            findViewById<View>(R.id.qo_qr_frame).setOnClickListener {
+                val png = WidgetStore.qrPngBytes(this)
+                val ok = png != null && CopyActivity.copyImageToClipboard(this, png)
+                Toast.makeText(this, if (ok) R.string.wg_copied_image else R.string.wg_copy_image_failed, Toast.LENGTH_SHORT)
+                    .show()
+            }
             findViewById<TextView>(R.id.qo_bank).text = WidgetStore.str(this, "qr_bank")
             val masked = WidgetStore.str(this, "qr_masked")
             val holder = WidgetStore.str(this, "qr_holder")
@@ -141,6 +148,7 @@ class QrOverlayActivity : Activity() {
             findViewById<View>(R.id.qo_number_row).visibility = View.GONE
             findViewById<View>(R.id.qo_copy_row).visibility = View.GONE
             findViewById<View>(R.id.qo_qr_frame).visibility = View.GONE
+            findViewById<View>(R.id.qo_tap_hint).visibility = View.GONE
             findViewById<View>(R.id.qo_bank).visibility = View.GONE
             findViewById<View>(R.id.qo_masked).visibility = View.GONE
             val unlinked = state == "unlinked"

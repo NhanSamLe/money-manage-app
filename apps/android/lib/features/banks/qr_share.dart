@@ -1,6 +1,8 @@
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -229,6 +231,30 @@ Future<void> shareQrImage(
   }
 }
 
+/// Copies the QR card itself as a picture (paste into Zalo, Messenger...), like bank apps do.
+Future<void> copyQrImage(BuildContext context, GlobalKey key) async {
+  final bytes = await captureQrPng(key);
+  if (bytes == null || !context.mounted) return;
+  var ok = false;
+  if (!kIsWeb && Platform.isAndroid) {
+    try {
+      ok =
+          await const MethodChannel('moma/widgets')
+              .invokeMethod<bool>('copyImage', {'png': bytes}) ??
+          false;
+    } catch (_) {}
+  }
+  if (!context.mounted) return;
+  if (ok) {
+    showSnack(context, 'Đã sao chép ảnh mã QR, dán vào Zalo/Messenger để gửi');
+  } else {
+    await showErrorDialog(
+      context,
+      'Không sao chép được ảnh. Bạn thử "Chia sẻ ảnh mã QR".',
+    );
+  }
+}
+
 Future<void> copyText(BuildContext context, String text, String done) async {
   await Clipboard.setData(ClipboardData(text: text));
   if (context.mounted) showSnack(context, done);
@@ -246,6 +272,11 @@ Future<void> showQrActions(
     context,
     title: 'Mã QR nhận tiền',
     options: const [
+      ChoiceOption(
+        value: 'copyimg',
+        label: 'Sao chép ảnh mã QR',
+        icon: Symbols.content_copy_rounded,
+      ),
       ChoiceOption(
         value: 'save',
         label: 'Lưu ảnh mã QR',
@@ -270,6 +301,8 @@ Future<void> showQrActions(
   );
   if (!context.mounted || v == null) return;
   switch (v) {
+    case 'copyimg':
+      await copyQrImage(context, boundaryKey);
     case 'save':
       await saveQrImage(context, boundaryKey);
     case 'share':
@@ -288,7 +321,9 @@ class QrActionRow extends StatelessWidget {
     required this.onCopyAccount,
     required this.onSave,
     required this.onShare,
+    this.onCopyImage,
   });
+  final VoidCallback? onCopyImage;
   final VoidCallback onCopyAccount;
   final VoidCallback onSave;
   final VoidCallback onShare;
@@ -324,6 +359,8 @@ class QrActionRow extends StatelessWidget {
     );
     return Row(
       children: [
+        if (onCopyImage != null)
+          btn(Symbols.photo_library_rounded, 'Chép ảnh QR', onCopyImage!),
         btn(Symbols.content_copy_rounded, 'Sao chép STK', onCopyAccount),
         btn(Symbols.download_rounded, 'Lưu ảnh', onSave),
         btn(Symbols.share_rounded, 'Chia sẻ', onShare),

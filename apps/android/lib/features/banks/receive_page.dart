@@ -175,6 +175,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                           ),
                           const SizedBox(height: 12),
                           QrActionRow(
+                            onCopyImage: () => copyQrImage(context, _qrKey),
                             onCopyAccount: () => copyText(
                               context,
                               acc,

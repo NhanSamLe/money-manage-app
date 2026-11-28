@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the in-app update download folder is exposed to the system installer. -->
+<!-- Exposed folders: the in-app update download (system installer) and the copied QR image (clipboard). -->
 <paths>
     <cache-path name="updates" path="updates/" />
+    <cache-path name="clip" path="clip/" />
 </paths>

@@ -73,6 +73,9 @@
     <string name="wg_copy_payload_btn">Sao chép nội dung mã</string>
     <string name="wg_copied_number">Đã sao chép số tài khoản</string>
     <string name="wg_copied_payload">Đã sao chép nội dung mã QR</string>
+    <string name="wg_copied_image">Đã sao chép ảnh mã QR, dán vào Zalo/Messenger để gửi</string>
+    <string name="wg_copy_image_failed">Không sao chép được ảnh mã QR</string>
+    <string name="wg_qr_tap_copy">Chạm vào mã để sao chép ảnh</string>
     <string name="wg_copy_missing">Mở MoMa một lần để cập nhật số tài khoản</string>
     <string name="wg_reveal">Hiện số tài khoản</string>
     <string name="wg_hide">Ẩn số tài khoản</string>

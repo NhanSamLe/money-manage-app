@@ -123,5 +123,22 @@ class CopyActivity : Activity() {
             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText(label, text))
         }
+
+        /**
+         * Puts a PNG on the clipboard as an image (paste into Zalo, Messenger, notes...). The file lives in
+         * cache/clip/ and is exposed read-only through MoMa's FileProvider; the clipboard grants the pasting app access.
+         */
+        fun copyImageToClipboard(ctx: Context, png: ByteArray): Boolean = try {
+            val dir = File(ctx.cacheDir, "clip").apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() }
+            val file = File(dir, "MoMa-QR-${System.currentTimeMillis()}.png")
+            file.writeBytes(png)
+            val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.moma_update", file)
+            val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newUri(ctx.contentResolver, "MoMa QR", uri))
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }
